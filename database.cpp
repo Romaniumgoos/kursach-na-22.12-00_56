@@ -554,7 +554,7 @@ bool Database::findUser(const std::string& username,
         std::cerr << "[!] findUser: соединение с БД не открыто\n";
         return false;
     }
-
+afafesfsefsfswf
     const char* sql =
         "SELECT id, name, role "
         "FROM users "
