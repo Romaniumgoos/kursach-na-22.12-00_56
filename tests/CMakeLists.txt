@@ -1,27 +1,37 @@
-# Find GTest
+# Настройка компилятора
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Поиск зависимостей
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-# Add test executable
-add_executable(test_schedule_refactoring 
+# Добавляем заголовочные файлы
+include_directories(
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party/sqlite
+)
+
+# Список исходных файлов для тестов
+set(TEST_SOURCES
     test_schedule_refactoring.cpp
     ${CMAKE_SOURCE_DIR}/database.cpp
     ${CMAKE_SOURCE_DIR}/database.h
+    ${CMAKE_SOURCE_DIR}/teacher.cpp
+    ${CMAKE_SOURCE_DIR}/teacher.h
+    ${CMAKE_SOURCE_DIR}/user.h
 )
 
-# Link with GTest and SQLite3
-target_link_libraries(test_schedule_refactoring 
-    PRIVATE 
-    GTest::GTest 
+# Создаем исполняемый файл тестов
+add_executable(schedule_tests ${TEST_SOURCES})
+
+# Подключаем зависимости
+target_link_libraries(schedule_tests
+    PRIVATE
+    GTest::GTest
     GTest::Main
     sqlite3
 )
 
-# Include directories
-target_include_directories(test_schedule_refactoring 
-    PRIVATE 
-    ${CMAKE_SOURCE_DIR}
-)
-
-# Add test
-gtest_discover_tests(test_schedule_refactoring)
+# Добавляем тесты
+gtest_discover_tests(schedule_tests)
