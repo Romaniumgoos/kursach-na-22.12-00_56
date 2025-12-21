@@ -10,6 +10,40 @@
 #include <iomanip>
 
 
+namespace {
+
+int getIdBySingleTextParam(sqlite3* db, const char* sql, const std::string& value) {
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return 0;
+    }
+
+    sqlite3_bind_text(stmt, 1, value.c_str(), -1, SQLITE_TRANSIENT);
+
+    int id = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        id = sqlite3_column_int(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return id;
+}
+
+int getUserIdByUsername(sqlite3* db, const std::string& username) {
+    return getIdBySingleTextParam(db,
+                                 "SELECT id FROM users WHERE username = ? LIMIT 1;",
+                                 username);
+}
+
+int getGroupIdByName(sqlite3* db, const std::string& name) {
+    return getIdBySingleTextParam(db,
+                                 "SELECT id FROM groups WHERE name = ? LIMIT 1;",
+                                 name);
+}
+
+}
+
+
 Database::Database(const std::string& file)
     : db_(nullptr), fileName(file)
 {
@@ -434,31 +468,6 @@ bool Database::initializeDemoData() {
         " ('t_melnik',       '123', 'teacher', 'Мельник А. А.',      NULL, 0),"
         " ('t_phys',         '123', 'teacher', 'Физкультуров Ф. Ф.', NULL, 0);"
 
-        // ===== TEACHER_GROUPS =====
-        "INSERT INTO teacher_groups (teacher_id, group_id) VALUES "
-        " (118, 1), (118, 2), (118, 3), (118, 4),"
-        " (119, 1), (119, 2), (119, 3), (119, 4),"
-        " (120, 1), (120, 2), (120, 3), (120, 4),"
-        " (121, 3), (121, 4),"
-        " (122, 1), (122, 2), (122, 3), (122, 4),"
-        " (123, 1), (123, 2), (123, 4),"
-        " (124, 1), (124, 2), (124, 3), (124, 4),"
-        " (125, 1), (125, 2), (125, 3), (125, 4),"
-        " (126, 1), (126, 2), (126, 3), (126, 4),"
-        " (127, 1), (127, 2), (127, 3), (127, 4),"
-        " (128, 3), (128, 4),"
-        " (129, 2),"
-        " (130, 1), (130, 2), (130, 3), (130, 4),"
-        " (131, 1), (131, 2), (131, 3), (131, 4),"
-        " (132, 1), (132, 2), (132, 3), (132, 4),"
-        " (133, 2), (133, 3), (133, 4),"
-        " (134, 1), (134, 2), (134, 3), (134, 4),"
-        " (135, 3), (135, 4),"
-        " (136, 1),"
-        " (137, 3),"
-        " (138, 4),"
-        " (139, 1), (139, 2), (139, 3), (139, 4);"
-
         // ===== ПРЕДМЕТЫ =====
         "INSERT INTO subjects (id, name) VALUES "
         " (1, 'АПЭЦ'),"
@@ -524,8 +533,7 @@ bool Database::initializeDemoData() {
     // ===== СЕМЕСТРЫ =====
     "INSERT INTO semesters (id, name, start_date, end_date) VALUES "
     " (1, '1 семестр 2025/2026', '2025-09-01', '2025-12-31');"
-
-        "COMMIT;";
+        ;
 
     char* errMsg = nullptr;
     int rc = sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg);
@@ -533,6 +541,145 @@ bool Database::initializeDemoData() {
         std::cerr << "[✗] Ошибка заполнения демо-данными: "
                   << (errMsg ? errMsg : "unknown") << "\n";
         if (errMsg) sqlite3_free(errMsg);
+        return false;
+    }
+
+    {
+        const std::vector<std::string> allGroups = {"420601", "420602", "420603", "420604"};
+        const std::vector<std::pair<std::string, std::vector<std::string>>> teacherGroups = {
+            {"t_shilin", allGroups},
+            {"t_prigara", {"420602"}},
+            {"t_nehaychik", {"420603", "420604"}},
+            {"t_phys", allGroups},
+            {"t_sevurnev", allGroups},
+            {"t_sluzhalik", allGroups},
+            {"t_batin", allGroups},
+            {"t_bobrova", allGroups},
+            {"t_ryshkel", allGroups},
+            {"t_tsavlovskaya", {"420603", "420604"}},
+            {"t_german", allGroups},
+            {"t_yuchkov", allGroups},
+            {"t_puhir", allGroups},
+            {"t_krishchenovich", allGroups},
+            {"t_lappo", allGroups},
+            {"t_nehlebova", {"420603", "420604"}},
+            {"t_deriabina", allGroups},
+            {"t_ezovit", {"420601"}},
+            {"t_trofimovich", {"420603"}},
+            {"t_melnik", {"420604"}},
+
+            {"t_gurevich", allGroups},
+            {"t_sharonova", allGroups},
+        };
+
+        const char* insertSql =
+            "INSERT OR IGNORE INTO teacher_groups(teacher_id, group_id) VALUES (?, ?);";
+
+        sqlite3_stmt* insertStmt = nullptr;
+        if (sqlite3_prepare_v2(db_, insertSql, -1, &insertStmt, nullptr) != SQLITE_OK) {
+            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+            std::cerr << "[✗] Ошибка подготовки INSERT teacher_groups: "
+                      << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+            return false;
+        }
+
+        for (const auto& tg : teacherGroups) {
+            const std::string& username = tg.first;
+            const int teacherId = getUserIdByUsername(db_, username);
+            if (teacherId <= 0) {
+                sqlite3_finalize(insertStmt);
+                sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+                std::cerr << "[✗] teacher_groups: не найден пользователь teacher username='"
+                          << username << "'\n";
+                return false;
+            }
+
+            for (const auto& groupName : tg.second) {
+                const int groupId = getGroupIdByName(db_, groupName);
+                if (groupId <= 0) {
+                    sqlite3_finalize(insertStmt);
+                    sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+                    std::cerr << "[✗] teacher_groups: не найдена группа name='"
+                              << groupName << "'\n";
+                    return false;
+                }
+
+                sqlite3_reset(insertStmt);
+                sqlite3_clear_bindings(insertStmt);
+                sqlite3_bind_int(insertStmt, 1, teacherId);
+                sqlite3_bind_int(insertStmt, 2, groupId);
+
+                const int stepRc = sqlite3_step(insertStmt);
+                if (stepRc != SQLITE_DONE) {
+                    sqlite3_finalize(insertStmt);
+                    sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+                    std::cerr << "[✗] teacher_groups: ошибка INSERT для teacher='"
+                              << username << "', group='" << groupName << "': "
+                              << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+                    return false;
+                }
+            }
+        }
+
+        sqlite3_finalize(insertStmt);
+    }
+
+    {
+        const char* verifySql =
+            "SELECT u.username, u.name, GROUP_CONCAT(g.name, ', ') "
+            "FROM teacher_groups tg "
+            "JOIN users u ON u.id = tg.teacher_id "
+            "JOIN groups g ON g.id = tg.group_id "
+            "GROUP BY u.id "
+            "ORDER BY u.username;";
+
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, verifySql, -1, &stmt, nullptr) != SQLITE_OK) {
+            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+            std::cerr << "[✗] Ошибка подготовки SELECT teacher_groups verify: "
+                      << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+            return false;
+        }
+
+        std::cout << "\n[DEMO] teacher username -> groups\n";
+        std::cout << std::left
+                  << std::setw(18) << "username" << " | "
+                  << std::setw(22) << "name" << " | "
+                  << "groups" << "\n";
+        std::cout << std::string(80, '-') << "\n";
+
+        while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+            const unsigned char* usernameText = sqlite3_column_text(stmt, 0);
+            const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+            const unsigned char* groupsText = sqlite3_column_text(stmt, 2);
+
+            const std::string username = usernameText ? reinterpret_cast<const char*>(usernameText) : "";
+            const std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+            const std::string groups = groupsText ? reinterpret_cast<const char*>(groupsText) : "";
+
+            std::cout << std::left
+                      << std::setw(18) << username << " | "
+                      << std::setw(22) << name << " | "
+                      << groups << "\n";
+        }
+
+        if (rc != SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+            std::cerr << "[✗] Ошибка выполнения SELECT teacher_groups verify: "
+                      << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+            return false;
+        }
+
+        sqlite3_finalize(stmt);
+    }
+
+    rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] Ошибка COMMIT демо-данных: "
+                  << (errMsg ? errMsg : "unknown") << "\n";
+        if (errMsg) sqlite3_free(errMsg);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
 
@@ -554,7 +701,7 @@ bool Database::findUser(const std::string& username,
         std::cerr << "[!] findUser: соединение с БД не открыто\n";
         return false;
     }
-afafesfsefsfswf
+
     const char* sql =
         "SELECT id, name, role "
         "FROM users "

@@ -62,6 +62,52 @@ int main() {
             }
         }
 
+        {
+            sqlite3_stmt* dupStmt = nullptr;
+            const char* dupSql =
+                "SELECT weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room, lesson_type, COUNT(*) "
+                "FROM schedule "
+                "WHERE group_id = 0 AND lesson_type = 'ЛК' "
+                "GROUP BY weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room, lesson_type "
+                "HAVING COUNT(*) > 1;";
+
+            if (sqlite3_prepare_v2(db.getHandle(), dupSql, -1, &dupStmt, nullptr) == SQLITE_OK) {
+                bool hasDup = false;
+                while (sqlite3_step(dupStmt) == SQLITE_ROW) {
+                    if (!hasDup) {
+                        std::cerr << "⚠ WARNING: найдены дубли общих лекций (group_id=0)\n";
+                        hasDup = true;
+                    }
+
+                    const int weekday = sqlite3_column_int(dupStmt, 0);
+                    const int lessonNumber = sqlite3_column_int(dupStmt, 1);
+                    const int weekOfCycle = sqlite3_column_int(dupStmt, 2);
+                    const int subjectId = sqlite3_column_int(dupStmt, 3);
+                    const int teacherId = sqlite3_column_int(dupStmt, 4);
+                    const unsigned char* roomText = sqlite3_column_text(dupStmt, 5);
+                    const unsigned char* lessonTypeText = sqlite3_column_text(dupStmt, 6);
+                    const int cnt = sqlite3_column_int(dupStmt, 7);
+
+                    const std::string room = roomText ? reinterpret_cast<const char*>(roomText) : "";
+                    const std::string lessonType = lessonTypeText ? reinterpret_cast<const char*>(lessonTypeText) : "";
+
+                    std::cerr
+                        << "  weekday=" << weekday
+                        << ", lesson_number=" << lessonNumber
+                        << ", week_of_cycle=" << weekOfCycle
+                        << ", subject_id=" << subjectId
+                        << ", teacher_id=" << teacherId
+                        << ", room='" << room << "'"
+                        << ", lesson_type='" << lessonType << "'"
+                        << ", count=" << cnt << "\n";
+                }
+
+                sqlite3_finalize(dupStmt);
+            } else {
+                std::cerr << "❌ Не удалось выполнить проверку дублей лекций\n";
+            }
+        }
+
         // 🔍 Проверка количества пар
         std::cout << "\n🔍 ПРОВЕРКА ЗАГРУЗКИ\n";
         sqlite3_stmt* stmt = nullptr;
