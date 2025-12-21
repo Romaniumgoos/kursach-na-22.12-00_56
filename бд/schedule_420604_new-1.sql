@@ -1,0 +1,61 @@
+-- Расписание группы 420604 (groupid=4)
+BEGIN TRANSACTION;
+
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 1, 1, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 1, 2, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 1, 3, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 1, 4, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 2, 1, 2, 121, '104-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 2, 2, 2, 121, '104-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 2, 3, 2, 121, '104-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 2, 4, 2, 121, '104-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 3, 1, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 3, 2, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 3, 3, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 3, 4, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 4, 2, 4, 126, '104-3');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 4, 3, 4, 126, '104-3');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 4, 4, 4, 126, '104-3');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 4, 1, 5, 124, '108-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 5, 1, 5, 125, '603-2');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 5, 2, 5, 125, '603-2');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 5, 3, 5, 125, '603-2');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 0, 5, 4, 5, 125, '603-2');
+
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 1, 1, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 1, 2, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 1, 3, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 1, 4, 1, 118, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 2, 1, 2, 121, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 2, 2, 2, 121, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 2, 3, 2, 121, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 2, 4, 2, 121, '414-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 3, 1, 3, 139, '503-3');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 3, 3, 3, 139, '503-3');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 3, 2, 2, 130, '604-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 3, 4, 2, 130, '604-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 4, 2, 2, 130, '604-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 1, 4, 4, 2, 130, '604-5');
+
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 1, 1, 9, 136, '605-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 1, 3, 9, 136, '605-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 1, 2, 11, 119, '605-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 1, 4, 11, 119, '605-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 2, 1, 2, 130, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 2, 3, 2, 130, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 2, 2, 5, 124, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 2, 4, 5, 124, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 3, 1, 5, 125, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 3, 2, 5, 125, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 3, 3, 5, 125, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 3, 4, 5, 125, '106-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 4, 1, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 4, 2, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 4, 3, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 4, 4, 3, 139, 'спортзал');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 5, 1, 2, 120, '512-4');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 5, 3, 12, 137, '605-5');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 5, 2, 5, 125, '603-2');
+INSERT INTO schedule (groupid, subgroup, weekday, lessonnumber, weekofcycle, subjectid, teacherid, room) VALUES (4, 0, 2, 5, 4, 4, 126, '503-3');
+
+COMMIT;
