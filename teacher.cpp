@@ -107,14 +107,7 @@ static bool selectLessonForAbsence(Database& db,
         lessons.push_back(les);
     }
 
-    const char* pairTimes[] = {
-        "08:30-09:55",
-        "10:05-11:30",
-        "12:00-13:25",
-        "13:35-15:00",
-        "15:30-16:55",
-        "17:05-18:30"
-    };
+    const auto& pairTimes = getPairTimes();
 
     std::cout << "\nВаши пары для группы " << groupId
               << " (неделя " << week_of_cycle << "):\n";
@@ -388,25 +381,29 @@ sch.id,
                 break;
             }
 
-            const char* pairTimes[] = {"08:30-09:55", "10:05-11:30", "12:00-13:25",
-                                       "13:35-15:00", "15:30-16:55", "17:05-18:30"};
-            const char* dayNames[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
+                const auto& dayNames  = getDayNames();
+                const auto& pairTimes = getPairTimes();
 
-            std::cout << "\nВыберите пару для выставления оценки:\n";
-            for (size_t i = 0; i < lessons.size(); ++i) {
-                const auto& les = lessons[i];
-                std::string dateLabel;
-                if (les.dateISO.size() == 10)
-                    dateLabel = les.dateISO.substr(8,2) + "-" + les.dateISO.substr(5,2);
+                std::cout << "\nВыберите пару для выставления оценки:\n";
+                for (size_t i = 0; i < lessons.size(); ++i) {
+                    const auto& les = lessons[i];
 
-                std::cout << (i + 1) << ") " << dayNames[les.weekday] << " " << dateLabel
-                          << ", пара " << les.lessonNumber;
-                if (les.lessonNumber >= 1 && les.lessonNumber <= 6)
-                    std::cout << " (" << pairTimes[les.lessonNumber - 1] << ")";
-                if (les.subgroup == 1) std::cout << ", подгр. 1";
-                else if (les.subgroup == 2) std::cout << ", подгр. 2";
-                std::cout << ", " << les.subjectName << " [" << les.lessonType << "]\n";
-            }
+                    const std::string dateLabel = formatDateLabel(les.dateISO);
+
+                    std::cout << (i + 1) << ") "
+                              << dayNames[les.weekday] << " " << dateLabel
+                              << ", " << les.lessonNumber;
+
+                    if (les.lessonNumber >= 1 && les.lessonNumber <= 6) {
+                        std::cout << " (" << pairTimes[les.lessonNumber - 1] << ")";
+                    }
+
+                    if (les.subgroup == 1) std::cout << ", подгр. 1";
+                    else if (les.subgroup == 2) std::cout << ", подгр. 2";
+
+                    std::cout << ", " << les.subjectName << " [" << les.lessonType << "]\n";
+                }
+
 
             int choice = readChoiceFromList("Номер пары", 1, (int)lessons.size(), true, 0);
             if (choice == 0) {
@@ -854,17 +851,15 @@ sch.id,
         return;
     }
 
-    const char* pairTimes[] = {"08:30-09:55", "10:05-11:30", "12:00-13:25",
-                               "13:35-15:00", "15:30-16:55", "17:05-18:30"};
-    const char* dayNames[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
+    const auto& dayNames = getDayNames();
+    const auto& pairTimes = getPairTimes();
 
     std::cout << "\nВыберите пару для пропуска:\n";
     for (size_t i = 0; i < lessons.size(); ++i) {
         const auto& les = lessons[i];
 
         std::string dateLabel;
-        if (les.dateISO.size() == 10)
-            dateLabel = les.dateISO.substr(8,2) + "-" + les.dateISO.substr(5,2);
+        formatDateLabel(les.dateISO);
 
         std::cout << (i + 1) << ") " << dayNames[les.weekday] << " " << dateLabel
                   << ", пара " << les.lessonNumber;
@@ -1032,15 +1027,9 @@ bool Teacher::viewMySchedule(int week_of_cycle)
     std::cout << "║ МОЁ РАСПИСАНИЕ - НЕДЕЛЯ " << week_of_cycle << "\n";
     std::cout << "╚══════════════════════════════════════════════════════════════╝\n";
 
-    const char* dayNames[] = {"ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"};
-    const char* pairTimes[] = {
-        "08:30-09:55",
-        "10:05-11:30",
-        "12:00-13:25",
-        "13:35-15:00",
-        "15:30-16:55",
-        "17:05-18:30"
-    };
+    const auto& dayNames = getDayNames();
+    const auto& pairTimes = getPairTimes();
+
 
     int currentDay = -1;
     bool found = false;

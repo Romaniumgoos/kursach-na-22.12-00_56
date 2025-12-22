@@ -7,6 +7,32 @@
 #include <limits>
 #include <sstream>
 #include <iomanip>
+#include <cctype>
+
+const std::array<const char*, 6>& getDayNames() {
+    static const std::array<const char*, 6> kDayNames = {
+        "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"
+    };
+    return kDayNames;
+}
+
+const std::array<const char*, 6>& getPairTimes() {
+    static const std::array<const char*, 6> kPairTimes = {
+        "08:30-09:55",
+        "10:05-11:30",
+        "12:00-13:25",
+        "13:35-15:00",
+        "15:30-16:55",
+        "17:05-18:30"
+    };
+    return kPairTimes;
+}
+
+std::string formatDateLabel(const std::string& iso) {
+    // ожидаем "YYYY-MM-DD"
+    if (iso.size() != 10 || iso[4] != '-' || iso[7] != '-') return "";
+    return iso.substr(8, 2) + "-" + iso.substr(5, 2);
+}
 
 // ---------- Safe input helpers ----------
 

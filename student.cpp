@@ -146,15 +146,8 @@ bool Student::viewMySchedule(Database& db) {
     int week = chooseWeekOfCycleOrDate(db);
     if (week == 0) return false;
 
-    const char* dayNames[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
-    const char* pairTimes[] = {
-        "08:30-09:55",
-        "10:05-11:30",
-        "12:00-13:25",
-        "13:35-15:00",
-        "15:30-16:55",
-        "17:05-18:30"
-    };
+    const auto& dayNames = getDayNames();
+    const auto& pairTimes = getPairTimes();
 
     std::cout << "\n╔════════════════════════════════════════════════════╗\n";
     std::cout << "║ МОЁ РАСПИСАНИЕ | Группа " << groupId

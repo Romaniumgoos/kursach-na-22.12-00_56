@@ -1739,24 +1739,25 @@ bool Database::getScheduleForGroup(int group_id, int weekday, int week_of_cycle,
     rows.clear();
 
     const char* sql = R"(
-       SELECT
+    SELECT
     sch.id,
-    sch.weekday,
     sch.lesson_number,
-    s.name as subject_name,
-    u.name as teacher_name,
+    sch.sub_group,
+    subj.name,
     sch.room,
-    sch.lesson_type,
-    sch.sub_group
+    COALESCE(sch.lesson_type, ''),
+    u.name AS teacher_name
 FROM schedule sch
-JOIN subjects s ON sch.subject_id = s.id
-JOIN users u ON sch.teacher_id = u.id
-WHERE sch.weekday = ?
+JOIN subjects subj ON sch.subject_id = subj.id
+JOIN users    u    ON sch.teacher_id = u.id
+WHERE (sch.group_id = ? OR sch.group_id = 0)
+  AND sch.weekday = ?
   AND sch.week_of_cycle = ?
-  AND (sch.group_id = ? OR sch.group_id = 0)  // Общие или для конкретной группы
-  AND (sch.sub_group = 0 OR sch.sub_group = ?)  // Общие или для конкретной подгруппы
 ORDER BY sch.lesson_number, sch.sub_group
-    )";
+
+)";
+
+
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
@@ -1846,15 +1847,19 @@ bool Database::getScheduleForTeacherGroup(
 ) {
     rows.clear();
     const char* sql = R"(
-        SELECT sch.id, sch.weekday, sch.lesson_number, sch.sub_group,
-       s.id as subject_id, s.name as subject_name
-FROM schedule sch
-JOIN subjects s ON sch.subject_id = s.id
-WHERE sch.teacher_id = ?
-  AND sch.group_id = ?
-  AND (sch.sub_group = 0 OR sch.sub_group = ?)  // Оставляем только нужные подгруппы
-  AND (sch.week_of_cycle = ? OR ? = 0)  // Добавляем фильтр по неделе, если нужно
-ORDER BY sch.weekday, sch.lesson_number
+        SELECT
+    s.id,
+    s.subject_id,
+    s.weekday,
+    s.lesson_number,
+    s.sub_group,
+    subj.name
+FROM schedule s
+JOIN subjects subj ON s.subject_id = subj.id
+WHERE s.teacher_id = ?
+  AND s.group_id = ?
+ORDER BY s.weekday, s.lesson_number, s.sub_group
+
     )";
 
     sqlite3_stmt* stmt = nullptr;
