@@ -116,9 +116,10 @@ static bool selectLessonForAbsence(Database& db,
 
         std::string dateISO;
         std::string dateLabel;
-        if (db.getDateForWeekday(week_of_cycle, les.dayOfWeek, dateISO) && dateISO.size() == 10) {
-            dateLabel = dateISO.substr(8, 2) + "-" + dateISO.substr(5, 2);
+        if (db.getDateForWeekday(week_of_cycle, les.dayOfWeek, dateISO)) {
+            dateLabel = formatDateLabel(dateISO);
         }
+
 
         std::cout << (i + 1) << ") День " << les.dayOfWeek;
         if (!dateLabel.empty()) std::cout << " (" << dateLabel << ")";
@@ -1050,9 +1051,10 @@ bool Teacher::viewMySchedule(int week_of_cycle)
 
             std::string dateISO;
             std::string dateLabel;
-            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO) && dateISO.size() == 10) {
-                dateLabel = dateISO.substr(8, 2) + "-" + dateISO.substr(5, 2);
+            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO)) {
+                dateLabel = formatDateLabel(dateISO);
             }
+
 
             if (weekday >= 0 && weekday <= 5) {
                 if (!dateLabel.empty()) std::cout << "\n[" << dayNames[weekday] << "] (" << dateLabel << ")\n";

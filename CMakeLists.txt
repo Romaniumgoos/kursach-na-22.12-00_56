@@ -20,9 +20,14 @@ add_executable(${PROJECT_NAME}
         menu.cpp
         AdminService.h
         AdminService.cpp
+        core/result.h
+        services/student_service.h
+        services/student_service.cpp
 )
 
-target_include_directories(${PROJECT_NAME}
-        PRIVATE
-        third_party/sqlite
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
 )
+
+

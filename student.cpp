@@ -1,4 +1,5 @@
 #include "student.h"
+#include "services/student_service.h"
 
 #include "database.h"
 #include "statistics.h"
@@ -16,6 +17,7 @@
 void Student::displayMenu(Database& db) {
     // загрузить группу и подгруппу перед первым показом меню
     loadGroupInfo(db);
+    StudentService svc(db);
 
     while (true) {
         std::cout << "\n[STUDENT MENU]\n";
@@ -166,9 +168,10 @@ bool Student::viewMySchedule(Database& db) {
 
         std::string dateISO;
         std::string dateLabel;
-        if (db.getDateForWeekday(week, weekday, dateISO) && dateISO.size() == 10) {
-            dateLabel = dateISO.substr(8, 2) + "-" + dateISO.substr(5, 2);
+        if (db.getDateForWeekday(week, weekday, dateISO)) {
+            dateLabel = formatDateLabel(dateISO);
         }
+
 
         if (!dateLabel.empty()) {
             std::cout << "\n[" << dayNames[weekday] << "] (" << dateLabel << ")\n";
@@ -217,12 +220,15 @@ bool Student::viewMySchedule(Database& db) {
 
 // === МОИ ПРОПУСКИ ===
 void Student::viewMyAbsences(Database& db) {
+    StudentService svc(db);
     int semesterId = 1;
-    std::vector<std::tuple<std::string,int,std::string,std::string>> absences;
-    if (!db.getStudentAbsencesForSemester(getId(), semesterId, absences)) {
-        std::cout << "✗ Ошибка при получении данных.\n";
+    auto absRes = svc.getAbsencesForSemester(getId(), semesterId);
+    if (!absRes.ok) {
+        std::cout << absRes.error << "\n";
         return;
     }
+    const auto& absences = absRes.value;
+
 
     if (absences.empty()) {
         std::cout << "Пропусков за семестр не найдено.\n";
