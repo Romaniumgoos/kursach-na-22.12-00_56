@@ -2299,34 +2299,33 @@ bool Database::deleteScheduleEntry(int scheduleId) {
 
 // ===== ПРОВЕРКА ЗАНЯТОСТИ ПРЕПОДАВАТЕЛЯ =====
 bool Database::isTeacherBusy(int teacher_id, int weekday,
-                              int lesson_number, int week_of_cycle, 
-                              int exclude_schedule_id) {
+                              int lesson_number, int week_of_cycle) {
     if (!db_) return false;
 
     const char* sql = R"(
         SELECT COUNT(*)
         FROM schedule
         WHERE teacher_id = ?
+<<<<<<< HEAD
   AND weekday = ?
   AND lesson_number = ?
   AND week_of_cycle = ?
   AND (id <> ? OR ? = 0)  // Более понятный порядок условий
+=======
+          AND weekday = ?
+          AND lesson_number = ?
+          AND week_of_cycle = ?
+>>>>>>> parent of b351274 (закрыл блок А)
     )";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] Ошибка подготовки запроса isTeacherBusy: " 
-                  << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, teacher_id);
     sqlite3_bind_int(stmt, 2, weekday);
     sqlite3_bind_int(stmt, 3, lesson_number);
     sqlite3_bind_int(stmt, 4, week_of_cycle);
-    sqlite3_bind_int(stmt, 5, exclude_schedule_id);
-    sqlite3_bind_int(stmt, 6, exclude_schedule_id);
 
     int count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -2334,49 +2333,40 @@ bool Database::isTeacherBusy(int teacher_id, int weekday,
     }
 
     sqlite3_finalize(stmt);
-    
-    if (count > 0) {
-        std::cout << "[!] Преподаватель с ID " << teacher_id 
-                  << " уже занят в день " << weekday 
-                  << ", пара " << lesson_number 
-                  << ", неделя " << week_of_cycle << std::endl;
-    }
-    
     return count > 0;
 }
 
 // ===== ПРОВЕРКА ЗАНЯТОСТИ АУДИТОРИИ =====
 bool Database::isRoomBusy(const std::string& room, int weekday,
-                          int lesson_number, int week_of_cycle,
-                          int exclude_schedule_id) {
-    if (!db_ || room.empty()) return false;
+                          int lesson_number, int week_of_cycle) {
+    if (!db_) return false;
 
     const char* sql = R"(
         SELECT COUNT(*)
         FROM schedule
         WHERE room = ?
+<<<<<<< HEAD
   AND weekday = ?
   AND lesson_number = ?
   AND week_of_cycle = ?
   AND room IS NOT NULL
   AND room <> ''
   AND (id <> ? OR ? = 0)  // Более понятный порядок условий
+=======
+          AND weekday = ?
+          AND lesson_number = ?
+          AND week_of_cycle = ?
+>>>>>>> parent of b351274 (закрыл блок А)
     )";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] Ошибка подготовки запроса isRoomBusy: " 
-                  << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_text(stmt, 1, room.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_int(stmt, 2, weekday);
     sqlite3_bind_int(stmt, 3, lesson_number);
     sqlite3_bind_int(stmt, 4, week_of_cycle);
-    sqlite3_bind_int(stmt, 5, exclude_schedule_id);
-    sqlite3_bind_int(stmt, 6, exclude_schedule_id);
 
     int count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -2384,14 +2374,6 @@ bool Database::isRoomBusy(const std::string& room, int weekday,
     }
 
     sqlite3_finalize(stmt);
-    
-    if (count > 0) {
-        std::cout << "[!] Аудитория " << room 
-                  << " уже занята в день " << weekday 
-                  << ", пара " << lesson_number 
-                  << ", неделя " << week_of_cycle << std::endl;
-    }
-    
     return count > 0;
 }
 
@@ -2438,34 +2420,15 @@ bool Database::getTeachersWithSubjects(
 
 bool Database::addScheduleEntry(int group_id, int sub_group, int weekday, int lesson_number,
                                 int week_of_cycle, int subject_id, int teacher_id,
-                                const std::string& room, const std::string& lesson_type) {
-    if (!db_) {
-        std::cerr << "[✗] addScheduleEntry: БД не подключена\n";
-        return false;
-    }
+                                const std::string& room, const std::string& lesson_type ) {
+    if (!db_) return false;
 
-    // Если это лекция — устанавливаем group_id = 0 и sub_group = 0
-    int finalgroup_id = (lesson_type == "ЛК") ? 0 : group_id;
-    int finalsub_group = (lesson_type == "ЛК") ? 0 : sub_group;
-
-    // Проверяем, не занят ли преподаватель в это время (excludeScheduleId = 0 для новой записи)
-    if (isTeacherBusy(teacher_id, weekday, lesson_number, week_of_cycle, 0)) {
-        std::cerr << "[✗] Ошибка: Преподаватель уже занят в это время" << std::endl;
-        return false;
-    }
-
-    // Проверяем, не занята ли аудитория в это время (если указана)
-    if (!room.empty() && isRoomBusy(room, weekday, lesson_number, week_of_cycle, 0)) {
-        std::cerr << "[✗] Ошибка: Аудитория уже занята в это время" << std::endl;
-        return false;
-    }
-
-    // Проверяем, не занята ли ячейка расписания для группы/подгруппы
-    if (isScheduleSlotBusy(finalgroup_id, finalsub_group, weekday, lesson_number, week_of_cycle)) {
-        std::cerr << "[✗] Ошибка: В это время у " 
-                  << (finalsub_group > 0 ? "подгруппы" : "группы") 
-                  << " уже есть занятие" << std::endl;
-        return false;
+    // Если лекция — записываем её как общую (group_id = 0, sub_group = 0)
+    int finalgroup_id = group_id;
+    int finalsub_group = sub_group;
+    if (lesson_type == "ЛК") {
+        finalgroup_id = 0;
+        finalsub_group = 0;
     }
 
     const char* sql = R"(
@@ -2477,11 +2440,7 @@ bool Database::addScheduleEntry(int group_id, int sub_group, int weekday, int le
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] Ошибка подготовки запроса addScheduleEntry: " 
-                  << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, finalgroup_id);
     sqlite3_bind_int(stmt, 2, finalsub_group);
@@ -2491,19 +2450,11 @@ bool Database::addScheduleEntry(int group_id, int sub_group, int weekday, int le
     sqlite3_bind_int(stmt, 6, subject_id);
     sqlite3_bind_int(stmt, 7, teacher_id);
     sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 9, lesson_type.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 9, lesson_type .c_str(), -1, SQLITE_TRANSIENT);
 
     rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-
-    if (rc == SQLITE_DONE) {
-        std::cout << "[✓] Запись успешно добавлена в расписание" << std::endl;
-        return true;
-    } else {
-        std::cerr << "[✗] Ошибка при добавлении записи в расписание: " 
-                  << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    return rc == SQLITE_DONE;
 }
 
 bool Database::deleteGrade(int grade_id) {
@@ -2533,22 +2484,6 @@ bool Database::updateScheduleEntry(int schedule_id, int group_id, int sub_group,
         std::cerr << "[✗] updateScheduleEntry: БД не подключена\n";
         return false;
     }
-
-    // Проверяем, не занят ли преподаватель в это время (исключая текущую запись)
-    if (isTeacherBusy(teacher_id, weekday, lesson_number, week_of_cycle, schedule_id)) {
-        std::cerr << "[✗] Ошибка: Преподаватель уже занят в это время" << std::endl;
-        return false;
-    }
-
-    // Проверяем, не занята ли аудитория в это время (если указана, исключая текущую запись)
-    if (!room.empty() && isRoomBusy(room, weekday, lesson_number, week_of_cycle, schedule_id)) {
-        std::cerr << "[✗] Ошибка: Аудитория уже занята в это время" << std::endl;
-        return false;
-    }
-
-    // Если это лекция — устанавливаем group_id = 0 и sub_group = 0
-    int finalgroup_id = (lesson_type == "ЛК") ? 0 : group_id;
-    int finalsub_group = (lesson_type == "ЛК") ? 0 : sub_group;
 
     const char* sql = R"(
         UPDATE schedule
@@ -2580,8 +2515,8 @@ WHERE id = ?
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, finalgroup_id);
-    sqlite3_bind_int(stmt, 2, finalsub_group);
+    sqlite3_bind_int(stmt, 1, group_id);
+    sqlite3_bind_int(stmt, 2, sub_group);
     sqlite3_bind_int(stmt, 3, weekday);
     sqlite3_bind_int(stmt, 4, lesson_number);
     sqlite3_bind_int(stmt, 5, week_of_cycle);
@@ -2595,59 +2530,10 @@ WHERE id = ?
     sqlite3_finalize(stmt);
 
     if (rc == SQLITE_DONE && sqlite3_changes(db_) > 0) {
-        std::cout << "[✓] Запись расписания успешно обновлена (ID: " << schedule_id << ")" << std::endl;
         return true;
     }
 
     std::cerr << "[✗] updateScheduleEntry: не удалось обновить запись с ID " << schedule_id << "\n";
     return false;
 }
-bool Database::scheduleEntryExactExists(int groupId, int subgroup, int weekday,
-                                      int lessonNumber, int weekOfCycle, int subjectId,
-                                      int teacherId, const std::string& room,
-                                      const std::string& lessonType, int excludeScheduleId) {
-    if (!db_) return false;
 
-    const char* sql = R"(
-        SELECT COUNT(*)
-        FROM schedule
-        WHERE group_id = ?
-          AND sub_group = ?
-          AND weekday = ?
-          AND lesson_number = ?
-          AND week_of_cycle = ?
-          AND subject_id = ?
-          AND teacher_id = ?
-          AND COALESCE(room, '') = COALESCE(?, '')
-          AND COALESCE(lesson_type, '') = COALESCE(?, '')
-          AND (? = 0 OR id <> ?)
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "[✗] Ошибка подготовки запроса scheduleEntryExactExists: "
-                 << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    // Привязываем параметры
-    sqlite3_bind_int(stmt, 1, groupId);
-    sqlite3_bind_int(stmt, 2, subgroup);
-    sqlite3_bind_int(stmt, 3, weekday);
-    sqlite3_bind_int(stmt, 4, lessonNumber);
-    sqlite3_bind_int(stmt, 5, weekOfCycle);
-    sqlite3_bind_int(stmt, 6, subjectId);
-    sqlite3_bind_int(stmt, 7, teacherId);
-    sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 9, lessonType.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 10, excludeScheduleId);
-    sqlite3_bind_int(stmt, 11, excludeScheduleId);
-
-    bool exists = false;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        exists = (sqlite3_column_int(stmt, 0) > 0);
-    }
-
-    sqlite3_finalize(stmt);
-    return exists;
-}

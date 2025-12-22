@@ -212,10 +212,10 @@ bool deleteScheduleEntry(int scheduleId);
     // ===== НОВЫЕ МЕТОДЫ ДЛЯ ПРОВЕРКИ КОНФЛИКТОВ =====
 
     // Проверка занятости преподавателя в указанный слот
-    bool isTeacherBusy(int teacher_id, int weekday, int lesson_number, int week_of_cycle, int excludeScheduleId = 0);
+    bool isTeacherBusy(int teacher_id, int weekday, int lesson_number, int week_of_cycle);
 
     // Проверка занятости аудитории в указанный слот
-    bool isRoomBusy(const std::string& room, int weekday, int lesson_number, int week_of_cycle, int excludeScheduleId = 0);
+    bool isRoomBusy(const std::string& room, int weekday, int lesson_number, int week_of_cycle);
 
     // Получить список преподавателей с их предметами (для удобного выбора)
     // Возвращает: (teacher_id, teacher_name, "Предмет1, Предмет2, ...")
@@ -226,11 +226,7 @@ bool deleteScheduleEntry(int scheduleId);
     bool updateScheduleEntry(int schedule_id, int group_id, int sub_group, int weekday,
                              int lesson_number, int week_of_cycle, int subject_id,
                              int teacher_id, const std::string& room, const std::string& lesson_type);
-    // В классе Database добавьте:
-    bool scheduleEntryExactExists(int groupId, int subgroup, int weekday, int lessonNumber,
-                                int weekOfCycle, int subjectId, int teacherId,
-                                const std::string& room, const std::string& lessonType,
-                                int excludeScheduleId = 0);
+
 };
 
 

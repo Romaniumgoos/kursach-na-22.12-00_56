@@ -566,11 +566,9 @@ case 6: {
             std::cout << "ID преподавателя: ";
             std::cin >> teacherId;
 
-            // занятость преподавателя (excludeScheduleId = 0 для новой записи)
-            if (db.isTeacherBusy(teacherId, weekday, lessonNumber, week, 0)) {
-                std::cout << "[✗] Ошибка: Преподаватель уже занят в это время.\n";
-                std::cout << "    День: " << weekday << ", Пара: " << lessonNumber 
-                          << ", Неделя: " << week << std::endl;
+            // занятость преподавателя
+            if (db.isTeacherBusy(teacherId, weekday, lessonNumber, week)) {
+                std::cout << "Преподаватель уже занят в это время.\n";
                 continue;
             }
 
@@ -592,11 +590,9 @@ case 6: {
                 continue;
             }
 
-            // занятость аудитории (excludeScheduleId = 0 для новой записи)
-            if (db.isRoomBusy(room, weekday, lessonNumber, week, 0)) {
-                std::cout << "[✗] Ошибка: Аудитория уже занята в это время.\n";
-                std::cout << "    День: " << weekday << ", Пара: " << lessonNumber 
-                          << ", Неделя: " << week << ", Аудитория: " << room << std::endl;
+            // занятость аудитории
+            if (db.isRoomBusy(room, weekday, lessonNumber, week)) {
+                std::cout << "Аудитория уже занята.\n";
                 continue;
             }
 
@@ -620,12 +616,7 @@ case 6: {
                     std::cout << "Некорректный выбор типа.\n";
                     continue;
             }
-            // Проверка на точный дубликат (только для новой записи)
-            if (db.scheduleEntryExactExists(groupId, subgroup, weekday, lessonNumber, week,
-                                          subjectId, teacherId, room, lessonType)) {
-                std::cout << "[✗] Ошибка: Такая запись уже существует (точный дубль)\n";
-                continue;
-                                          }
+
             // спросить, повторять ли пару на все недели цикла
             std::cout << "Повторять эту пару на все недели цикла (1-4)? (1 - да, 0 - нет): ";
             int repeatAll = 0;
@@ -660,23 +651,22 @@ case 6: {
 
             sqlite3* raw_db = db.getHandle();
             const char* sql = R"(
-        SELECT weekday, lesson_number, sub_group,
-               subject_id, teacher_id, room, lesson_type, group_id
-        FROM schedule
-        WHERE id = ?
-    )";
+                SELECT weekday, lessonnumber, subgroup,
+                       subjectid, teacherid, room, lesson_type, groupid
+                FROM schedule
+                WHERE id = ?
+            )";
 
             sqlite3_stmt* stmt = nullptr;
             int rc2 = sqlite3_prepare_v2(raw_db, sql, -1, &stmt, nullptr);
             if (rc2 != SQLITE_OK) {
-                std::cerr << "[✗] Ошибка подготовки запроса: " << sqlite3_errmsg(raw_db) << "\n";
+                std::cout << "Ошибка поиска пары.\n";
                 continue;
             }
-
             sqlite3_bind_int(stmt, 1, scheduleId);
             rc2 = sqlite3_step(stmt);
             if (rc2 != SQLITE_ROW) {
-                std::cout << "[✗] Пара с ID " << scheduleId << " не найдена.\n";
+                std::cout << "Пара с таким ID не найдена.\n";
                 sqlite3_finalize(stmt);
                 continue;
             }
@@ -693,8 +683,6 @@ case 6: {
             std::string curRoom = r ? r : "";
             std::string curType = t ? t : "";
             sqlite3_finalize(stmt);
-
-            // ... остальной код остается без изменений ...
 
             int newWeekday  = curWeekday;
             int newLesson   = curLesson;
@@ -780,10 +768,8 @@ case 6: {
                 std::cin >> newTeacher;
 
                 if (newTeacher != curTeacherId &&
-                    db.isTeacherBusy(newTeacher, newWeekday, newLesson, week, scheduleId)) {
-                    std::cout << "[✗] Ошибка: Новый преподаватель уже занят в это время.\n";
-                    std::cout << "    День: " << newWeekday << ", Пара: " << newLesson 
-                              << ", Неделя: " << week << std::endl;
+                    db.isTeacherBusy(newTeacher, newWeekday, newLesson, week)) {
+                    std::cout << "Новый преподаватель уже занят в это время.\n";
                     continue;
                 }
             }
@@ -808,10 +794,8 @@ case 6: {
                 }
 
                 if (newRoom != curRoom &&
-                    db.isRoomBusy(newRoom, newWeekday, newLesson, week, scheduleId)) {
-                    std::cout << "[✗] Ошибка: Новая аудитория уже занята в это время.\n";
-                    std::cout << "    День: " << newWeekday << ", Пара: " << newLesson 
-                              << ", Неделя: " << week << ", Аудитория: " << newRoom << std::endl;
+                    db.isRoomBusy(newRoom, newWeekday, newLesson, week)) {
+                    std::cout << "Новая аудитория уже занята.\n";
                     continue;
                 }
             }
@@ -832,12 +816,7 @@ case 6: {
                         continue;
                 }
             }
-            // Проверка на точный дубликат (исключая текущую запись)
-            if (db.scheduleEntryExactExists(newGroupId, newSubgroup, newWeekday, newLesson, week,
-                                          newSubject, newTeacher, newRoom, newType, scheduleId)) {
-                std::cout << "[✗] Ошибка: Такая запись уже существует (точный дубль)\n";
-                continue;
-                                          }
+
             if (db.updateScheduleEntry(scheduleId,
                                        newGroupId,
                                        newSubgroup,
