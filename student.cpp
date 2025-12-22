@@ -25,11 +25,9 @@ void Student::displayMenu(Database& db) {
         std::cout << "4. Моё расписание\n";
         std::cout << "0. Выход в авторизацию\n";
 
-        int choice = 0;
-        std::cin >> choice;
-        if (choice == 0) {
-            break;
-        }
+        int choice = readChoiceFromList("Ваш выбор", 0, 4, false, 0);
+        if (choice == 0) break;
+
 
         switch (choice) {
         case 1: { // Мои оценки по предметам (семестр фиксирован = 1)

@@ -1,13 +1,14 @@
 #include "teacher.h"
 #include "database.h"
 #include "statistics.h"
+#include "menu.h"
 
 #include <iostream>
 #include <vector>
 #include <utility>
 #include <tuple>
 #include <iomanip>
-#include "menu.h"
+#include <algorithm>
 // ===== КОНСТРУКТОР =====
 
 Teacher::Teacher(int teacher_id,
@@ -33,12 +34,11 @@ struct LessonInfo {
 
 // Выбор пары из расписания препода по конкретной группе.
 // Заполняет outSubjectId и возвращает true при успехе.
-static bool selectLessonFromSchedule(
-    Database& db,
-    int teacherId,
-    int groupId,
-    int& outSubjectId
-) {
+static bool selectLessonFromSchedule(Database& db,
+                                     int teacherId,
+                                     int groupId,
+                                     int& outSubjectId)
+{
     std::vector<std::tuple<int,int,int,int,int,std::string>> rows;
     if (!db.getScheduleForTeacherGroup(teacherId, groupId, rows) || rows.empty()) {
         std::cout << "Для этой группы у вас нет пар по расписанию.\n";
@@ -67,11 +67,9 @@ static bool selectLessonFromSchedule(
                   << " (subjectId = " << les.subjectId << ")\n";
     }
 
-    std::cout << "Выберите номер пары: ";
-    int choice = 0;
-    std::cin >> choice;
-    if (choice < 1 || choice > (int)lessons.size()) {
-        std::cout << "Некорректный выбор.\n";
+    int choice = readChoiceFromList("Выберите номер пары", 1, (int)lessons.size(), true, 0);
+    if (choice == 0) {
+        std::cout << "Отмена.\n";
         return false;
     }
 
@@ -81,16 +79,15 @@ static bool selectLessonFromSchedule(
 
 
 // Выбор конкретной пары препода по группе и неделе с возвратом scheduleId и даты-слота.
-static bool selectLessonForAbsence(
-    Database& db,
-    int teacherId,
-    int groupId,
-    int week_of_cycle,
-    int& outScheduleId,
-    int& outSubjectId,
-    int& outWeekday,
-    int& outLessonNumber
-) {
+static bool selectLessonForAbsence(Database& db,
+                                   int teacherId,
+                                   int groupId,
+                                   int week_of_cycle,
+                                   int& outScheduleId,
+                                   int& outSubjectId,
+                                   int& outWeekday,
+                                   int& outLessonNumber)
+{
     std::vector<std::tuple<int,int,int,int,int,std::string>> rows;
     if (!db.getScheduleForTeacherGroup(teacherId, groupId, rows) || rows.empty()) {
         std::cout << "Для этой группы у вас нет пар по расписанию.\n";
@@ -131,27 +128,22 @@ static bool selectLessonForAbsence(
         }
 
         std::cout << (i + 1) << ") День " << les.dayOfWeek;
-        if (!dateLabel.empty()) {
-            std::cout << " (" << dateLabel << ")";
-        }
+        if (!dateLabel.empty()) std::cout << " (" << dateLabel << ")";
 
         std::cout << ", " << les.pairNumber << "-я пара";
-        if (les.pairNumber >= 1 && les.pairNumber <= 6) {
+        if (les.pairNumber >= 1 && les.pairNumber <= 6)
             std::cout << " (" << pairTimes[les.pairNumber - 1] << ")";
-        }
 
-        if (les.subgroup == 1)      std::cout << ", подгр. 1";
+        if (les.subgroup == 1) std::cout << ", подгр. 1";
         else if (les.subgroup == 2) std::cout << ", подгр. 2";
 
         std::cout << ", предмет: " << les.subjectName
                   << " (subjectId = " << les.subjectId << ")\n";
     }
 
-    std::cout << "Выберите номер пары: ";
-    int choice = 0;
-    std::cin >> choice;
-    if (choice < 1 || choice > (int)lessons.size()) {
-        std::cout << "Некорректный выбор.\n";
+    int choice = readChoiceFromList("Выберите номер пары", 1, (int)lessons.size(), true, 0);
+    if (choice == 0) {
+        std::cout << "Отмена.\n";
         return false;
     }
 
@@ -182,16 +174,46 @@ void Teacher::displayMenu(Database& db) {
         std::cout << "10. Изменить или удалить оценку\n";
         std::cout << "0. Выход в авторизацию\n";
 
-        int choice = 0;
-        std::cin >> choice;
+        int choice = readChoiceFromList("Ваш выбор", 0, 10, false, 0);
+        if (choice == 0) break;
 
-        if (choice == 0) {
-            break;
-        }
 
         switch (choice) {
-        case 1: {
-            // 1. Список предметов преподавателя
+            case 1: {
+                std::vector<std::pair<int, std::string>> subjects;
+                if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
+                    std::cout << "За вами не закреплены предметы.\n";
+                    break;
+                }
+
+                std::cout << "\nВаши предметы:\n";
+                for (const auto& s : subjects) {
+                    std::cout << s.first << ". " << s.second << "\n";
+                }
+
+                int subjectId = readIntInRange("Введите id предмета", 1, 1000000, subjects.front().first, true, 0);
+                if (subjectId == 0) break;
+
+                std::vector<std::pair<int, std::string>> groups;
+                if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
+                    std::cout << "За вами не закреплены группы.\n";
+                    break;
+                }
+
+                std::cout << "\nДоступные группы:\n";
+                for (const auto& g : groups) {
+                    std::cout << g.first << ". " << g.second << "\n";
+                }
+
+                int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+                if (groupId == 0) break;
+
+                int semesterId = 1;
+                double avg = Statistics::calculateGroupSubjectAverage(db, groupId, subjectId, semesterId);
+                std::cout << "\nСредний балл группы по предмету: " << avg << "\n";
+                break;
+            }
+         case 2: {
             std::vector<std::pair<int, std::string>> subjects;
             if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
                 std::cout << "За вами не закреплены предметы.\n";
@@ -203,50 +225,9 @@ void Teacher::displayMenu(Database& db) {
                 std::cout << s.first << ". " << s.second << "\n";
             }
 
-            std::cout << "Введите id предмета: ";
-            int subjectId = 0;
-            std::cin >> subjectId;
+            int subjectId = readIntInRange("Введите id предмета", 1, 1000000, subjects.front().first, true, 0);
+            if (subjectId == 0) break;
 
-            // 2. Список групп
-            std::vector<std::pair<int, std::string>> groups;
-            if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
-                std::cout << "За вами не закреплены группы.\n";
-                break;
-            }
-
-            std::cout << "\nДоступные группы:\n";
-            for (const auto& g : groups) {
-                std::cout << g.first << ". " << g.second << "\n";
-            }
-
-            std::cout << "Введите id группы: ";
-            int groupId = 0;
-            std::cin >> groupId;
-
-            int semesterId = 1;
-
-            double avg = Statistics::calculateGroupSubjectAverage(db, groupId, subjectId, semesterId);
-            std::cout << "\nСредний балл группы по предмету: " << avg << "\n";
-            break;
-        }
-
-        case 2: {
-            // 1. Выбираем предмет
-            std::vector<std::pair<int, std::string>> subjects;
-            if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
-                std::cout << "За вами не закреплены предметы.\n";
-                break;
-            }
-
-            std::cout << "\nВаши предметы:\n";
-            for (const auto& s : subjects) {
-                std::cout << s.first << ". " << s.second << "\n";
-            }
-            std::cout << "Введите id предмета: ";
-            int subjectId = 0;
-            std::cin >> subjectId;
-
-            // 2. Выбираем группу
             std::vector<std::pair<int, std::string>> groups;
             if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
                 std::cout << "За вами не закреплены группы.\n";
@@ -257,13 +238,12 @@ void Teacher::displayMenu(Database& db) {
             for (const auto& g : groups) {
                 std::cout << g.first << ". " << g.second << "\n";
             }
-            std::cout << "Введите id группы: ";
-            int groupId = 0;
-            std::cin >> groupId;
+
+            int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+            if (groupId == 0) break;
 
             int semesterId = 1;
 
-            // 4. Студенты группы
             std::vector<std::pair<int, std::string>> students;
             if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
                 std::cout << "В группе нет студентов.\n";
@@ -283,7 +263,7 @@ void Teacher::displayMenu(Database& db) {
 
                 std::cout << "\n" << name << " (ID " << studentId << "):\n";
                 if (grades.empty()) {
-                    std::cout << "  нет оценок\n";
+                    std::cout << " нет оценок\n";
                     continue;
                 }
 
@@ -291,179 +271,157 @@ void Teacher::displayMenu(Database& db) {
                     int value;
                     std::string date, type;
                     std::tie(value, date, type) = g;
-                    std::cout << "  " << value << " | " << date << " | " << type << "\n";
+                    std::cout << " " << value << " | " << date << " | " << type << "\n";
                 }
             }
             break;
         }
-
        case 3: {
-    int semesterId = 1;
+            int semesterId = 1;
 
-    // 1. Выбор группы из своих групп
-    std::vector<std::pair<int, std::string>> groups;
-    if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
-        std::cout << "У вас нет привязанных групп.\n";
-        break;
-    }
+            std::vector<std::pair<int, std::string>> groups;
+            if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
+                std::cout << "У вас нет привязанных групп.\n";
+                break;
+            }
 
-    std::cout << "\nДоступные группы:\n";
-    for (const auto& g : groups) {
-        std::cout << "  " << g.first << " - " << g.second << "\n";
-    }
+            std::cout << "\nДоступные группы:\n";
+            for (const auto& g : groups) {
+                std::cout << " " << g.first << " - " << g.second << "\n";
+            }
 
-    int groupId = 0;
-    std::cout << "Введите id группы: ";
-    std::cin >> groupId;
+            int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+            if (groupId == 0) break;
 
-    // 2. Список студентов этой группы
-    std::vector<std::pair<int, std::string>> students;
-    if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
-        std::cout << "В этой группе нет студентов.\n";
-        break;
-    }
+            std::vector<std::pair<int, std::string>> students;
+            if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
+                std::cout << "В этой группе нет студентов.\n";
+                break;
+            }
 
-    std::cout << "\nСтуденты группы:\n";
-    for (const auto& st : students) {
-        std::cout << "  " << st.first << " - " << st.second << "\n";
-    }
+            std::cout << "\nСтуденты группы:\n";
+            for (const auto& st : students) {
+                std::cout << " " << st.first << " - " << st.second << "\n";
+            }
 
-    int studentId = 0;
-    std::cout << "Введите ID студента: ";
-    std::cin >> studentId;
+            int studentId = readIntInRange("Введите ID студента", 1, 1000000, students.front().first, true, 0);
+            if (studentId == 0) break;
 
-    // Получить подгруппу студента
-    int studentGroupId = 0, studentSubgroup = 0;
-    if (!db.getStudentGroupAndSubgroup(studentId, studentGroupId, studentSubgroup)) {
-        std::cout << "Ошибка: не удалось определить подгруппу студента.\n";
-        break;
-    }
-    if (studentGroupId != groupId) {
-        std::cout << "Ошибка: студент не из этой группы.\n";
-        break;
-    }
+            int studentGroupId = 0, studentSubgroup = 0;
+            if (!db.getStudentGroupAndSubgroup(studentId, studentGroupId, studentSubgroup)) {
+                std::cout << "Ошибка: не удалось определить подгруппу студента.\n";
+                break;
+            }
+            if (studentGroupId != groupId) {
+                std::cout << "Ошибка: студент не из этой группы.\n";
+                break;
+            }
 
-    // 3. Выбор недели цикла
-    int weekOfCycle = chooseWeekOfCycleOrDate(db);
-    if (weekOfCycle == 0) break;
+            int weekOfCycle = chooseWeekOfCycleOrDate(db);
+            if (weekOfCycle == 0) break;
 
-    // 4. Получить расписание преподавателя для этой группы на выбранной неделе
-    //    Фильтруем: только ПЗ/ЛР (не ЛК), только подгруппа студента (или 0)
-    sqlite3* rawdb = db.getHandle();
-    const char* sql = R"(
-        SELECT
-            sch.id,
-            sch.subject_id,
-            sch.weekday,
-            sch.lesson_number,
-            sch.sub_group,
-            subj.name,
-            sch.lesson_type
-        FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        WHERE sch.teacher_id = ?
-          AND sch.group_id = ?
-          AND sch.week_of_cycle = ?
-          AND (sch.sub_group = 0 OR sch.sub_group = ?)
-          AND sch.lesson_type != 'ЛК'
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
-    )";
+            sqlite3* rawdb = db.getHandle();
+            const char* sql = R"(
+                SELECT
+sch.id,
+                       sch.subject_id,
+                       sch.weekday,
+                       sch.lesson_number,
+                       sch.sub_group,
+                       subj.name,
+                       sch.lesson_type
+                FROM schedule sch
+                JOIN subjects subj ON sch.subject_id = subj.id
+                WHERE sch.teacher_id = ?
+                  AND sch.group_id = ?
+                  AND sch.week_of_cycle = ?
+                  AND (sch.sub_group = 0 OR sch.sub_group = ?)
+                  AND sch.lesson_type != 'ЛК'
+                ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+            )";
 
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(rawdb, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cout << "Ошибка SQL.\n";
-        break;
-    }
-    sqlite3_bind_int(stmt, 1, getId());
-    sqlite3_bind_int(stmt, 2, groupId);
-    sqlite3_bind_int(stmt, 3, weekOfCycle);
-    sqlite3_bind_int(stmt, 4, studentSubgroup);
+            sqlite3_stmt* stmt = nullptr;
+            if (sqlite3_prepare_v2(rawdb, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+                std::cout << "Ошибка SQL.\n";
+                break;
+            }
 
-    struct LessonInfo {
-        int scheduleId;
-        int subjectId;
-        int weekday;
-        int lessonNumber;
-        int subgroup;
-        std::string subjectName;
-        std::string lessonType;
-        std::string dateISO;
-    };
-    std::vector<LessonInfo> lessons;
+            sqlite3_bind_int(stmt, 1, getId());
+            sqlite3_bind_int(stmt, 2, groupId);
+            sqlite3_bind_int(stmt, 3, weekOfCycle);
+            sqlite3_bind_int(stmt, 4, studentSubgroup);
 
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        LessonInfo info;
-        info.scheduleId   = sqlite3_column_int(stmt, 0);
-        info.subjectId    = sqlite3_column_int(stmt, 1);
-        info.weekday      = sqlite3_column_int(stmt, 2);
-        info.lessonNumber = sqlite3_column_int(stmt, 3);
-        info.subgroup     = sqlite3_column_int(stmt, 4);
-        const char* subjName = (const char*)sqlite3_column_text(stmt, 5);
-        const char* ltype    = (const char*)sqlite3_column_text(stmt, 6);
-        info.subjectName = subjName ? subjName : "";
-        info.lessonType  = ltype ? ltype : "";
+            struct LessonInfo {
+                int scheduleId;
+                int subjectId;
+                int weekday;
+                int lessonNumber;
+                int subgroup;
+                std::string subjectName;
+                std::string lessonType;
+                std::string dateISO;
+            };
 
-        // Получить дату ISO для этой пары
-        if (!db.getDateForWeekday(weekOfCycle, info.weekday, info.dateISO)) {
-            continue; // пропускаем, если не удалось получить дату
-        }
+            std::vector<LessonInfo> lessons;
+            while (sqlite3_step(stmt) == SQLITE_ROW) {
+                LessonInfo info;
+                info.scheduleId   = sqlite3_column_int(stmt, 0);
+                info.subjectId    = sqlite3_column_int(stmt, 1);
+                info.weekday      = sqlite3_column_int(stmt, 2);
+                info.lessonNumber = sqlite3_column_int(stmt, 3);
+                info.subgroup     = sqlite3_column_int(stmt, 4);
 
-        lessons.push_back(info);
-    }
-    sqlite3_finalize(stmt);
+                const char* subjName = (const char*)sqlite3_column_text(stmt, 5);
+                const char* ltype    = (const char*)sqlite3_column_text(stmt, 6);
+                info.subjectName = subjName ? subjName : "";
+                info.lessonType  = ltype ? ltype : "";
 
-    if (lessons.empty()) {
-        std::cout << "Нет доступных пар для оценки (только ПЗ/ЛР, подходящие по подгруппе).\n";
-        break;
-    }
+                if (!db.getDateForWeekday(weekOfCycle, info.weekday, info.dateISO)) {
+                    continue;
+                }
+                lessons.push_back(info);
+            }
+            sqlite3_finalize(stmt);
 
-    // 5. Показать список пар
-    const char* pairTimes[] = {"08:30-09:55", "10:05-11:30", "12:00-13:25",
-                               "13:35-15:00", "15:30-16:55", "17:05-18:30"};
-    const char* dayNames[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
+            if (lessons.empty()) {
+                std::cout << "Нет доступных пар для оценки (только ПЗ/ЛР, подходящие по подгруппе).\n";
+                break;
+            }
 
-    std::cout << "\nВыберите пару для выставления оценки:\n";
-    for (size_t i = 0; i < lessons.size(); ++i) {
-        const auto& les = lessons[i];
-        std::string dateLabel;
-        if (les.dateISO.size() == 10) {
-            dateLabel = les.dateISO.substr(8,2) + "-" + les.dateISO.substr(5,2);
-        }
-        std::cout << (i+1) << ") " << dayNames[les.weekday] << " " << dateLabel
-                  << ", пара " << les.lessonNumber;
-        if (les.lessonNumber >= 1 && les.lessonNumber <= 6)
-            std::cout << " (" << pairTimes[les.lessonNumber-1] << ")";
-        if (les.subgroup == 1)
-            std::cout << ", подгр. 1";
-        else if (les.subgroup == 2)
-            std::cout << ", подгр. 2";
-        std::cout << ", " << les.subjectName << " [" << les.lessonType << "]\n";
-    }
+            const char* pairTimes[] = {"08:30-09:55", "10:05-11:30", "12:00-13:25",
+                                       "13:35-15:00", "15:30-16:55", "17:05-18:30"};
+            const char* dayNames[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
 
-    int choice = 0;
-    std::cout << "Номер пары: ";
-    std::cin >> choice;
-    if (choice < 1 || choice > (int)lessons.size()) {
-        std::cout << "Некорректный выбор.\n";
-        break;
-    }
+            std::cout << "\nВыберите пару для выставления оценки:\n";
+            for (size_t i = 0; i < lessons.size(); ++i) {
+                const auto& les = lessons[i];
+                std::string dateLabel;
+                if (les.dateISO.size() == 10)
+                    dateLabel = les.dateISO.substr(8,2) + "-" + les.dateISO.substr(5,2);
 
-    const auto& selected = lessons[choice - 1];
+                std::cout << (i + 1) << ") " << dayNames[les.weekday] << " " << dateLabel
+                          << ", пара " << les.lessonNumber;
+                if (les.lessonNumber >= 1 && les.lessonNumber <= 6)
+                    std::cout << " (" << pairTimes[les.lessonNumber - 1] << ")";
+                if (les.subgroup == 1) std::cout << ", подгр. 1";
+                else if (les.subgroup == 2) std::cout << ", подгр. 2";
+                std::cout << ", " << les.subjectName << " [" << les.lessonType << "]\n";
+            }
 
-    // 6. Проверка: есть ли у студента пропуск на эту дату и предмет?
-    std::vector<std::tuple<std::string, int, std::string, std::string>> absences;
-    if (db.getStudentAbsencesForSemester(studentId, semesterId, absences)) {
-        for (const auto& a : absences) {
-            const std::string& absDate = std::get<2>(a);
-            // Нужно также проверить subject_id пропуска
-            // getStudentAbsencesForSemester возвращает (subjectName, hours, date, type)
-            // Нам нужно сравнить по дате и предмету
+            int choice = readChoiceFromList("Номер пары", 1, (int)lessons.size(), true, 0);
+            if (choice == 0) {
+                std::cout << "Отмена.\n";
+                break;
+            }
 
-            // Более надёжная проверка: прямой запрос по studentId, subjectId, date
+            const auto& selected = lessons[choice - 1];
+
+            // Проверка: есть ли пропуск на эту дату и предмет?
             sqlite3_stmt* absStmt = nullptr;
             const char* absSQL =
                 "SELECT COUNT(*) FROM absences "
                 "WHERE student_id = ? AND subject_id = ? AND semester_id = ? AND date = ?";
+
             if (sqlite3_prepare_v2(rawdb, absSQL, -1, &absStmt, nullptr) == SQLITE_OK) {
                 sqlite3_bind_int(absStmt, 1, studentId);
                 sqlite3_bind_int(absStmt, 2, selected.subjectId);
@@ -476,35 +434,29 @@ void Teacher::displayMenu(Database& db) {
                         std::cout << "Ошибка: у студента есть пропуск на эту пару ("
                                   << selected.dateISO << "). Оценку ставить нельзя.\n";
                         sqlite3_finalize(absStmt);
-                        break; // выход из case 3
+                        break;
                     }
                 }
                 sqlite3_finalize(absStmt);
             }
+
+            int value = readIntInRange("Введите оценку (0-10)", 0, 10, 0, true, -1);
+            if (value == -1) {
+                std::cout << "Отмена.\n";
+                break;
+            }
+
+            if (db.addGrade(studentId, selected.subjectId, semesterId, value,
+                            selected.dateISO, selected.lessonType))
+            {
+                std::cout << "✓ Оценка " << value << " добавлена за " << selected.subjectName
+                          << " [" << selected.lessonType << "] на " << selected.dateISO << "\n";
+            } else {
+                std::cout << "Ошибка при добавлении оценки.\n";
+            }
+
+            break;
         }
-    }
-
-    // 7. Ввод оценки
-    int value = 0;
-    std::cout << "Введите оценку (0-10): ";
-    std::cin >> value;
-    if (value < 0 || value > 10) {
-        std::cout << "Оценка должна быть от 0 до 10.\n";
-        break;
-    }
-
-    // 8. Добавить оценку в БД с grade_type
-    if (db.addGrade(studentId, selected.subjectId, semesterId, value,
-                    selected.dateISO, selected.lessonType)) {
-        std::cout << "✓ Оценка " << value << " добавлена за " << selected.subjectName
-                  << " [" << selected.lessonType << "] на " << selected.dateISO << "\n";
-    } else {
-        std::cout << "Ошибка при добавлении оценки.\n";
-    }
-
-    break;
-}
-
 
         case 4: {
             addAbsence(db);
@@ -517,97 +469,93 @@ void Teacher::displayMenu(Database& db) {
         }
 
        case 6: {
-    int semesterId = 1;
+            int semesterId = 1;
 
-    // 1) Группы преподавателя
-    std::vector<std::pair<int,std::string>> groups;
-    if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
-        std::cout << "У вас нет привязанных групп.\n";
-        break;
-    }
-    std::cout << "\nВаши группы:\n";
-    for (const auto& g : groups) {
-        std::cout << "  " << g.first << " - " << g.second << "\n";
-    }
-    int groupId = 0;
-    std::cout << "Введите id группы: ";
-    std::cin >> groupId;
+            std::vector<std::pair<int, std::string>> groups;
+            if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
+                std::cout << "У вас нет привязанных групп.\n";
+                break;
+            }
 
-    // 2) Студенты группы
-    std::vector<std::pair<int,std::string>> students;
-    if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
-        std::cout << "В этой группе нет студентов.\n";
-        break;
-    }
-    std::cout << "\nСтуденты группы:\n";
-    for (const auto& st : students) {
-        std::cout << "  " << st.first << " - " << st.second << "\n";
-    }
-    int studentId = 0;
-    std::cout << "Введите ID студента: ";
-    std::cin >> studentId;
+            std::cout << "\nВаши группы:\n";
+            for (const auto& g : groups) {
+                std::cout << " " << g.first << " - " << g.second << "\n";
+            }
 
-    // 3) Предметы преподавателя
-    std::vector<std::pair<int,std::string>> subjects;
-    if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
-        std::cout << "У вас нет предметов.\n";
-        break;
-    }
-    std::cout << "\nВаши предметы:\n";
-    for (const auto& s : subjects) {
-        std::cout << "  " << s.first << " - " << s.second << "\n";
-    }
-    int subjectId = 0;
-    std::cout << "Введите id предмета: ";
-    std::cin >> subjectId;
+            int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+            if (groupId == 0) break;
 
-    // 4) Все пропуски студента
-    std::vector<std::tuple<std::string,int,std::string,std::string>> absences;
-    if (!db.getStudentAbsencesForSemester(studentId, semesterId, absences)) {
-        std::cout << "Ошибка при получении пропусков.\n";
-        break;
-    }
-    if (absences.empty()) {
-        std::cout << "У этого студента нет пропусков.\n";
-        break;
-    }
+            std::vector<std::pair<int, std::string>> students;
+            if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
+                std::cout << "В этой группе нет студентов.\n";
+                break;
+            }
 
-    std::cout << "\nВыберите пропуск для удаления:\n";
-    for (size_t i = 0; i < absences.size(); ++i) {
-        const auto& a = absences[i];
-        const std::string& subjName = std::get<0>(a);
-        int hours                   = std::get<1>(a);
-        const std::string& date     = std::get<2>(a);
-        const std::string& type     = std::get<3>(a);
-        std::cout << (i+1) << ") " << date << " | "
-                  << subjName << " | " << hours << " часов | " << type << "\n";
-    }
+            std::cout << "\nСтуденты группы:\n";
+            for (const auto& st : students) {
+                std::cout << " " << st.first << " - " << st.second << "\n";
+            }
 
-    int choice = 0;
-    std::cout << "Номер пропуска: ";
-    std::cin >> choice;
-    if (choice < 1 || choice > (int)absences.size()) {
-        std::cout << "Некорректный выбор.\n";
-        break;
-    }
+            int studentId = readIntInRange("Введите ID студента", 1, 1000000, students.front().first, true, 0);
+            if (studentId == 0) break;
 
-    const std::string dateISO = std::get<2>(absences[choice - 1]);
+            std::vector<std::pair<int, std::string>> subjects;
+            if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
+                std::cout << "У вас нет предметов.\n";
+                break;
+            }
 
-    if (db.deleteTodayAbsence(studentId, subjectId, semesterId, dateISO)) {
-        std::cout << "Пропуск за " << dateISO << " удалён.\n";
-    } else {
-        std::cout << "Не удалось удалить пропуск.\n";
-    }
-    break;
-}
+            std::cout << "\nВаши предметы:\n";
+            for (const auto& s : subjects) {
+                std::cout << " " << s.first << " - " << s.second << "\n";
+            }
 
+            int subjectId = readIntInRange("Введите id предмета", 1, 1000000, subjects.front().first, true, 0);
+            if (subjectId == 0) break;
+
+            std::vector<std::tuple<std::string,int,std::string,std::string>> absences;
+            if (!db.getStudentAbsencesForSemester(studentId, semesterId, absences)) {
+                std::cout << "Ошибка при получении пропусков.\n";
+                break;
+            }
+            if (absences.empty()) {
+                std::cout << "У этого студента нет пропусков.\n";
+                break;
+            }
+
+            std::cout << "\nВыберите пропуск для удаления:\n";
+            for (size_t i = 0; i < absences.size(); ++i) {
+                const auto& a = absences[i];
+                const std::string& subjName = std::get<0>(a);
+                int hours = std::get<1>(a);
+                const std::string& date = std::get<2>(a);
+                const std::string& type = std::get<3>(a);
+
+                std::cout << (i + 1) << ") " << date << " | "
+                          << subjName << " | " << hours << " часов | " << type << "\n";
+            }
+
+            int choice = readChoiceFromList("Номер пропуска", 1, (int)absences.size(), true, 0);
+            if (choice == 0) {
+                std::cout << "Отмена.\n";
+                break;
+            }
+
+            const std::string dateISO = std::get<2>(absences[choice - 1]);
+            if (db.deleteTodayAbsence(studentId, subjectId, semesterId, dateISO)) {
+                std::cout << "Пропуск за " << dateISO << " удалён.\n";
+            } else {
+                std::cout << "Не удалось удалить пропуск.\n";
+            }
+
+            break;
+        }
 
 
             case 7: {
             int semesterId = 1;
 
-            // 1. Предметы, которые ведёт этот преподаватель
-            std::vector<std::pair<int,std::string>> subjects;
+            std::vector<std::pair<int, std::string>> subjects;
             if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
                 std::cout << "За вами не закреплены предметы.\n";
                 break;
@@ -618,12 +566,10 @@ void Teacher::displayMenu(Database& db) {
                 std::cout << s.first << ". " << s.second << "\n";
             }
 
-            std::cout << "Введите id предмета: ";
-            int subjectId = 0;
-            std::cin >> subjectId;
+            int subjectId = readIntInRange("Введите id предмета", 1, 1000000, subjects.front().first, true, 0);
+            if (subjectId == 0) break;
 
-            // 2. Группы, закреплённые за преподавателем
-            std::vector<std::pair<int,std::string>> groups;
+            std::vector<std::pair<int, std::string>> groups;
             if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
                 std::cout << "За вами не закреплены группы.\n";
                 break;
@@ -634,11 +580,9 @@ void Teacher::displayMenu(Database& db) {
                 std::cout << g.first << ". " << g.second << "\n";
             }
 
-            std::cout << "Введите id группы: ";
-            int groupId = 0;
-            std::cin >> groupId;
+            int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+            if (groupId == 0) break;
 
-            // 3. Сводка пропусков
             std::vector<std::tuple<int,std::string,int>> rows;
             if (!db.getGroupSubjectAbsencesSummary(groupId, subjectId, semesterId, rows)) {
                 std::cout << "✗ Ошибка при получении сводки пропусков.\n";
@@ -654,6 +598,7 @@ void Teacher::displayMenu(Database& db) {
                       << " и предмету " << subjectId << " ===\n";
             std::cout << "ID | ФИО | часы\n";
             std::cout << "─────────────────────────────\n";
+
             for (const auto& r : rows) {
                 int studentId;
                 std::string name;
@@ -661,15 +606,15 @@ void Teacher::displayMenu(Database& db) {
                 std::tie(studentId, name, totalHours) = r;
                 std::cout << studentId << " | " << name << " | " << totalHours << "\n";
             }
+
             break;
-            }
+        }
 
             case 8: {
-            int week = chooseWeekOfCycleOrDate(db);
-            if (week == 0) break;
-            viewMySchedule(week);
-
-            break;
+                int week = chooseWeekOfCycleOrDate(db);
+                if (week == 0) break;
+                viewMySchedule(week);
+                break;
             }
 
 
@@ -679,115 +624,112 @@ void Teacher::displayMenu(Database& db) {
             viewFullSchedule();
             break;
         }
-case 10: {  // ← ДОБАВИТЬ ЭТОТ БЛОК
-                // Изменить или удалить оценку
-                int semesterId = 1;
+case 10: {
+            int semesterId = 1;
 
-                // 1) Группы
-                std::vector<std::pair<int,std::string>> groups;
-                if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
-                    std::cout << "У вас нет привязанных групп.\n";
-                    break;
-                }
-                std::cout << "\nВаши группы:\n";
-                for (const auto& g : groups) {
-                    std::cout << "  " << g.first << " - " << g.second << "\n";
-                }
-                int groupId = 0;
-                std::cout << "Введите id группы: ";
-                std::cin >> groupId;
-
-                // 2) Студенты
-                std::vector<std::pair<int,std::string>> students;
-                if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
-                    std::cout << "В этой группе нет студентов.\n";
-                    break;
-                }
-                std::cout << "\nСтуденты:\n";
-                for (const auto& st : students) {
-                    std::cout << "  " << st.first << " - " << st.second << "\n";
-                }
-                int studentId = 0;
-                std::cout << "Введите ID студента: ";
-                std::cin >> studentId;
-
-                // 3) Предметы преподавателя
-                std::vector<std::pair<int,std::string>> subjects;
-                if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
-                    std::cout << "У вас нет предметов.\n";
-                    break;
-                }
-                std::cout << "\nВаши предметы:\n";
-                for (const auto& s : subjects) {
-                    std::cout << "  " << s.first << " - " << s.second << "\n";
-                }
-                int subjectId = 0;
-                std::cout << "Введите id предмета: ";
-                std::cin >> subjectId;
-
-                // 4) Список оценок студента по этому предмету
-                std::vector<std::tuple<int,int,std::string,std::string>> grades;
-                if (!db.getGradesForStudentSubject(studentId, subjectId, semesterId, grades)) {
-                    std::cout << "Ошибка при получении оценок.\n";
-                    break;
-                }
-                if (grades.empty()) {
-                    std::cout << "Оценок нет.\n";
-                    break;
-                }
-
-                std::cout << "\nОценки студента:\n";
-                for (size_t i = 0; i < grades.size(); ++i) {
-                    int gradeId, value;
-                    std::string date, type;
-                    std::tie(gradeId, value, date, type) = grades[i];
-                    std::cout << (i+1) << ") ID=" << gradeId << ", оценка=" << value
-                              << ", дата=" << date << ", тип=" << type << "\n";
-                }
-
-                int choice = 0;
-                std::cout << "Номер оценки для изменения/удаления: ";
-                std::cin >> choice;
-                if (choice < 1 || choice > (int)grades.size()) {
-                    std::cout << "Некорректный выбор.\n";
-                    break;
-                }
-
-                int gradeId = std::get<0>(grades[choice - 1]);
-
-                std::cout << "1 - Изменить, 2 - Удалить: ";
-                int action = 0;
-                std::cin >> action;
-
-                if (action == 1) {
-                    // Изменить
-                    int newValue = 0;
-                    std::cout << "Новая оценка (0-10): ";
-                    std::cin >> newValue;
-                    if (newValue < 0 || newValue > 10) {
-                        std::cout << "Оценка вне диапазона.\n";
-                        break;
-                    }
-                    std::string newDate = std::get<2>(grades[choice - 1]);
-                    std::string newType = std::get<3>(grades[choice - 1]);
-
-                    if (db.updateGrade(gradeId, newValue, newDate, newType)) {
-                        std::cout << "✓ Оценка изменена.\n";
-                    } else {
-                        std::cout << "Ошибка при изменении.\n";
-                    }
-                } else if (action == 2) {
-                    // Удалить
-                    if (db.deleteGrade(gradeId)) {
-                        std::cout << "✓ Оценка удалена.\n";
-                    } else {
-                        std::cout << "Ошибка при удалении.\n";
-                    }
-                } else {
-                    std::cout << "Некорректный выбор действия.\n";
-                }
+            std::vector<std::pair<int, std::string>> groups;
+            if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
+                std::cout << "У вас нет привязанных групп.\n";
                 break;
             }
+
+            std::cout << "\nВаши группы:\n";
+            for (const auto& g : groups) {
+                std::cout << " " << g.first << " - " << g.second << "\n";
+            }
+
+            int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+            if (groupId == 0) break;
+
+            std::vector<std::pair<int, std::string>> students;
+            if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
+                std::cout << "В этой группе нет студентов.\n";
+                break;
+            }
+
+            std::cout << "\nСтуденты:\n";
+            for (const auto& st : students) {
+                std::cout << " " << st.first << " - " << st.second << "\n";
+            }
+
+            int studentId = readIntInRange("Введите ID студента", 1, 1000000, students.front().first, true, 0);
+            if (studentId == 0) break;
+
+            std::vector<std::pair<int, std::string>> subjects;
+            if (!db.getSubjectsForTeacher(getId(), subjects) || subjects.empty()) {
+                std::cout << "У вас нет предметов.\n";
+                break;
+            }
+
+            std::cout << "\nВаши предметы:\n";
+            for (const auto& s : subjects) {
+                std::cout << " " << s.first << " - " << s.second << "\n";
+            }
+
+            int subjectId = readIntInRange("Введите id предмета", 1, 1000000, subjects.front().first, true, 0);
+            if (subjectId == 0) break;
+
+            std::vector<std::tuple<int,int,std::string,std::string>> grades;
+            if (!db.getGradesForStudentSubject(studentId, subjectId, semesterId, grades)) {
+                std::cout << "Ошибка при получении оценок.\n";
+                break;
+            }
+
+            if (grades.empty()) {
+                std::cout << "Оценок нет.\n";
+                break;
+            }
+
+            std::cout << "\nОценки студента:\n";
+            for (size_t i = 0; i < grades.size(); ++i) {
+                int gradeId, value;
+                std::string date, type;
+                std::tie(gradeId, value, date, type) = grades[i];
+                std::cout << (i+1) << ") ID=" << gradeId << ", оценка=" << value
+                          << ", дата=" << date << ", тип=" << type << "\n";
+            }
+
+            int choice = readChoiceFromList("Номер оценки", 1, (int)grades.size(), true, 0);
+            if (choice == 0) {
+                std::cout << "Отмена.\n";
+                break;
+            }
+
+            int gradeId = std::get<0>(grades[choice - 1]);
+
+            std::cout << "1 - Изменить, 2 - Удалить\n";
+            int action = readIntInRange("Действие", 1, 2, 1, true, 0);
+            if (action == 0) {
+                std::cout << "Отмена.\n";
+                break;
+            }
+
+            if (action == 1) {
+                int newValue = readIntInRange("Новая оценка (0-10)", 0, 10, 0, true, -1);
+                if (newValue == -1) {
+                    std::cout << "Отмена.\n";
+                    break;
+                }
+
+                std::string newDate = std::get<2>(grades[choice - 1]);
+                std::string newType = std::get<3>(grades[choice - 1]);
+
+                if (db.updateGrade(gradeId, newValue, newDate, newType)) {
+                    std::cout << "✓ Оценка изменена.\n";
+                } else {
+                    std::cout << "Ошибка при изменении.\n";
+                }
+            } else {
+                if (db.deleteGrade(gradeId)) {
+                    std::cout << "✓ Оценка удалена.\n";
+                } else {
+                    std::cout << "Ошибка при удалении.\n";
+                }
+            }
+
+            break;
+        }
+
         default:
             std::cout << "Неверный пункт меню.\n";
             break;
@@ -797,10 +739,10 @@ case 10: {  // ← ДОБАВИТЬ ЭТОТ БЛОК
 
 // ===== ПРОПУСКИ (ТВОЙ КОД, ЧУТЬ ПОДЧИЩЕН) =====
 
-void Teacher::addAbsence(Database& db) {
+void Teacher::addAbsence(Database& db)
+{
     int semesterId = 1;
 
-    // 1. Группы преподавателя
     std::vector<std::pair<int, std::string>> groups;
     if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
         std::cout << "У вас нет привязанных групп.\n";
@@ -809,14 +751,12 @@ void Teacher::addAbsence(Database& db) {
 
     std::cout << "\nВаши группы:\n";
     for (const auto& g : groups) {
-        std::cout << "  " << g.first << " - " << g.second << "\n";
+        std::cout << " " << g.first << " - " << g.second << "\n";
     }
 
-    int groupId = 0;
-    std::cout << "Введите id группы: ";
-    std::cin >> groupId;
+    int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+    if (groupId == 0) return;
 
-    // 2. Студенты группы
     std::vector<std::pair<int, std::string>> students;
     if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
         std::cout << "В этой группе нет студентов.\n";
@@ -825,14 +765,12 @@ void Teacher::addAbsence(Database& db) {
 
     std::cout << "\nСтуденты группы:\n";
     for (const auto& st : students) {
-        std::cout << "  " << st.first << " - " << st.second << "\n";
+        std::cout << " " << st.first << " - " << st.second << "\n";
     }
 
-    int studentId = 0;
-    std::cout << "Введите ID студента: ";
-    std::cin >> studentId;
+    int studentId = readIntInRange("Введите ID студента", 1, 1000000, students.front().first, true, 0);
+    if (studentId == 0) return;
 
-    // Получить подгруппу студента
     int studentGroupId = 0, studentSubgroup = 0;
     if (!db.getStudentGroupAndSubgroup(studentId, studentGroupId, studentSubgroup)) {
         std::cout << "Ошибка: не удалось определить подгруппу студента.\n";
@@ -843,25 +781,22 @@ void Teacher::addAbsence(Database& db) {
         return;
     }
 
-    // 3. Выбор недели
     int weekOfCycle = chooseWeekOfCycleOrDate(db);
     if (weekOfCycle == 0) {
         std::cout << "Некорректная неделя.\n";
         return;
     }
 
-    // 4. Получить расписание преподавателя для этой группы на выбранной неделе
-    //    Фильтруем: только подгруппа студента (или 0)
     sqlite3* rawdb = db.getHandle();
     const char* sql = R"(
         SELECT
-            sch.id,
-            sch.subject_id,
-            sch.weekday,
-            sch.lesson_number,
-            sch.sub_group,
-            subj.name,
-            sch.lesson_type
+sch.id,
+               sch.subject_id,
+               sch.weekday,
+               sch.lesson_number,
+               sch.sub_group,
+               subj.name,
+               sch.lesson_type
         FROM schedule sch
         JOIN subjects subj ON sch.subject_id = subj.id
         WHERE sch.teacher_id = ?
@@ -876,6 +811,7 @@ void Teacher::addAbsence(Database& db) {
         std::cout << "Ошибка SQL.\n";
         return;
     }
+
     sqlite3_bind_int(stmt, 1, getId());
     sqlite3_bind_int(stmt, 2, groupId);
     sqlite3_bind_int(stmt, 3, weekOfCycle);
@@ -891,8 +827,8 @@ void Teacher::addAbsence(Database& db) {
         std::string lessonType;
         std::string dateISO;
     };
-    std::vector<LessonInfo> lessons;
 
+    std::vector<LessonInfo> lessons;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         LessonInfo info;
         info.scheduleId   = sqlite3_column_int(stmt, 0);
@@ -900,6 +836,7 @@ void Teacher::addAbsence(Database& db) {
         info.weekday      = sqlite3_column_int(stmt, 2);
         info.lessonNumber = sqlite3_column_int(stmt, 3);
         info.subgroup     = sqlite3_column_int(stmt, 4);
+
         const char* subjName = (const char*)sqlite3_column_text(stmt, 5);
         const char* ltype    = (const char*)sqlite3_column_text(stmt, 6);
         info.subjectName = subjName ? subjName : "";
@@ -908,7 +845,6 @@ void Teacher::addAbsence(Database& db) {
         if (!db.getDateForWeekday(weekOfCycle, info.weekday, info.dateISO)) {
             continue;
         }
-
         lessons.push_back(info);
     }
     sqlite3_finalize(stmt);
@@ -918,7 +854,6 @@ void Teacher::addAbsence(Database& db) {
         return;
     }
 
-    // 5. Показать список
     const char* pairTimes[] = {"08:30-09:55", "10:05-11:30", "12:00-13:25",
                                "13:35-15:00", "15:30-16:55", "17:05-18:30"};
     const char* dayNames[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
@@ -926,36 +861,34 @@ void Teacher::addAbsence(Database& db) {
     std::cout << "\nВыберите пару для пропуска:\n";
     for (size_t i = 0; i < lessons.size(); ++i) {
         const auto& les = lessons[i];
+
         std::string dateLabel;
-        if (les.dateISO.size() == 10) {
+        if (les.dateISO.size() == 10)
             dateLabel = les.dateISO.substr(8,2) + "-" + les.dateISO.substr(5,2);
-        }
-        std::cout << (i+1) << ") " << dayNames[les.weekday] << " " << dateLabel
+
+        std::cout << (i + 1) << ") " << dayNames[les.weekday] << " " << dateLabel
                   << ", пара " << les.lessonNumber;
         if (les.lessonNumber >= 1 && les.lessonNumber <= 6)
-            std::cout << " (" << pairTimes[les.lessonNumber-1] << ")";
-        if (les.subgroup == 1)
-            std::cout << ", подгр. 1";
-        else if (les.subgroup == 2)
-            std::cout << ", подгр. 2";
+            std::cout << " (" << pairTimes[les.lessonNumber - 1] << ")";
+        if (les.subgroup == 1) std::cout << ", подгр. 1";
+        else if (les.subgroup == 2) std::cout << ", подгр. 2";
         std::cout << ", " << les.subjectName << " [" << les.lessonType << "]\n";
     }
 
-    int choice = 0;
-    std::cout << "Номер пары: ";
-    std::cin >> choice;
-    if (choice < 1 || choice > (int)lessons.size()) {
-        std::cout << "Некорректный выбор.\n";
+    int choice = readChoiceFromList("Номер пары", 1, (int)lessons.size(), true, 0);
+    if (choice == 0) {
+        std::cout << "Отмена.\n";
         return;
     }
 
     const auto& selected = lessons[choice - 1];
 
-    // 6. Проверка: уже есть оценка на эту дату и предмет?
+    // Проверка: уже есть оценка на эту дату и предмет?
     sqlite3_stmt* gradeStmt = nullptr;
     const char* gradeSQL =
         "SELECT COUNT(*) FROM grades "
         "WHERE student_id = ? AND subject_id = ? AND semester_id = ? AND date = ?";
+
     if (sqlite3_prepare_v2(rawdb, gradeSQL, -1, &gradeStmt, nullptr) == SQLITE_OK) {
         sqlite3_bind_int(gradeStmt, 1, studentId);
         sqlite3_bind_int(gradeStmt, 2, selected.subjectId);
@@ -975,27 +908,19 @@ void Teacher::addAbsence(Database& db) {
     }
 
     // 7. Ввод часов
-    int hours = 0;
-    std::cout << "Количество часов пропуска (1 или 2): ";
-    std::cin >> hours;
-    if (hours != 1 && hours != 2) {
-        std::cout << "Часы должны быть 1 или 2.\n";
+    int hours = readIntInRange("Количество часов пропуска (1 или 2)", 1, 2, 1, true, 0);
+    if (hours == 0) {
+        std::cout << "Отмена.\n";
         return;
     }
 
     // 8. Тип пропуска
-    std::cout << "Тип пропуска: 1 - уважительный, 2 - неуважительный: ";
-    int typeChoice = 0;
-    std::cin >> typeChoice;
-    std::string type;
-    if (typeChoice == 1) {
-        type = "excused";
-    } else if (typeChoice == 2) {
-        type = "unexcused";
-    } else {
-        std::cout << "Некорректный выбор типа.\n";
+    int typeChoice = readIntInRange("Тип пропуска (1-уважительный, 2-неуважительный)", 1, 2, 1, true, 0);
+    if (typeChoice == 0) {
+        std::cout << "Отмена.\n";
         return;
     }
+    std::string type = (typeChoice == 1) ? "excused" : "unexcused";
 
     // 9. Добавить пропуск
     if (db.addAbsence(studentId, selected.subjectId, semesterId, hours, selected.dateISO, type)) {
@@ -1005,10 +930,9 @@ void Teacher::addAbsence(Database& db) {
         std::cout << "Ошибка при добавлении пропуска.\n";
     }
 }
-
-void Teacher::viewStudentAbsences(Database& db, int semesterId) {
-    // 1. Группы преподавателя
-    std::vector<std::pair<int,std::string>> groups;
+void Teacher::viewStudentAbsences(Database& db, int semesterId)
+{
+    std::vector<std::pair<int, std::string>> groups;
     if (!db.getGroupsForTeacher(getId(), groups) || groups.empty()) {
         std::cout << "У вас нет привязанных групп.\n";
         return;
@@ -1016,14 +940,13 @@ void Teacher::viewStudentAbsences(Database& db, int semesterId) {
 
     std::cout << "\nВаши группы:\n";
     for (const auto& g : groups) {
-        std::cout << "  " << g.first << " - " << g.second << "\n";
+        std::cout << " " << g.first << " - " << g.second << "\n";
     }
-    int groupId = 0;
-    std::cout << "Введите id группы: ";
-    std::cin >> groupId;
 
-    // 2. Студенты группы
-    std::vector<std::pair<int,std::string>> students;
+    int groupId = readIntInRange("Введите id группы", 1, 1000000, groups.front().first, true, 0);
+    if (groupId == 0) return;
+
+    std::vector<std::pair<int, std::string>> students;
     if (!db.getStudentsOfGroup(groupId, students) || students.empty()) {
         std::cout << "В этой группе нет студентов.\n";
         return;
@@ -1031,18 +954,18 @@ void Teacher::viewStudentAbsences(Database& db, int semesterId) {
 
     std::cout << "\nСтуденты группы " << groupId << ":\n";
     for (const auto& st : students) {
-        std::cout << "  " << st.first << " - " << st.second << "\n";
+        std::cout << " " << st.first << " - " << st.second << "\n";
     }
-    int studentId = 0;
-    std::cout << "Введите ID студента: ";
-    std::cin >> studentId;
 
-    // 3. Пропуски этого студента за семестр
+    int studentId = readIntInRange("Введите ID студента", 1, 1000000, students.front().first, true, 0);
+    if (studentId == 0) return;
+
     std::vector<std::tuple<std::string,int,std::string,std::string>> absences;
     if (!db.getStudentAbsencesForSemester(studentId, semesterId, absences)) {
         std::cout << "Ошибка при получении пропусков.\n";
         return;
     }
+
     if (absences.empty()) {
         std::cout << "Пропусков нет.\n";
         return;
@@ -1051,24 +974,27 @@ void Teacher::viewStudentAbsences(Database& db, int semesterId) {
     std::cout << "\nПропуски студента " << studentId << ":\n";
     std::cout << "Дата | предмет | часы | тип\n";
     std::cout << "─────────────────────────────────────────\n";
+
     int total = 0;
     for (const auto& a : absences) {
         const std::string& subj = std::get<0>(a);
-        int hours               = std::get<1>(a);
+        int hours = std::get<1>(a);
         const std::string& date = std::get<2>(a);
         const std::string& type = std::get<3>(a);
+
         total += hours;
         std::cout << date << " | " << subj << " | "
                   << hours << " часов | " << type << "\n";
     }
+
     std::cout << "─────────────────────────────────────────\n";
     std::cout << "Всего часов пропусков: " << total << "\n";
 }
 
 
-
 // ===== НОВЫЕ ФУНКЦИИ РАСПИСАНИЯ ДЛЯ ПРЕПОДАВАТЕЛЯ =====
-bool Teacher::viewMySchedule(int week_of_cycle) {
+bool Teacher::viewMySchedule(int week_of_cycle)
+{
     if (!db_ || !db_->isConnected()) {
         std::cerr << "[✗] БД не инициализирована\n";
         return false;
@@ -1076,21 +1002,22 @@ bool Teacher::viewMySchedule(int week_of_cycle) {
 
     sqlite3* raw_db = db_->getHandle();
     const char* sql = R"(
-    SELECT
-        sch.lesson_number,   -- 0
-        sch.weekday,        -- 1
-        g.name       AS group_name,   -- 2
-        subj.name    AS subject,      -- 3
-        sch.room,                     -- 4
-        sch.sub_group,                 -- 5
-        sch.lesson_type               -- 6
-    FROM schedule sch
-    JOIN subjects subj ON sch.subject_id = subj.id
-    JOIN groups   g    ON sch.group_id  = g.id
-    WHERE sch.teacher_id   = ?
-      AND sch.week_of_cycle = ?
-    ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
-)";
+        SELECT
+            sch.lesson_number, -- 0
+            sch.weekday,      -- 1
+            g.name AS group_name, -- 2
+            subj.name AS subject, -- 3
+            sch.room,         -- 4
+            sch.sub_group,     -- 5
+            sch.lesson_type    -- 6
+        FROM schedule sch
+        JOIN subjects subj ON sch.subject_id = subj.id
+        JOIN groups g ON sch.group_id = g.id
+        WHERE sch.teacher_id = ?
+          AND sch.week_of_cycle = ?
+        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+    )";
+
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(raw_db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
@@ -1134,56 +1061,46 @@ bool Teacher::viewMySchedule(int week_of_cycle) {
 
             std::string dateISO;
             std::string dateLabel;
-            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO)) {
-                if (dateISO.size() == 10) {
-                    dateLabel = dateISO.substr(8, 2) + "-" + dateISO.substr(5, 2);
-                }
+            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO) && dateISO.size() == 10) {
+                dateLabel = dateISO.substr(8, 2) + "-" + dateISO.substr(5, 2);
             }
 
-            if (!dateLabel.empty() && weekday >= 0 && weekday <= 5) {
-                std::cout << "\n[" << dayNames[weekday] << "] (" << dateLabel << ")\n";
-            } else if (weekday >= 0 && weekday <= 5) {
-                std::cout << "\n[" << dayNames[weekday] << "]\n";
+            if (weekday >= 0 && weekday <= 5) {
+                if (!dateLabel.empty()) std::cout << "\n[" << dayNames[weekday] << "] (" << dateLabel << ")\n";
+                else std::cout << "\n[" << dayNames[weekday] << "]\n";
             } else {
                 std::cout << "\n[день " << weekday << "]\n";
             }
         }
 
         std::string subjectText = subject ? subject : "";
-        if (subgroup == 1)
-            subjectText += " (подгр. 1)";
-        else if (subgroup == 2)
-            subjectText += " (подгр. 2)";
+        if (subgroup == 1) subjectText += " (подгр. 1)";
+        else if (subgroup == 2) subjectText += " (подгр. 2)";
 
         std::string typeLabel;
-        if (ltype && *ltype) {
-            typeLabel = " [" + std::string(ltype) + "]";
-        }
+        if (ltype && *ltype) typeLabel = " [" + std::string(ltype) + "]";
 
-        std::cout << "  " << lessonNumber << "-я пара";
+        std::cout << " " << lessonNumber << "-я пара";
         if (lessonNumber >= 1 && lessonNumber <= 6) {
             std::cout << " (" << pairTimes[lessonNumber - 1] << ")";
         }
 
-        std::cout << " | "
-                  << (group ? group : "") << " | "
+        std::cout << " | " << (group ? group : "") << " | "
                   << subjectText << typeLabel << " | "
                   << (room ? room : "") << "\n";
     }
+
+    sqlite3_finalize(stmt);
 
     if (!found) {
         std::cout << "Расписание не найдено на эту неделю.\n";
     }
 
-    sqlite3_finalize(stmt);
     return true;
 }
 
-
-
-
-
-bool Teacher::viewFullSchedule() {
+bool Teacher::viewFullSchedule()
+{
     if (!db_) {
         std::cerr << "[✗] БД не инициализирована\n";
         return false;
@@ -1195,3 +1112,5 @@ bool Teacher::viewFullSchedule() {
     }
     return true;
 }
+
+
