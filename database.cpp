@@ -1739,22 +1739,23 @@ bool Database::getScheduleForGroup(int group_id, int weekday, int week_of_cycle,
     rows.clear();
 
     const char* sql = R"(
-        SELECT
-            sch.id,           -- 0
-            sch.lesson_number, -- 1
-            sch.sub_group,     -- 2
-            subj.name,        -- 3
-            sch.room,         -- 4
-            sch.lesson_type ,  -- 5
-            u.name            -- 6 (teacher)
-        FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        JOIN users    u    ON sch.teacher_id = u.id
-            WHERE (sch.group_id = ? OR sch.group_id = 0)
-      AND sch.weekday = ?
-      AND sch.week_of_cycle = ?
-
-        ORDER BY sch.lesson_number, sch.sub_group
+       SELECT
+    sch.id,
+    sch.weekday,
+    sch.lesson_number,
+    s.name as subject_name,
+    u.name as teacher_name,
+    sch.room,
+    sch.lesson_type,
+    sch.sub_group
+FROM schedule sch
+JOIN subjects s ON sch.subject_id = s.id
+JOIN users u ON sch.teacher_id = u.id
+WHERE sch.weekday = ?
+  AND sch.week_of_cycle = ?
+  AND (sch.group_id = ? OR sch.group_id = 0)  // Общие или для конкретной группы
+  AND (sch.sub_group = 0 OR sch.sub_group = ?)  // Общие или для конкретной подгруппы
+ORDER BY sch.lesson_number, sch.sub_group
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -1845,17 +1846,15 @@ bool Database::getScheduleForTeacherGroup(
 ) {
     rows.clear();
     const char* sql = R"(
-        SELECT
-            s.id,          -- 0 scheduleId
-            s.subject_id,   -- 1 subject_id
-            s.weekday,     -- 2 dayOfWeek
-            s.lesson_number,-- 3 pairNumber
-            s.sub_group,    -- 4 sub_group
-            subj.name      -- 5 subjectName
-        FROM schedule s
-        JOIN subjects subj ON s.subject_id = subj.id
-        WHERE s.teacher_id = ? AND s.group_id = ?
-        ORDER BY s.weekday, s.lesson_number, s.sub_group
+        SELECT sch.id, sch.weekday, sch.lesson_number, sch.sub_group,
+       s.id as subject_id, s.name as subject_name
+FROM schedule sch
+JOIN subjects s ON sch.subject_id = s.id
+WHERE sch.teacher_id = ?
+  AND sch.group_id = ?
+  AND (sch.sub_group = 0 OR sch.sub_group = ?)  // Оставляем только нужные подгруппы
+  AND (sch.week_of_cycle = ? OR ? = 0)  // Добавляем фильтр по неделе, если нужно
+ORDER BY sch.weekday, sch.lesson_number
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -2109,11 +2108,11 @@ bool Database::isScheduleSlotBusy(int group_id, int sub_group,
     const char* sql = R"(
         SELECT COUNT(*)
         FROM schedule
-        WHERE group_id     = ?
-          AND weekday     = ?
-          AND lesson_number= ?
-          AND week_of_cycle = ?
-          AND (sub_group = ? OR sub_group = 0 OR ? = 0)
+        WHERE group_id = ?
+  AND weekday = ?
+  AND lesson_number = ?
+  AND week_of_cycle = ?
+  AND (sub_group = ? OR sub_group = 0)
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -2187,21 +2186,18 @@ bool Database::getScheduleForGroupWeek(
     if (!db_) return false;
 
     const char* sql = R"(
-        SELECT
-            sch.id,           -- 0
-            sch.weekday,      -- 1
-            sch.lesson_number, -- 2
-            sch.sub_group,     -- 3
-            subj.name,        -- 4
-            u.name,           -- 5
-            sch.room,         -- 6
-            sch.lesson_type   -- 7
-        FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        JOIN users    u    ON sch.teacher_id = u.id
-        WHERE sch.group_id     = ?
-          AND sch.week_of_cycle = ?
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+        SELECT sch.id, sch.weekday, sch.lesson_number, sch.sub_group,
+       s.name as subject_name,
+       u.name as teacher_name,
+       sch.room,
+       sch.lesson_type
+FROM schedule sch
+JOIN subjects s ON sch.subject_id = s.id
+JOIN users u ON sch.teacher_id = u.id
+WHERE sch.group_id = ?
+  AND sch.week_of_cycle = ?
+  AND (sch.sub_group = 0 OR sch.sub_group = ?)  // Добавляем фильтр по подгруппе
+ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -2311,10 +2307,10 @@ bool Database::isTeacherBusy(int teacher_id, int weekday,
         SELECT COUNT(*)
         FROM schedule
         WHERE teacher_id = ?
-          AND weekday = ?
-          AND lesson_number = ?
-          AND week_of_cycle = ?
-          AND (? = 0 OR id <> ?)
+  AND weekday = ?
+  AND lesson_number = ?
+  AND week_of_cycle = ?
+  AND (id <> ? OR ? = 0)  // Более понятный порядок условий
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -2359,12 +2355,12 @@ bool Database::isRoomBusy(const std::string& room, int weekday,
         SELECT COUNT(*)
         FROM schedule
         WHERE room = ?
-          AND weekday = ?
-          AND lesson_number = ?
-          AND week_of_cycle = ?
-          AND room IS NOT NULL 
-          AND room <> ''
-          AND (? = 0 OR id <> ?)
+  AND weekday = ?
+  AND lesson_number = ?
+  AND week_of_cycle = ?
+  AND room IS NOT NULL
+  AND room <> ''
+  AND (id <> ? OR ? = 0)  // Более понятный порядок условий
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -2556,9 +2552,25 @@ bool Database::updateScheduleEntry(int schedule_id, int group_id, int sub_group,
 
     const char* sql = R"(
         UPDATE schedule
-        SET group_id = ?, sub_group = ?, weekday = ?, lesson_number = ?,
-            week_of_cycle = ?, subject_id = ?, teacher_id = ?, room = ?, lesson_type = ?
-        WHERE id = ?
+SET group_id = ?,
+    sub_group = ?,
+    weekday = ?,
+    lesson_number = ?,
+    week_of_cycle = ?,
+    subject_id = ?,
+    teacher_id = ?,
+    room = ?,
+    lesson_type = ?
+WHERE id = ?
+  AND NOT EXISTS (
+    SELECT 1 FROM schedule
+    WHERE group_id = ?
+      AND sub_group = ?
+      AND weekday = ?
+      AND lesson_number = ?
+      AND week_of_cycle = ?
+      AND id <> ?  // Исключаем текущую запись
+  )
     )";
 
     sqlite3_stmt* stmt = nullptr;

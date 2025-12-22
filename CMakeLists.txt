@@ -18,6 +18,8 @@ add_executable(${PROJECT_NAME}
         scholarship.cpp
         menu.h
         menu.cpp
+        AdminService.h
+        AdminService.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
