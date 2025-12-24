@@ -1,6 +1,7 @@
 #include "teacherwindow.h"
 #include <QVBoxLayout>
 #include <QFont>
+#include "ui/widgets/ThemeToggleWidget.h"
 
 TeacherWindow::TeacherWindow(Database* db, int teacherId, const QString& teacherName,
                              QWidget *parent)

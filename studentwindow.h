@@ -7,7 +7,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include "database.h"
-
+class ThemeToggleWidget;
 class StudentWindow : public QMainWindow {
     Q_OBJECT
 
@@ -46,6 +46,9 @@ private:
     QWidget* scheduleTab_;
     QComboBox* weekComboBox_;
     QTableWidget* scheduleTable_;
+
+    ThemeToggleWidget* themeToggle_ = nullptr;
+
 
     void setupUI();
     void setupGradesTab();

@@ -6,6 +6,10 @@
 #include <QPushButton>
 #include <QLabel>
 #include "database.h"
+#include "ui/widgets/ThemeToggleWidget.h"
+#include <QToolBar>
+
+
 
 class LoginWindow : public QMainWindow {
     Q_OBJECT

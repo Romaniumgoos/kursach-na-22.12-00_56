@@ -5,6 +5,8 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QDebug>
+#include "ui/widgets/ThemeToggleWidget.h"
+#include <QToolBar>
 
 StudentWindow::StudentWindow(Database* db, int studentId, const QString& studentName, 
                              QWidget *parent)
@@ -13,6 +15,13 @@ StudentWindow::StudentWindow(Database* db, int studentId, const QString& student
 
     loadStudentInfo();
     setupUI();
+    auto* tb = new QToolBar("Toolbar", this);
+    tb->setMovable(false);
+    addToolBar(Qt::TopToolBarArea, tb);
+
+    themeToggle_ = new ThemeToggleWidget(this);
+    tb->addWidget(themeToggle_);
+
 
     setWindowTitle(QString("Студент: %1").arg(studentName_));
     resize(900, 600);

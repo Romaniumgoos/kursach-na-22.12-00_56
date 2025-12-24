@@ -1,35 +1,3 @@
-#cmake_minimum_required(VERSION 3.31)
-#project(untitled)
-#
-#set(CMAKE_CXX_STANDARD 20)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#
-#add_executable(${PROJECT_NAME}
-#        main.cpp
-#        database.cpp
-#        admin.cpp
-#        teacher.cpp
-#        student.cpp
-#        user.cpp
-#        third_party/sqlite/sqlite3.c
-#        statistics.h
-#        statistics.cpp
-#        scholarship.h
-#        scholarship.cpp
-#        menu.h
-#        menu.cpp
-#        AdminService.h
-#        AdminService.cpp
-#        core/result.h
-#        services/student_service.h
-#        services/student_service.cpp
-#        main.cpp
-#)
-#
-#target_include_directories(${PROJECT_NAME} PRIVATE
-#        ${CMAKE_CURRENT_SOURCE_DIR}
-#        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
-#)
 cmake_minimum_required(VERSION 3.31)
 project(untitled)
 
@@ -43,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
-# ===== Общие исходники (backend) =====
+# ===== Backend (общий код) =====
 set(BACKEND_SOURCES
         database.cpp
         admin.cpp
@@ -61,23 +29,47 @@ set(BACKEND_SOURCES
 )
 
 set(BACKEND_HEADERS
+        database.h
+        admin.h
+        teacher.h
+        student.h
+        user.h
         statistics.h
         scholarship.h
         menu.h
+
         AdminService.h
         core/result.h
         services/student_service.h
-        config.h
 
+        config.h
 )
 
-# ===== GUI executable (Qt) =====
-add_executable(app_gui
+# ===== GUI-only (Qt UI) =====
+set(GUI_SOURCES
         main.cpp
-        loginwindow.h loginwindow.cpp
-        studentwindow.h studentwindow.cpp
-        teacherwindow.h teacherwindow.cpp
-        adminwindow.h adminwindow.cpp
+        loginwindow.cpp
+        studentwindow.cpp
+        teacherwindow.cpp
+        adminwindow.cpp
+
+        ui/style/ThemeManager.cpp
+        ui/widgets/ThemeToggleWidget.cpp
+)
+
+set(GUI_HEADERS
+        loginwindow.h
+        studentwindow.h
+        teacherwindow.h
+        adminwindow.h
+
+        ui/style/ThemeManager.h
+        ui/widgets/ThemeToggleWidget.h
+)
+
+add_executable(app_gui
+        ${GUI_SOURCES}
+        ${GUI_HEADERS}
         ${BACKEND_SOURCES}
         ${BACKEND_HEADERS}
 )
@@ -92,7 +84,7 @@ target_link_libraries(app_gui PRIVATE
         Qt6::Widgets
 )
 
-# ===== Console executable (старый режим) =====
+# ===== Console executable =====
 add_executable(app_console
         main_console.cpp
         ${BACKEND_SOURCES}
@@ -103,6 +95,3 @@ target_include_directories(app_console PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
 )
-
-
-

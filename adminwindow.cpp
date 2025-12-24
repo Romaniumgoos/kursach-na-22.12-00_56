@@ -1,6 +1,7 @@
 #include "adminwindow.h"
 #include <QVBoxLayout>
 #include <QFont>
+#include "ui/widgets/ThemeToggleWidget.h"
 
 AdminWindow::AdminWindow(Database* db, int adminId, const QString& adminName,
                          QWidget *parent)

@@ -7,12 +7,15 @@
 #include <QFormLayout>
 #include <QMessageBox>
 #include <QDebug>
+#include "ui/widgets/ThemeToggleWidget.h"
 
 LoginWindow::LoginWindow(Database* db, QWidget *parent)
     : QMainWindow(parent), db_(db) {
     setupUI();
     setWindowTitle("Авторизация - Student Management System");
     resize(400, 250);
+
+
 }
 
 LoginWindow::~LoginWindow() {
@@ -27,6 +30,11 @@ void LoginWindow::setupUI() {
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setSpacing(15);
     mainLayout->setContentsMargins(30, 30, 30, 30);
+
+    auto* topRow = new QHBoxLayout();
+    topRow->addStretch();
+    topRow->addWidget(new ThemeToggleWidget(this));
+    mainLayout->addLayout(topRow);
 
     // Заголовок
     QLabel* titleLabel = new QLabel("Вход в систему", this);
