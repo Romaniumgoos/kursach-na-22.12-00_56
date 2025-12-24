@@ -1,5 +1,4 @@
 #pragma once
-
 #include "user.h"
 #include "database.h"
 
@@ -9,20 +8,15 @@ public:
 
     void displayMenu(Database& db) override;
 
-    // Просмотр собственных пропусков
     void viewMyAbsences(Database& db);
-
-    // Моё расписание
     bool viewMySchedule(Database& db);
 
-    // Новые методы для расписания
-    int getGroupId() const { return groupId_; }
-    int getSubgroup() const { return subgroup_; }
+    int getGroupId() const { return groupId; }
+    int getSubgroup() const { return subgroup; }
 
-    // Инициализация из БД после логина
     bool loadGroupInfo(Database& db);
 
 private:
-    int groupId_ = 0;
-    int subgroup_ = 0;
+    int groupId = 0;
+    int subgroup = 0;
 };

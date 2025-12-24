@@ -1977,30 +1977,30 @@ static bool parseDateISO(const std::string& s, std::tm& out) {
     return true;
 }
 
-// int Database::getweekofcycleForDate(const std::string& dateISO) {
-//     // старт семестра: 2025-09-01
-//     std::tm tmStart{};
-//     parseDateISO("2025-09-01", tmStart);
-//     std::time_t tStart = std::mktime(&tmStart);
-//
-//     std::tm tmDate{};
-//     if (!parseDateISO(dateISO, tmDate)) {
-//         return 1; // дефолт, если дата кривая
-//     }
-//     std::time_t tDate = std::mktime(&tmDate);
-//
-//     if (tDate < tStart) return 1;
-//
-//     // разница в днях
-//     long diffDays = static_cast<long>((tDate - tStart) / (60 * 60 * 24));
-//
-//     // номер недели от начала семестра (0=первая неделя)
-//     long weekIndex = diffDays / 7;
-//
-//     // цикл 1–4
-//     int week_of_cycle = static_cast<int>((weekIndex % 4) + 1);
-//     return week_of_cycle;
-// }
+int Database::getweekofcycleForDate(const std::string& dateISO) {
+    // старт семестра: 2025-09-01
+    std::tm tmStart{};
+    parseDateISO("2025-09-01", tmStart);
+    std::time_t tStart = std::mktime(&tmStart);
+
+    std::tm tmDate{};
+    if (!parseDateISO(dateISO, tmDate)) {
+        return 1; // дефолт, если дата кривая
+    }
+    std::time_t tDate = std::mktime(&tmDate);
+
+    if (tDate < tStart) return 1;
+
+    // разница в днях
+    long diffDays = static_cast<long>((tDate - tStart) / (60 * 60 * 24));
+
+    // номер недели от начала семестра (0=первая неделя)
+    long weekIndex = diffDays / 7;
+
+    // цикл 1–4
+    int week_of_cycle = static_cast<int>((weekIndex % 4) + 1);
+    return week_of_cycle;
+}
 
 bool Database::getCycleWeeks(
     std::vector<std::tuple<int,int,std::string,std::string>>& out) {
@@ -2026,41 +2026,6 @@ bool Database::getCycleWeeks(
     }
     sqlite3_finalize(stmt);
     return true;
-}
-int Database::getWeekOfCycleByDate(const std::string& dateISO){
-    if (!db_) {
-        std::cerr << "[✗] getWeekOfCycleByDate: соединение с БД не открыто\n";
-        return 0;
-    }
-
-    const char* sql =
-        "SELECT week_of_cycle FROM cycle_weeks "
-        "WHERE start_date <= ? AND end_date >= ? "
-        "LIMIT 1;";
-
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getweek_of_cycleByDate: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return 0;
-    }
-
-    sqlite3_bind_text(stmt, 1, dateISO.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, dateISO.c_str(), -1, SQLITE_TRANSIENT);
-
-    int week_of_cycle = 0;
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_ROW) {
-        week_of_cycle = sqlite3_column_int(stmt, 0);
-    } else if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getweek_of_cycleByDate: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-    }
-
-    sqlite3_finalize(stmt);
-    return week_of_cycle;
 }
 
 bool Database::getDateForWeekday(int week_of_cycle, int weekday, std::string& outDateISO) {
@@ -2182,62 +2147,65 @@ bool Database::isScheduleSlotBusy(int group_id, int sub_group,
 //     return ok;
 // }
 
-bool Database::getScheduleForGroupWeek(
-    int group_id, int week_of_cycle,
-    std::vector<std::tuple<int,int,int,int,
-                           std::string,std::string,
-                           std::string,std::string>>& rows) {
-    rows.clear();
-    if (!db_) return false;
+bool Database::getScheduleForTeacherGroupWeek(
+    int teacher_Id,
+    int group_Id,
+    int week_Of_Cycle,
+    int studentSub_group,
+    std::vector<std::tuple<int,int,int,int,int,std::string,std::string>>& outRows
+) {
+    outRows.clear();
+    if (!isConnected()) return false;
 
-    const char* sql = R"(
-        SELECT sch.id, sch.weekday, sch.lesson_number, sch.sub_group,
-       s.name as subject_name,
-       u.name as teacher_name,
-       sch.room,
-       sch.lesson_type
-FROM schedule sch
-JOIN subjects s ON sch.subject_id = s.id
-JOIN users u ON sch.teacher_id = u.id
-WHERE sch.group_id = ?
-  AND sch.week_of_cycle = ?
-  AND (sch.sub_group = 0 OR sch.sub_group = ?)  // Добавляем фильтр по подгруппе
-ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
-    )";
+    const char* sql = R"SQL(
+        SELECT sch.id,
+               sch.subject_id,
+               sch.weekday,
+               sch.lesson_number,
+               sch.sub_group,
+               subj.name,
+               COALESCE(sch.lesson_type, '')
+        FROM schedule sch
+        JOIN subjects subj ON sch.subject_id = subj.id
+        WHERE sch.teacher_id = ?
+          AND sch.group_id   = ?
+          AND sch.week_of_cycle = ?
+          AND (sch.sub_group = 0 OR sch.sub_group = ?)
+        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+    )SQL";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) return false;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
-    sqlite3_bind_int(stmt, 1, group_id);
-    sqlite3_bind_int(stmt, 2, week_of_cycle);
+    sqlite3_bind_int(stmt, 1, teacher_Id);
+    sqlite3_bind_int(stmt, 2, group_Id);
+    sqlite3_bind_int(stmt, 3, week_Of_Cycle);
+    sqlite3_bind_int(stmt, 4, studentSub_group);
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int id        = sqlite3_column_int(stmt, 0);
-        int weekday   = sqlite3_column_int(stmt, 1);
-        int lesson    = sqlite3_column_int(stmt, 2);
-        int sub_group  = sqlite3_column_int(stmt, 3);
-        const char* subj = (const char*)sqlite3_column_text(stmt, 4);
-        const char* teach= (const char*)sqlite3_column_text(stmt, 5);
-        const char* room = (const char*)sqlite3_column_text(stmt, 6);
-        const char* ltype= (const char*)sqlite3_column_text(stmt, 7);
+        int scheduleId   = sqlite3_column_int(stmt, 0);
+        int subjectId    = sqlite3_column_int(stmt, 1);
+        int weekday      = sqlite3_column_int(stmt, 2);
+        int lessonNumber = sqlite3_column_int(stmt, 3);
+        int subgroup     = sqlite3_column_int(stmt, 4);
 
-        rows.emplace_back(
-            id,
+        const char* subjName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        const char* ltype    = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+
+        outRows.emplace_back(
+            scheduleId,
+            subjectId,
             weekday,
-            lesson,
-            sub_group,
-            subj   ? subj   : "",
-            teach  ? teach  : "",
-            room   ? room   : "",
-            ltype  ? ltype  : ""
+            lessonNumber,
+            subgroup,
+            subjName ? subjName : "",
+            ltype ? ltype : ""
         );
     }
 
     sqlite3_finalize(stmt);
     return true;
 }
-
 
 bool Database::addLectureForAllGroups(int basegroup_id, int sub_group,
                                       int weekday, int lesson_number, int week_of_cycle,
@@ -2541,4 +2509,76 @@ WHERE id = ?
     std::cerr << "[✗] updateScheduleEntry: не удалось обновить запись с ID " << schedule_id << "\n";
     return false;
 }
+
+int Database::getWeekIdByDate(const std::string& dateISO)
+{
+    if (!db_) return 0;
+
+    const char* sql = R"(
+        SELECT id
+        FROM cycleweeks
+        WHERE start_date <= ? AND end_date >= ?
+        ORDER BY start_date
+        LIMIT 1
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        return 0;
+
+    sqlite3_bind_text(stmt, 1, dateISO.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, dateISO.c_str(), -1, SQLITE_TRANSIENT);
+
+    int id = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+        id = sqlite3_column_int(stmt, 0);
+
+    sqlite3_finalize(stmt);
+    return id;
+}
+int Database::getWeekOfCycleByWeekId(int weekId) {
+    if (!db_) return 0;
+    const char* sql = "SELECT week_of_cycle FROM cycleweeks WHERE id = ? LIMIT 1";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0;
+
+    sqlite3_bind_int(stmt, 1, weekId);
+
+    int w = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) w = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return w;
+}
+
+bool Database::getDateForWeekdayByWeekId(int weekId, int weekday, std::string& outDateISO) {
+    outDateISO.clear();
+    if (!db_) return false;
+
+    const char* sql = "SELECT start_date FROM cycleweeks WHERE id = ? LIMIT 1";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, weekId);
+
+    std::string start;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* s = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        if (s) start = s;
+    }
+    sqlite3_finalize(stmt);
+
+    if (start.empty()) return false;
+
+    int y, m, d;
+    if (sscanf(start.c_str(), "%d-%d-%d", &y, &m, &d) != 3) return false;
+
+    d += weekday; // weekday 0..5
+    std::ostringstream oss;
+    oss << y << "-" << std::setw(2) << std::setfill('0') << m
+        << "-" << std::setw(2) << std::setfill('0') << d;
+    outDateISO = oss.str();
+    return true;
+}
+
+
 

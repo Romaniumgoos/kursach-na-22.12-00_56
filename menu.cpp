@@ -8,6 +8,28 @@
 #include <sstream>
 #include <iomanip>
 #include <cctype>
+struct WeekSelection {
+    int weekId = 0;       // >0 если выбрана календарная неделя
+    int weekOfCycle = 0;  // 1..4 всегда нужен для schedule
+};
+
+WeekSelection decodeWeekSelection(Database& db, int sel) {
+    WeekSelection r;
+    if (sel == 0) return r;
+
+    if (sel < 0) {
+        r.weekOfCycle = -sel;          // mode 1
+        r.weekId = 0;
+        return r;
+    }
+
+    // sel > 0 => weekId (mode 2 или 3)
+    r.weekId = sel;
+
+    // нужно получить weekOfCycle по weekId (добавь метод в Database)
+    r.weekOfCycle = db.getWeekOfCycleByWeekId(r.weekId);
+    return r;
+}
 
 const std::array<const char*, 6>& getDayNames() {
     static const std::array<const char*, 6> kDayNames = {
@@ -141,7 +163,7 @@ int chooseWeekOfCycleOrDate(Database& db)
 
     if (mode == 1) {
         int week = readIntInRange("Введите номер недели (1-4)", 1, 4, 1, true, 0);
-        return week; // 0 = отмена
+        return -week; // 0 = отмена
     }
 
     if (mode == 2) {
@@ -167,7 +189,7 @@ int chooseWeekOfCycleOrDate(Database& db)
             int id, weekCycle;
             std::string start, end;
             std::tie(id, weekCycle, start, end) = w;
-            if (id == idChoice) return weekCycle;
+            if (id == idChoice) return id;
         }
 
         std::cout << "Нет недели с таким ID.\n";
@@ -182,12 +204,13 @@ int chooseWeekOfCycleOrDate(Database& db)
         return 0;
     }
 
-    int w = db.getWeekOfCycleByDate(date);
-    if (w == 0) {
+    int weekId = db.getWeekIdByDate(date);
+    if (weekId == 0) {
         std::cout << "Эта дата не входит ни в одну учебную неделю.\n";
         return 0;
     }
 
-    std::cout << "Эта дата попадает в неделю цикла: " << w << "\n";
-    return w;
+    std::cout << "Эта дата попадает в календарную неделю (ID): " << weekId << "\n";
+    return weekId;
+
 }

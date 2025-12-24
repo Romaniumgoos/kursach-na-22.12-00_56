@@ -41,6 +41,7 @@ static bool selectLessonFromSchedule(Database& db,
 {
     std::vector<std::tuple<int,int,int,int,int,std::string>> rows;
     if (!db.getScheduleForTeacherGroup(teacherId, groupId, rows) || rows.empty()) {
+
         std::cout << "Для этой группы у вас нет пар по расписанию.\n";
         return false;
     }
@@ -88,22 +89,24 @@ static bool selectLessonForAbsence(Database& db,
                                    int& outWeekday,
                                    int& outLessonNumber)
 {
-    std::vector<std::tuple<int,int,int,int,int,std::string>> rows;
-    if (!db.getScheduleForTeacherGroup(teacherId, groupId, rows) || rows.empty()) {
+    std::vector<std::tuple<int,int,int,int,int,std::string,std::string>> rows;
+    if (!db.getScheduleForTeacherGroupWeek(teacherId, groupId, week_of_cycle, /*subgroupFilter=*/0, rows) || rows.empty()) {
+
         std::cout << "Для этой группы у вас нет пар по расписанию.\n";
         return false;
     }
-
+    std::string ignoreLessonType;
     std::vector<LessonInfo> lessons;
     lessons.reserve(rows.size());
     for (const auto& r : rows) {
         LessonInfo les;
         std::tie(les.scheduleId,
-                 les.subjectId,
-                 les.dayOfWeek,
-                 les.pairNumber,
-                 les.subgroup,
-                 les.subjectName) = r;
+         les.subjectId,
+         les.dayOfWeek,
+         les.pairNumber,
+         les.subgroup,
+         les.subjectName,
+         ignoreLessonType) = r;
         lessons.push_back(les);
     }
 
@@ -119,6 +122,8 @@ static bool selectLessonForAbsence(Database& db,
         if (db.getDateForWeekday(week_of_cycle, les.dayOfWeek, dateISO)) {
             dateLabel = formatDateLabel(dateISO);
         }
+
+
 
 
         std::cout << (i + 1) << ") День " << les.dayOfWeek;
@@ -311,8 +316,15 @@ void Teacher::displayMenu(Database& db) {
                 break;
             }
 
-            int weekOfCycle = chooseWeekOfCycleOrDate(db);
-            if (weekOfCycle == 0) break;
+                int weekId = chooseWeekOfCycleOrDate(db);
+                if (weekId == 0) break;
+
+                int weekOfCycle = 0;
+                if (weekId < 0) weekOfCycle = -weekId;
+                else            weekOfCycle = db.getWeekOfCycleByWeekId(weekId);
+
+                if (weekOfCycle == 0) break;
+
 
             sqlite3* rawdb = db.getHandle();
             const char* sql = R"(
@@ -370,10 +382,11 @@ sch.id,
                 info.subjectName = subjName ? subjName : "";
                 info.lessonType  = ltype ? ltype : "";
 
-                if (!db.getDateForWeekday(weekOfCycle, info.weekday, info.dateISO)) {
+                if (!db.getDateForWeekdayByWeekId(weekId, info.weekday, info.dateISO)) {
                     continue;
                 }
                 lessons.push_back(info);
+
             }
             sqlite3_finalize(stmt);
 
@@ -609,11 +622,19 @@ sch.id,
         }
 
             case 8: {
-                int week = chooseWeekOfCycleOrDate(db);
-                if (week == 0) break;
-                viewMySchedule(week);
+                int weekId = chooseWeekOfCycleOrDate(db);
+                if (weekId == 0) break;
+
+                int weekOfCycle = 0;
+                if (weekId < 0) weekOfCycle = -weekId;
+                else            weekOfCycle = db.getWeekOfCycleByWeekId(weekId);
+
+                if (weekOfCycle == 0) break;
+
+                viewMySchedule(weekOfCycle);
                 break;
             }
+
 
 
 
@@ -779,41 +800,27 @@ void Teacher::addAbsence(Database& db)
         return;
     }
 
-    int weekOfCycle = chooseWeekOfCycleOrDate(db);
+    int weekId = chooseWeekOfCycleOrDate(db);   // теперь это weekId (или -weekOfCycle)
+    if (weekId == 0) {
+        std::cout << "Некорректная неделя.\n";
+        return;
+    }
+
+    int weekOfCycle = 0;
+    if (weekId < 0) weekOfCycle = -weekId;                 // режим "ввели 1-4"
+    else            weekOfCycle = db.getWeekOfCycleByWeekId(weekId); // calendar week -> 1..4
+
     if (weekOfCycle == 0) {
         std::cout << "Некорректная неделя.\n";
         return;
     }
 
-    sqlite3* rawdb = db.getHandle();
-    const char* sql = R"(
-        SELECT
-sch.id,
-               sch.subject_id,
-               sch.weekday,
-               sch.lesson_number,
-               sch.sub_group,
-               subj.name,
-               sch.lesson_type
-        FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        WHERE sch.teacher_id = ?
-          AND sch.group_id = ?
-          AND sch.week_of_cycle = ?
-          AND (sch.sub_group = 0 OR sch.sub_group = ?)
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(rawdb, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cout << "Ошибка SQL.\n";
+    std::vector<std::tuple<int,int,int,int,int,std::string,std::string>> rows;
+    if (!db.getScheduleForTeacherGroupWeek(getId(), groupId, weekOfCycle, studentSubgroup, rows) || rows.empty()) {
+        std::cout << "Нет доступных пар (подходящих по подгруппе).\n";
         return;
     }
 
-    sqlite3_bind_int(stmt, 1, getId());
-    sqlite3_bind_int(stmt, 2, groupId);
-    sqlite3_bind_int(stmt, 3, weekOfCycle);
-    sqlite3_bind_int(stmt, 4, studentSubgroup);
 
     struct LessonInfo {
         int scheduleId;
@@ -827,25 +834,28 @@ sch.id,
     };
 
     std::vector<LessonInfo> lessons;
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
+    lessons.reserve(rows.size());
+
+    for (const auto& r : rows) {
         LessonInfo info;
-        info.scheduleId   = sqlite3_column_int(stmt, 0);
-        info.subjectId    = sqlite3_column_int(stmt, 1);
-        info.weekday      = sqlite3_column_int(stmt, 2);
-        info.lessonNumber = sqlite3_column_int(stmt, 3);
-        info.subgroup     = sqlite3_column_int(stmt, 4);
+        std::tie(info.scheduleId,
+                 info.subjectId,
+                 info.weekday,
+                 info.lessonNumber,
+                 info.subgroup,
+                 info.subjectName,
+                 info.lessonType) = r;
 
-        const char* subjName = (const char*)sqlite3_column_text(stmt, 5);
-        const char* ltype    = (const char*)sqlite3_column_text(stmt, 6);
-        info.subjectName = subjName ? subjName : "";
-        info.lessonType  = ltype ? ltype : "";
-
-        if (!db.getDateForWeekday(weekOfCycle, info.weekday, info.dateISO)) {
-            continue;
-        }
+        if (!db.getDateForWeekdayByWeekId(weekId, info.weekday, info.dateISO)) continue;
         lessons.push_back(info);
+
     }
-    sqlite3_finalize(stmt);
+
+    if (lessons.empty()) {
+        std::cout << "Нет доступных пар (подходящих по подгруппе).\n";
+        return;
+    }
+
 
     if (lessons.empty()) {
         std::cout << "Нет доступных пар (подходящих по подгруппе).\n";
@@ -861,6 +871,7 @@ sch.id,
 
         std::string dateLabel;
         formatDateLabel(les.dateISO);
+
 
         std::cout << (i + 1) << ") " << dayNames[les.weekday] << " " << dateLabel
                   << ", пара " << les.lessonNumber;
@@ -884,6 +895,7 @@ sch.id,
     const char* gradeSQL =
         "SELECT COUNT(*) FROM grades "
         "WHERE student_id = ? AND subject_id = ? AND semester_id = ? AND date = ?";
+    sqlite3* rawdb = db.getHandle();
 
     if (sqlite3_prepare_v2(rawdb, gradeSQL, -1, &gradeStmt, nullptr) == SQLITE_OK) {
         sqlite3_bind_int(gradeStmt, 1, studentId);

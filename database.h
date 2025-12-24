@@ -180,9 +180,10 @@ public:
 
     sqlite3* getHandle() { return db_; }
     sqlite3* getRawHandle() const { return db_; }
-    //int  getweekofcycleForDate(const std::string& dateISO);
+    int  getweekofcycleForDate(const std::string& dateISO);
     bool getCycleWeeks(std::vector<std::tuple<int,int,std::string,std::string>>& out);
-    int getWeekOfCycleByDate(const std::string& dateISO);
+    bool getDateForWeekdayByWeekId(int weekId, int weekday, std::string& outDateISO);
+    int getWeekOfCycleByWeekId(int weekId);
     bool getDateForWeekday(int week_of_cycle, int weekday, std::string& outDateISO);
     // Проверить, не занята ли ячейка расписания (группа+день+пара+неделя+подгруппа)
     bool isScheduleSlotBusy(int group_id, int sub_group,
@@ -199,11 +200,15 @@ public:
 bool deleteScheduleEntry(int scheduleId);
     // Получить расписание для группы на неделю (для редактирования)
     // возвращает: id, weekday, lesson_number, sub_group, subject_name, teacher_name, room, lesson_type
-    bool getScheduleForGroupWeek(
-        int group_id, int week_of_cycle,
-        std::vector<std::tuple<int,int,int,int,
-                               std::string,std::string,
-                               std::string,std::string>>& rows);
+    // scheduleId, subjectId, weekday, lessonNumber, subgroup, subjectName, lessonType
+    bool getScheduleForTeacherGroupWeek(
+        int teacher_Id,
+        int group_Id,
+        int week_Of_Cycle,
+        int studentSub_group,
+        std::vector<std::tuple<int,int,int,int,int,std::string,std::string>>& outRows
+    );
+
     // Добавить запись расписания для всех групп, кроме basegroup_id, если это лекция
     bool addLectureForAllGroups(int basegroup_id, int sub_group,
                                 int weekday, int lesson_number, int week_of_cycle,
@@ -226,6 +231,8 @@ bool deleteScheduleEntry(int scheduleId);
     bool updateScheduleEntry(int schedule_id, int group_id, int sub_group, int weekday,
                              int lesson_number, int week_of_cycle, int subject_id,
                              int teacher_id, const std::string& room, const std::string& lesson_type);
+    int getWeekIdByDate(const std::string& dateISO);
+
 
 };
 

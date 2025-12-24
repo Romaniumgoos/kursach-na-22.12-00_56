@@ -1,6 +1,5 @@
 #include "student.h"
 #include "services/student_service.h"
-
 #include "database.h"
 #include "statistics.h"
 #include "scholarship.h"
@@ -17,6 +16,7 @@
 void Student::displayMenu(Database& db) {
     // загрузить группу и подгруппу перед первым показом меню
     loadGroupInfo(db);
+
     StudentService svc(db);
 
     while (true) {
@@ -30,16 +30,17 @@ void Student::displayMenu(Database& db) {
         int choice = readChoiceFromList("Ваш выбор", 0, 4, false, 0);
         if (choice == 0) break;
 
-
         switch (choice) {
         case 1: { // Мои оценки по предметам (семестр фиксирован = 1)
             int semesterId = 1;
-            std::vector<std::tuple<std::string, int, std::string, std::string>> grades;
 
-            if (!db.getStudentGradesForSemester(getId(), semesterId, grades)) {
-                std::cout << "Ошибка при получении оценок.\n";
+            auto gradesRes = svc.getGradesForSemester(getId(), semesterId);
+            if (!gradesRes.ok) {
+                std::cout << "Ошибка при получении оценок: " << gradesRes.error << "\n";
                 break;
             }
+
+            const auto& grades = gradesRes.value;
 
             if (grades.empty()) {
                 std::cout << "Оценок не найдено.\n";
@@ -50,8 +51,8 @@ void Student::displayMenu(Database& db) {
             std::map<std::string, std::vector<int>> subjectMarks;
             for (const auto& g : grades) {
                 std::string subj, date, grade_type;
-                int value;
-                std::tie(subj, value, date, grade_type) = g;  // ← ИСПРАВЛЕНО: 4 элемента
+                int value = 0;
+                std::tie(subj, value, date, grade_type) = g;
                 subjectMarks[subj].push_back(value);
             }
 
@@ -66,8 +67,8 @@ void Student::displayMenu(Database& db) {
                     std::cout << v << " ";
                     sum += v;
                 }
-                double avgSubj = marks.empty() ? 0.0
-                    : static_cast<double>(sum) / marks.size();
+
+                double avgSubj = marks.empty() ? 0.0 : static_cast<double>(sum) / marks.size();
                 std::cout << "\nСредний балл по предмету: " << avgSubj << "\n";
 
                 totalSum += sum;
@@ -83,6 +84,7 @@ void Student::displayMenu(Database& db) {
 
         case 2: { // Стипендия, семестр тоже фиксированный = 1
             int semesterId = 1;
+
             double avg = Statistics::calculateStudentAverage(db, getId(), semesterId);
             ScholarshipInfo info = ScholarshipCalculator::calculate(avg);
 
@@ -119,15 +121,13 @@ void Student::displayMenu(Database& db) {
             break;
         }
 
-        case 3: {
+        case 3:
             viewMyAbsences(db);
             break;
-        }
 
-        case 4: {
+        case 4:
             viewMySchedule(db);
             break;
-        }
 
         default:
             std::cout << "Неверный пункт меню.\n";
@@ -138,17 +138,19 @@ void Student::displayMenu(Database& db) {
 
 // === МОЁ РАСПИСАНИЕ ===
 bool Student::viewMySchedule(Database& db) {
-    int groupId = 0;
-    int subgroup = 0;
-    if (!db.getStudentGroupAndSubgroup(getId(), groupId, subgroup)) {
-        std::cout << "Не удалось определить вашу группу/подгруппу.\n";
-        return false;
+    StudentService svc(db);
+
+    // Если по какой-то причине ещё не загрузили (хотя menu обычно делает это)
+    if (groupId == 0) {
+        if (!loadGroupInfo(db)) {
+            return false;
+        }
     }
 
-    int week = chooseWeekOfCycleOrDate(db);
+    const int week = chooseWeekOfCycleOrDate(db);
     if (week == 0) return false;
 
-    const auto& dayNames = getDayNames();
+    const auto& dayNames  = getDayNames();
     const auto& pairTimes = getPairTimes();
 
     std::cout << "\n╔════════════════════════════════════════════════════╗\n";
@@ -160,52 +162,44 @@ bool Student::viewMySchedule(Database& db) {
     bool hasAnyLessons = false;
 
     for (int weekday = 0; weekday <= 5; ++weekday) {
-        std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>> rows;
-        if (!db.getScheduleForGroup(groupId, weekday, week, rows)) {
+        const auto rowsRes = svc.getScheduleForGroup(groupId, weekday, week);
+        if (!rowsRes.ok || rowsRes.value.empty()) {
             continue;
         }
-        if (rows.empty()) continue;
 
-        std::string dateISO;
         std::string dateLabel;
-        if (db.getDateForWeekday(week, weekday, dateISO)) {
-            dateLabel = formatDateLabel(dateISO);
+        const auto dateRes = svc.getDateISO(week, weekday);
+        if (dateRes.ok) {
+            dateLabel = formatDateLabel(dateRes.value);
         }
 
+        std::cout << "\n[" << dayNames[weekday] << "]";
+        if (!dateLabel.empty()) std::cout << " (" << dateLabel << ")";
+        std::cout << "\n";
 
-        if (!dateLabel.empty()) {
-            std::cout << "\n[" << dayNames[weekday] << "] (" << dateLabel << ")\n";
-        } else {
-            std::cout << "\n[" << dayNames[weekday] << "]\n";
-        }
+        for (const auto& row : rowsRes.value) {
+            auto [id, lessonNumber, rowSubgroup, subject, room, lessonType, teacher] = row;
 
-        for (const auto& row : rows) {
-            int    id, lessonNumber, subgrp;
-            std::string subj, room, ltype, teacher;
-            std::tie(id, lessonNumber, subgrp, subj, room, ltype, teacher) = row;
-
-            // фильтр по подгруппе: студент видит свои подгрупповые и общие
-            if (subgroup != 0 && subgrp != 0 && subgrp != subgroup) {
+            // студент видит общие (subgroup=0) и свои (subgroup совпадает)
+            if (subgroup != 0 && rowSubgroup != 0 && rowSubgroup != subgroup) {
                 continue;
             }
 
             hasAnyLessons = true;
 
-            std::string subjText = subj;
-            if (subgrp == 1)      subjText += " (подгр. 1)";
-            else if (subgrp == 2) subjText += " (подгр. 2)";
+            std::string subjectText = subject;
+            if (rowSubgroup == 1)      subjectText += " (подгр. 1)";
+            else if (rowSubgroup == 2) subjectText += " (подгр. 2)";
 
             std::string typeLabel;
-            if (!ltype.empty()) {
-                typeLabel = " [" + ltype + "]";
-            }
+            if (!lessonType.empty()) typeLabel = " [" + lessonType + "]";
 
             std::cout << "  Пара " << lessonNumber;
             if (lessonNumber >= 1 && lessonNumber <= 6) {
                 std::cout << " (" << pairTimes[lessonNumber - 1] << ")";
             }
 
-            std::cout << " | " << subjText << typeLabel
+            std::cout << " | " << subjectText << typeLabel
                       << " | преп. " << teacher
                       << " | ауд. " << room << "\n";
         }
@@ -221,16 +215,14 @@ bool Student::viewMySchedule(Database& db) {
 // === МОИ ПРОПУСКИ ===
 void Student::viewMyAbsences(Database& db) {
     StudentService svc(db);
-    int semesterId = 1;
-    auto absRes = svc.getAbsencesForSemester(getId(), semesterId);
+    const int semesterId = 1;
+
+    const auto absRes = svc.getAbsencesForSemester(getId(), semesterId);
     if (!absRes.ok) {
-        std::cout << absRes.error << "\n";
+        std::cout << "✗ Ошибка при получении данных: " << absRes.error << "\n";
         return;
     }
-    const auto& absences = absRes.value;
-
-
-    if (absences.empty()) {
+    if (absRes.value.empty()) {
         std::cout << "Пропусков за семестр не найдено.\n";
         return;
     }
@@ -238,21 +230,19 @@ void Student::viewMyAbsences(Database& db) {
     std::cout << "\n=== Мои пропуски за семестр ===\n";
     std::cout << std::left << std::setw(12) << "Дата"
               << std::setw(25) << "Предмет"
-              << std::setw(8) << "Часы"
+              << std::setw(8)  << "Часы"
               << std::setw(18) << "Тип" << "\n";
     std::cout << std::string(63, '─') << "\n";
 
     int total = 0;
-    for (const auto& a : absences) {
-        const std::string& subj = std::get<0>(a);
-        int hours               = std::get<1>(a);
-        const std::string& date = std::get<2>(a);
-        const std::string& type = std::get<3>(a);
+    for (const auto& a : absRes.value) {
+        const auto& [subject, hours, dateISO, type] = a;
+
         total += hours;
 
-        std::cout << std::left << std::setw(12) << date
-                  << std::setw(25) << subj
-                  << std::setw(8) << hours
+        std::cout << std::left << std::setw(12) << dateISO
+                  << std::setw(25) << subject
+                  << std::setw(8)  << hours
                   << std::setw(18) << (type == "excused" ? "уважительная" : "неуважительная")
                   << "\n";
     }
@@ -263,14 +253,19 @@ void Student::viewMyAbsences(Database& db) {
 
 // === Загрузка группы/подгруппы ===
 bool Student::loadGroupInfo(Database& db) {
-    int g = 0, sub = 0;
-    if (!db.getStudentGroupAndSubgroup(getId(), g, sub)) {
-        std::cout << "[!] Не удалось загрузить группу и подгруппу для студента.\n";
-        groupId_ = 0;
-        subgroup_ = 0;
+    StudentService svc(db);
+
+    const auto gsRes = svc.getStudentGroupAndSubgroup(getId());
+    if (!gsRes.ok) {
+        std::cout << "[!] Не удалось загрузить группу/подгруппу: " << gsRes.error << "\n";
+        groupId = 0;
+        subgroup = 0;
         return false;
     }
-    groupId_ = g;
-    subgroup_ = sub;
+
+    groupId = gsRes.value.first;
+    subgroup = gsRes.value.second;
     return true;
 }
+
+
