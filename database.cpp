@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <cstring>
 
 
 namespace {
@@ -275,6 +276,7 @@ bool Database::initializeDemoData() {
         // потом основных пользователей, предметы, группы, недели
         "DELETE FROM users;"
         "DELETE FROM subjects;"
+    "DELETE FROM semesters;"
         "DELETE FROM groups;"
         "DELETE FROM cycle_weeks;"
         // сбрасываем AUTOINCREMENT
@@ -1966,7 +1968,7 @@ bool Database::loadGroupSchedule(int group_id, const std::string& filePath) {
 // Вспомогательная функция: переводит строку "YYYY-MM-DD" в std::tm
 static bool parseDateISO(const std::string& s, std::tm& out) {
     if (s.size() != 10) return false;
-    std::memset(&out, 0, sizeof(out));
+    memset(&out, 0, sizeof(out));
     out.tm_year = std::stoi(s.substr(0, 4)) - 1900;
     out.tm_mon  = std::stoi(s.substr(5, 2)) - 1;   // 0–11
     out.tm_mday = std::stoi(s.substr(8, 2));       // 1–31

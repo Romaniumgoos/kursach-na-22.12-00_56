@@ -1,163 +1,53 @@
+#include <QApplication>
+#include <QMessageBox>
+#include "loginwindow.h"
 #include "database.h"
-#include "user.h"
-#include "menu.h"
+#include "config.h"   // добавь вверху файла
 
-#include <iostream>
-#include <vector>
-#include <string>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
-int main() {
-#ifdef _WIN32
-    SetConsoleOutputCP(65001);
-    SetConsoleCP(65001);
-#endif
 
-    Database db("school.db");
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+
+    // Подключаемся к БД (файл рядом с .exe)
+    Database db(PROJECT_ROOT + "\\school.db");
+
     if (!db.connect()) {
-        std::cerr << "❌ Ошибка подключения к БД\n";
+        QMessageBox::critical(nullptr,
+                              "Ошибка БД",
+                              "Не удалось подключиться к базе данных (school.db).");
         return 1;
     }
 
+    // Если надо — инициализировать структуру таблиц
     if (!db.initialize()) {
-        std::cerr << "❌ Ошибка инициализации БД\n";
+        QMessageBox::critical(nullptr,
+                              "Ошибка БД",
+                              "Не удалось инициализировать структуру БД.");
         return 1;
     }
 
-    // Проверяем, пустое ли расписание (первая инициализация новой БД)
-    bool scheduleEmpty = true;
-    if (!db.isScheduleEmpty(scheduleEmpty)) {
-        std::cerr << "❌ Не удалось проверить расписание\n";
-        return 1;
-    }
-
-    if (scheduleEmpty) {
-        std::cout << "\n[+] Первая инициализация: заливаем демо-данные и расписание...\n";
-
+    // Проверяем, пустое ли расписание
+    bool isEmpty = true;
+    if (db.isScheduleEmpty(isEmpty) && isEmpty) {
         if (!db.initializeDemoData()) {
-            std::cerr << "❌ Ошибка заполнения демо-данных\n";
-            return 1;
+            QMessageBox::warning(nullptr,
+                                 "Предупреждение",
+                                 "Не удалось загрузить демо‑данные.");
         }
 
-        // 📅 Загрузка расписания 4 групп
-        std::cout << "\n📅 ЗАГРУЗКА РАСПИСАНИЯ\n";
-        std::vector<std::pair<int, std::string>> schedules = {
-            {1, "schedule_420601_newest.sql"},
-            {2, "schedule_420602_newest.sql"},
-            {3, "schedule_420603_newest.sql"},
-            {4, "schedule_420604_newest.sql"}
-        };
+        // Загрузка расписаний для 4 групп из файлов в корне проекта
+        db.loadGroupSchedule(1, PROJECT_ROOT + "\\schedule_420601_newest.sql");
+        db.loadGroupSchedule(2, PROJECT_ROOT + "\\schedule_420602_newest.sql");
+        db.loadGroupSchedule(3, PROJECT_ROOT + "\\schedule_420603_newest.sql");
+        db.loadGroupSchedule(4, PROJECT_ROOT + "\\schedule_420604_newest.sql");
 
-        int successful = 0;
-        for (const auto& [groupId, filename] : schedules) {
-            std::cout << "📂 Загрузка расписания для группы " << (420600 + groupId) << "...\n";
-            if (db.loadGroupSchedule(groupId, filename)) {
-                std::cout << "✓ Расписание загружено из файла: " << filename << "\n";
-                successful++;
-            } else {
-                std::cerr << "❌ Ошибка при загрузке файла: " << filename << "\n";
-            }
-        }
-
-        {
-            sqlite3_stmt* dupStmt = nullptr;
-            const char* dupSql =
-                "SELECT weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room, lesson_type, COUNT(*) "
-                "FROM schedule "
-                "WHERE group_id = 0 AND lesson_type = 'ЛК' "
-                "GROUP BY weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room, lesson_type "
-                "HAVING COUNT(*) > 1;";
-
-            if (sqlite3_prepare_v2(db.getHandle(), dupSql, -1, &dupStmt, nullptr) == SQLITE_OK) {
-                bool hasDup = false;
-                while (sqlite3_step(dupStmt) == SQLITE_ROW) {
-                    if (!hasDup) {
-                        std::cerr << "⚠ WARNING: найдены дубли общих лекций (group_id=0)\n";
-                        hasDup = true;
-                    }
-
-                    const int weekday = sqlite3_column_int(dupStmt, 0);
-                    const int lessonNumber = sqlite3_column_int(dupStmt, 1);
-                    const int weekOfCycle = sqlite3_column_int(dupStmt, 2);
-                    const int subjectId = sqlite3_column_int(dupStmt, 3);
-                    const int teacherId = sqlite3_column_int(dupStmt, 4);
-                    const unsigned char* roomText = sqlite3_column_text(dupStmt, 5);
-                    const unsigned char* lessonTypeText = sqlite3_column_text(dupStmt, 6);
-                    const int cnt = sqlite3_column_int(dupStmt, 7);
-
-                    const std::string room = roomText ? reinterpret_cast<const char*>(roomText) : "";
-                    const std::string lessonType = lessonTypeText ? reinterpret_cast<const char*>(lessonTypeText) : "";
-
-                    std::cerr
-                        << "  weekday=" << weekday
-                        << ", lesson_number=" << lessonNumber
-                        << ", week_of_cycle=" << weekOfCycle
-                        << ", subject_id=" << subjectId
-                        << ", teacher_id=" << teacherId
-                        << ", room='" << room << "'"
-                        << ", lesson_type='" << lessonType << "'"
-                        << ", count=" << cnt << "\n";
-                }
-
-                sqlite3_finalize(dupStmt);
-            } else {
-                std::cerr << "❌ Не удалось выполнить проверку дублей лекций\n";
-            }
-        }
-
-        // 🔍 Проверка количества пар
-        std::cout << "\n🔍 ПРОВЕРКА ЗАГРУЗКИ\n";
-        sqlite3_stmt* stmt = nullptr;
-        const std::string query = "SELECT COUNT(*) FROM schedule";
-        if (sqlite3_prepare_v2(db.getHandle(), query.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
-            if (sqlite3_step(stmt) == SQLITE_ROW) {
-                int total = sqlite3_column_int(stmt, 0);
-                std::cout << "✓ Всего пар в расписании: " << total << "\n";
-                if (total > 0) {
-                    std::cout << "✅ РАСПИСАНИЕ УСПЕШНО ЗАГРУЖЕНО! ("
-                              << successful << "/4 файлов)\n";
-                } else {
-                    std::cout << "❌ РАСПИСАНИЕ НЕ ЗАГРУЖЕНО!\n";
-                }
-            }
-            sqlite3_finalize(stmt);
-        } else {
-            std::cerr << "❌ Не удалось выполнить проверочный запрос COUNT(*)\n";
-        }
-    } else {
-        std::cout << "\n[+] Найдена существующая БД, демо-данные и расписание не перезаполняем.\n";
     }
 
-    // 🔐 Основной цикл авторизации
-    while (true) {
-        std::string username, password;
-        std::cout << "\n=== Авторизация ===\n";
-        std::cout << "Логин (или 'exit' для выхода): ";
-        std::cin >> username;
-        if (username == "exit") {
-            std::cout << "До свидания!\n";
-            break;
-        }
+    // Показываем окно логина
+    LoginWindow w(&db);
+    w.show();
 
-        std::cout << "Пароль: ";
-        std::cin >> password;
-
-        auto user = User::authenticate(db, username, password);
-        if (!user) {
-            std::cerr << "❌ Неверный логин или пароль.\n";
-            continue;
-        }
-
-        std::cout << "\n✓ Добро пожаловать, " << user->getName()
-                  << " [" << user->getRole() << "]\n\n";
-
-        user->displayMenu(db);
-    }
-
-    std::cout << "Программа завершена.\n";
-    db.disconnect();
-    return 0;
+    return app.exec();
 }

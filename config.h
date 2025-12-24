@@ -1,19 +1,6 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
+#include <string>
 
-// ============================================================
-// КОНФИГУРАЦИЯ ПОДКЛЮЧЕНИЯ К БД
-// ============================================================
-// Это файл с настройками подключения к базе данных
-// Используется во всём проекте, чтобы не повторять данные
-
-namespace DatabaseConfig {
-    // Параметры подключения к MySQL
-    const char* HOST = "127.0.0.1";      // Адрес сервера БД
-    const char* USER = "root";            // Пользователь БД
-    const char* PASSWORD = "my-secret-pw"; // Пароль БД
-    const char* DATABASE = "schoolsystem"; // Имя базы данных
-    const int PORT = 3307;                // Порт подключения
-}
-
-#endif // CONFIG_H
+// Путь к КОРНЮ проекта (там где лежат schedule_*.sql)
+inline const std::string PROJECT_ROOT =
+    R"(C:\Users\leshk\CLionProjects\prodolzhenie ot 24.12 15_32)";

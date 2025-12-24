@@ -1,0 +1,38 @@
+#include "adminwindow.h"
+#include <QVBoxLayout>
+#include <QFont>
+
+AdminWindow::AdminWindow(Database* db, int adminId, const QString& adminName,
+                         QWidget *parent)
+    : QMainWindow(parent), db_(db), adminId_(adminId), adminName_(adminName) {
+
+    setupUI();
+    setWindowTitle(QString("Администратор: %1").arg(adminName_));
+    resize(1100, 750);
+}
+
+AdminWindow::~AdminWindow() {
+}
+
+void AdminWindow::setupUI() {
+    QWidget* centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
+
+    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+
+    QLabel* titleLabel = new QLabel(QString("Добро пожаловать, %1!").arg(adminName_), this);
+    QFont titleFont = titleLabel->font();
+    titleFont.setPointSize(14);
+    titleFont.setBold(true);
+    titleLabel->setFont(titleFont);
+    mainLayout->addWidget(titleLabel);
+
+    QLabel* statusLabel = new QLabel("🚧 Окно администратора в разработке...", this);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    QFont statusFont = statusLabel->font();
+    statusFont.setPointSize(12);
+    statusLabel->setFont(statusFont);
+    mainLayout->addWidget(statusLabel);
+
+    mainLayout->addStretch();
+}

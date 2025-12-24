@@ -232,7 +232,8 @@ void Student::viewMyAbsences(Database& db) {
               << std::setw(25) << "Предмет"
               << std::setw(8)  << "Часы"
               << std::setw(18) << "Тип" << "\n";
-    std::cout << std::string(63, '─') << "\n";
+    std::cout << std::string(63, '-') << "\n";
+
 
     int total = 0;
     for (const auto& a : absRes.value) {
@@ -247,7 +248,7 @@ void Student::viewMyAbsences(Database& db) {
                   << "\n";
     }
 
-    std::cout << std::string(63, '─') << "\n";
+    std::cout << std::string(63, '-') << "\n";
     std::cout << "Всего часов пропусков: " << total << "\n";
 }
 

@@ -1,32 +1,29 @@
 #include "menu.h"
 #include "database.h"
 
+#include <array>
+#include <cctype>
+#include <iomanip>
 #include <iostream>
-#include <vector>
-#include <tuple>
 #include <limits>
 #include <sstream>
-#include <iomanip>
-#include <cctype>
-struct WeekSelection {
-    int weekId = 0;       // >0 если выбрана календарная неделя
-    int weekOfCycle = 0;  // 1..4 всегда нужен для schedule
-};
+#include <string>
+#include <tuple>
+#include <vector>
 
 WeekSelection decodeWeekSelection(Database& db, int sel) {
     WeekSelection r;
-    if (sel == 0) return r;
+    if (sel == 0) return r; // отмена
 
     if (sel < 0) {
-        r.weekOfCycle = -sel;          // mode 1
+        // mode 1: введён номер недели цикла 1..4
+        r.weekOfCycle = -sel;
         r.weekId = 0;
         return r;
     }
 
-    // sel > 0 => weekId (mode 2 или 3)
+    // sel > 0 => это weekId (mode 2/3)
     r.weekId = sel;
-
-    // нужно получить weekOfCycle по weekId (добавь метод в Database)
     r.weekOfCycle = db.getWeekOfCycleByWeekId(r.weekId);
     return r;
 }
