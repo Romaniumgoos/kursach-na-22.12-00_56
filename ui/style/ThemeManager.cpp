@@ -36,19 +36,30 @@ void ThemeManager::applyTheme(QApplication* app)
     QPalette pal;
 
     if (m_currentTheme == Dark) {
-        pal.setColor(QPalette::Window, QColor(53, 53, 53));
-        pal.setColor(QPalette::WindowText, Qt::white);
-        pal.setColor(QPalette::Base, QColor(25, 25, 25));
-        pal.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
-        pal.setColor(QPalette::ToolTipBase, Qt::white);
-        pal.setColor(QPalette::ToolTipText, Qt::white);
-        pal.setColor(QPalette::Text, Qt::white);
-        pal.setColor(QPalette::Button, QColor(53, 53, 53));
-        pal.setColor(QPalette::ButtonText, Qt::white);
-        pal.setColor(QPalette::BrightText, Qt::red);
-        pal.setColor(QPalette::Link, QColor(42, 130, 218));
-        pal.setColor(QPalette::Highlight, QColor(42, 130, 218));
-        pal.setColor(QPalette::HighlightedText, Qt::black);
+        // 3 слоя фона: Window (самый тёмный) -> Base (панели) -> AlternateBase (карточки)
+        pal.setColor(QPalette::Window, QColor(18, 18, 18));
+        pal.setColor(QPalette::Base, QColor(27, 27, 27));
+        pal.setColor(QPalette::AlternateBase, QColor(36, 36, 36));
+
+        pal.setColor(QPalette::WindowText, QColor(232, 234, 237));
+        pal.setColor(QPalette::Text, QColor(232, 234, 237));
+
+        pal.setColor(QPalette::ToolTipBase, QColor(36, 36, 36));
+        pal.setColor(QPalette::ToolTipText, QColor(232, 234, 237));
+
+        pal.setColor(QPalette::Button, QColor(36, 36, 36));
+        pal.setColor(QPalette::ButtonText, QColor(232, 234, 237));
+
+        pal.setColor(QPalette::BrightText, QColor(255, 99, 99));
+        pal.setColor(QPalette::Link, QColor(111, 183, 255));
+
+        // Highlight делаем не слишком "ядовитым", и чтобы текст на нём читался
+        pal.setColor(QPalette::Highlight, QColor(74, 163, 255));
+        pal.setColor(QPalette::HighlightedText, QColor(11, 15, 20));
+
+        pal.setColor(QPalette::Disabled, QPalette::Text, QColor(150, 150, 150));
+        pal.setColor(QPalette::Disabled, QPalette::WindowText, QColor(150, 150, 150));
+        pal.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(150, 150, 150));
     } else {
         // Реально светлая палитра (белая)
         pal.setColor(QPalette::Window, QColor(250, 250, 250));

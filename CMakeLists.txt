@@ -56,6 +56,8 @@ set(GUI_SOURCES
         ui/style/ThemeManager.cpp
         ui/widgets/ThemeToggleWidget.cpp
         ui/widgets/PeriodSelectorWidget.cpp
+        ui/widgets/LessonCardWidget.cpp
+        ui/widgets/WeekGridScheduleWidget.cpp
         ui/pages/StudentSchedulePage.cpp
         ui/pages/StudentGradesPage.cpp
         ui/pages/StudentAbsencesPage.cpp
@@ -70,6 +72,8 @@ set(GUI_HEADERS
         ui/style/ThemeManager.h
         ui/widgets/ThemeToggleWidget.h
         ui/widgets/PeriodSelectorWidget.h
+        ui/widgets/LessonCardWidget.h
+        ui/widgets/WeekGridScheduleWidget.h
         ui/pages/StudentSchedulePage.h
         ui/pages/StudentGradesPage.h
         ui/pages/StudentAbsencesPage.h

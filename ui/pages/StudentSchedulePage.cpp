@@ -1,6 +1,7 @@
 #include "ui/pages/StudentSchedulePage.h"
 #include "database.h"
 #include "ui/util/UiStyle.h"
+ #include "ui/widgets/WeekGridScheduleWidget.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -124,9 +125,13 @@ void StudentSchedulePage::setupLayout()
 
     mainLayout->addLayout(subgroupLayout);
 
-    // Таблица
+    // Таблица (fallback)
     table = new QTableWidget(this);
     mainLayout->addWidget(table);
+
+    // Новый вид: сетка недели
+    weekGrid = new WeekGridScheduleWidget(this);
+    mainLayout->addWidget(weekGrid);
 
     // Empty state
     emptyStateLabel = new QLabel("Нет занятий\nПопробуйте выбрать другую неделю или подгруппу", this);
@@ -182,7 +187,8 @@ void StudentSchedulePage::loadSchedule()
 
     emptyStateLabel->setText("Нет занятий\nПопробуйте выбрать другую неделю или подгруппу");
     emptyStateLabel->setVisible(false);
-    table->setVisible(true);
+    table->setVisible(false);
+    if (weekGrid) weekGrid->setVisible(true);
 
     // 1) weekOfCycle из выбранного периода
 
@@ -206,6 +212,7 @@ void StudentSchedulePage::loadSchedule()
         if (resolvedWeekId == 0) {
             table->setRowCount(0);
             table->setVisible(false);
+            if (weekGrid) weekGrid->setVisible(false);
             emptyStateLabel->setText("Неделя не найдена (weekId=0). Проверьте выбор периода.");
             emptyStateLabel->setVisible(true);
             return;
@@ -215,6 +222,7 @@ void StudentSchedulePage::loadSchedule()
         if (weekOfCycle == 0) {
             table->setRowCount(0);
             table->setVisible(false);
+            if (weekGrid) weekGrid->setVisible(false);
             emptyStateLabel->setText("Неделя не найдена в cycleweeks. Проверьте заполнение таблицы недель.");
             emptyStateLabel->setVisible(true);
             return;
@@ -244,6 +252,7 @@ void StudentSchedulePage::loadSchedule()
 
             table->setRowCount(0);
             table->setVisible(false);
+            if (weekGrid) weekGrid->setVisible(false);
 
             QString msg = "Для выбранной даты нет данных о цикле недель (cycleweeks).";
             if (!minISO.empty() && !maxISO.empty()) {
@@ -267,6 +276,7 @@ void StudentSchedulePage::loadSchedule()
     int studentSubgroup = 0;
     if (!db->getStudentGroupAndSubgroup(studentId, groupId, studentSubgroup)) {
         table->setVisible(false);
+        if (weekGrid) weekGrid->setVisible(false);
         emptyStateLabel->setText("Нет занятий\nПопробуйте выбрать другую неделю или подгруппу");
         emptyStateLabel->setVisible(true);
         return;
@@ -309,6 +319,16 @@ void StudentSchedulePage::loadSchedule()
              << "groupId=" << groupId;
 #endif
 
+    // 3) Новый вид: сетка недели
+    if (weekGrid) {
+        weekGrid->setSchedule(db, groupId, weekOfCycle, resolvedWeekId, currentSubgroup);
+        weekGrid->setVisible(true);
+        emptyStateLabel->setVisible(false);
+        table->setVisible(false);
+        return;
+    }
+
+    // Fallback: старый вывод таблицей
     const QStringList dayNames = {"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"};
     const QStringList pairTimes = {
             "08:30-09:55", "10:05-11:30", "12:00-13:25",
@@ -317,10 +337,8 @@ void StudentSchedulePage::loadSchedule()
 
     int totalRows = 0;
 
-    // 3) Идём по дням
     for (int weekday = 0; weekday <= 5; ++weekday) {
-
-        bool dayHeaderAdded = false; // <-- ПЕРЕНЁС СЮДА
+        bool dayHeaderAdded = false;
 
         std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>> rows;
         if (!db->getScheduleForGroup(groupId, weekday, weekOfCycle, rows)) {
@@ -337,16 +355,12 @@ void StudentSchedulePage::loadSchedule()
             QString lessonType = QString::fromStdString(std::get<5>(r));
             QString teacher = QString::fromStdString(std::get<6>(r));
 
-    // Фильтр подгруппы:
-    // - если currentSubgroup == 0: показываем всё
-    // - иначе: показываем общие (0) + выбранную подгруппу
-    if (currentSubgroup != 0) {
-        if (rowSubgroup != 0 && rowSubgroup != currentSubgroup) continue;
-    }
+            if (currentSubgroup != 0) {
+                if (rowSubgroup != 0 && rowSubgroup != currentSubgroup) continue;
+            }
 
-    Q_UNUSED(studentSubgroup);
+            Q_UNUSED(studentSubgroup);
 
-            // ===== ШАПКА ДНЯ (один раз на день) =====
             if (!dayHeaderAdded) {
                 dayHeaderAdded = true;
 
@@ -372,11 +386,9 @@ void StudentSchedulePage::loadSchedule()
                 addDayHeaderRow(table, headerText);
             }
 
-            // ===== строка пары =====
             addLessonRow(table, lessonNum, rowSubgroup, subject, room, lessonType, teacher);
             ++totalRows;
         }
-
     }
 
     const bool empty = (totalRows == 0);

@@ -12,7 +12,7 @@ inline constexpr const char* kInfoLabelStyle =
     "QLabel {"
     "  padding: 10px 12px;"
     "  border-radius: 8px;"
-    "  background: rgba(0,0,0,0.04);"
+    "  background: rgba(120,120,120,0.10);"
     "  font-weight: 600;"
     "}";
 

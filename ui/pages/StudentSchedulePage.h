@@ -7,6 +7,7 @@
 #include "ui/models/WeekSelection.h"
 
 class Database;
+class WeekGridScheduleWidget;
 
 class StudentSchedulePage : public QWidget {
     Q_OBJECT
@@ -25,6 +26,7 @@ private:
     WeekSelection currentSelection;
 
     QTableWidget* table = nullptr;
+    WeekGridScheduleWidget* weekGrid = nullptr;
     QLabel* emptyStateLabel = nullptr;
     QComboBox* subgroupCombo = nullptr;
     QLabel* periodLabel = nullptr;

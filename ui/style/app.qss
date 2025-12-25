@@ -3,6 +3,88 @@ QWidget {
     font-size: 14px;
 }
 
+QMainWindow {
+    background: palette(Window);
+    color: palette(WindowText);
+}
+
+QToolBar {
+    background: palette(Base);
+    border: none;
+    spacing: 6px;
+    padding: 6px;
+}
+
+QToolBar QToolButton {
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(120,120,120,0.10);
+    color: palette(ButtonText);
+}
+
+QToolBar QToolButton:hover {
+    background: rgba(120,120,120,0.18);
+}
+
+QToolBar QToolButton:checked {
+    background: rgba(80, 160, 220, 0.25);
+}
+
+/* Tabs */
+QTabWidget::pane {
+    border: 1px solid rgba(120,120,120,0.25);
+    border-radius: 12px;
+    background: palette(Base);
+    top: -1px;
+}
+
+QTabBar::tab {
+    min-height: 34px;
+    padding: 6px 14px;
+    margin-right: 6px;
+    border-radius: 12px;
+    background: rgba(120,120,120,0.10);
+    color: palette(WindowText);
+}
+
+QTabBar::tab:hover {
+    background: rgba(120,120,120,0.18);
+}
+
+QTabBar::tab:selected {
+    background: palette(AlternateBase);
+    border: 1px solid rgba(120,120,120,0.30);
+}
+
+/* Input controls */
+QComboBox, QDateEdit, QSpinBox {
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(120,120,120,0.35);
+    background: palette(Base);
+    color: palette(Text);
+}
+
+QComboBox:hover, QDateEdit:hover, QSpinBox:hover {
+    border: 1px solid rgba(120,120,120,0.55);
+}
+
+QComboBox:focus, QDateEdit:focus, QSpinBox:focus {
+    border: 2px solid palette(Highlight);
+}
+
+QComboBox QAbstractItemView {
+    background: palette(AlternateBase);
+    color: palette(Text);
+    border: 1px solid rgba(120,120,120,0.35);
+    selection-background-color: rgba(80,160,220,0.35);
+}
+
+QScrollArea {
+    background: palette(Base);
+    border: none;
+}
+
 /* Поля ввода */
 QLineEdit {
     padding: 10px 12px;
@@ -57,4 +139,111 @@ QHeaderView::section {
     background: rgba(120,120,120,0.10);
     color: palette(WindowText);
     font-weight: 600;
+}
+
+/* Расписание: сетка недели */
+WeekGridScheduleWidget {
+    background: palette(Base);
+}
+
+QLabel#WeekGridDayHeader {
+    background: palette(AlternateBase);
+    border: 1px solid rgba(120,120,120,0.25);
+    border-radius: 10px;
+    font-weight: 600;
+    color: palette(WindowText);
+}
+
+QLabel#WeekGridTimeLabel {
+    background: palette(Base);
+    border: 1px solid rgba(120,120,120,0.25);
+    border-radius: 10px;
+    font-weight: 600;
+    color: palette(WindowText);
+    font-size: 13px;
+}
+
+QWidget#WeekGridCell {
+    background: palette(AlternateBase);
+    border: 1px solid rgba(120,120,120,0.22);
+    border-radius: 12px;
+}
+
+QLabel#WeekGridEmptyLabel {
+    color: rgba(170,170,170,0.85);
+    font-size: 12px;
+}
+
+/* Карточка занятия */
+QWidget#LessonCard {
+    background: transparent;
+}
+
+QWidget#LessonCardStripe {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+QWidget#LessonCardStripe[stripeColor="#e85d5d"] { background: #e85d5d; }
+QWidget#LessonCardStripe[stripeColor="#4fb06a"] { background: #4fb06a; }
+QWidget#LessonCardStripe[stripeColor="#e6c14a"] { background: #e6c14a; }
+QWidget#LessonCardStripe[stripeColor="#9aa0a6"] { background: #9aa0a6; }
+
+QWidget#LessonCardBody {
+    background: palette(Base);
+    border: 1px solid rgba(120,120,120,0.22);
+    border-left: none;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+QLabel#LessonCardTitle {
+    color: palette(Text);
+    font-weight: 600;
+}
+
+QLabel#LessonCardRoom {
+    color: palette(Text);
+}
+
+QLabel#LessonCardTeacher {
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(120,120,120,0.16);
+    color: palette(WindowText);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Таблицы: QTableWidget (нужно для вкладки "Пропуски") */
+QTableWidget {
+    border-radius: 12px;
+    border: 1px solid rgba(120,120,120,0.25);
+    background: palette(Base);
+    alternate-background-color: palette(AlternateBase);
+    color: palette(Text);
+    selection-background-color: rgba(80,160,220,0.35);
+    selection-color: palette(Text);
+}
+
+QTableWidget::item {
+    padding: 6px 8px;
+}
+
+QTableWidget::item:selected {
+    background: rgba(80,160,220,0.35);
+}
+
+QTableCornerButton::section {
+    background: rgba(120,120,120,0.10);
+    border: none;
+}
+
+QLabel#LessonCardSubgroup {
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: rgba(120,120,120,0.22);
+    color: palette(Text);
+    font-weight: 600;
+    font-size: 12px;
 }
