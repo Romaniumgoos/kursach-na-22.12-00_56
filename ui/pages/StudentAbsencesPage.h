@@ -10,7 +10,8 @@ class QLabel;
 class QComboBox;
 class QPushButton;
 class QStackedWidget;
-class QTableWidget;
+class QScrollArea;
+class QVBoxLayout;
 
 class StudentAbsencesPage : public QWidget {
     Q_OBJECT
@@ -26,6 +27,8 @@ private:
         int hours = 0;
         std::string date;
         std::string type;
+        std::string lessonTime;
+        std::string lessonType;
     };
 
     Database* db;
@@ -48,7 +51,9 @@ private:
     QWidget* contentWidget;
     QWidget* emptyWidget;
 
-    QTableWidget* table;
+    QScrollArea* listScroll;
+    QWidget* listContainer;
+    QVBoxLayout* listLayout;
     QLabel* totalAbsencesLabel;
     QLabel* unexcusedAbsencesLabel;
 
@@ -58,12 +63,12 @@ private:
     std::vector<AbsenceRow> cachedAbsences;
 
     void setupLayout();
-    void setupTable();
 
     void populateSemesters();
     void showEmptyState(const QString& message);
     void showContent();
 
-    void applyFilterToTable();
+    void applyFilterToTimeline();
     void updateTotalsFromCache();
+    QWidget* buildAbsenceCard(const AbsenceRow& r);
 };

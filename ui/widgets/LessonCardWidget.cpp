@@ -1,14 +1,16 @@
 #include "ui/widgets/LessonCardWidget.h"
 
+ #include "ui/util/UiStyle.h"
+
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
 
 QString LessonCardWidget::stripeColorCss(const QString& lessonType)
 {
-    if (lessonType.contains("ЛР")) return "#e85d5d";
-    if (lessonType.contains("ЛК")) return "#4fb06a";
-    if (lessonType.contains("ПЗ")) return "#e6c14a";
+    if (lessonType.contains("ЛР")) return "#ff9150";
+    if (lessonType.contains("ПЗ")) return "#46aaff";
+    if (lessonType.contains("ЛК")) return "#aa78ff";
     return "#9aa0a6";
 }
 
@@ -45,24 +47,30 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
     topRow->setContentsMargins(0, 0, 0, 0);
     topRow->setSpacing(8);
 
-    QString title = subject;
-    if (!lessonType.isEmpty()) title += QString(" (%1)").arg(lessonType);
-
-    auto* titleLabel = new QLabel(title, body);
+    auto* titleLabel = new QLabel(subject, body);
     titleLabel->setObjectName("LessonCardTitle");
     titleLabel->setWordWrap(true);
     topRow->addWidget(titleLabel, 1);
 
-    auto* roomLabel = new QLabel(room, body);
-    roomLabel->setObjectName("LessonCardRoom");
-    roomLabel->setAlignment(Qt::AlignRight | Qt::AlignTop);
-    topRow->addWidget(roomLabel, 0);
+    if (!lessonType.isEmpty()) {
+        auto* typeBadge = new QLabel(lessonType, body);
+        typeBadge->setAlignment(Qt::AlignCenter);
+        typeBadge->setMinimumHeight(22);
+        typeBadge->setStyleSheet(UiStyle::badgeLessonTypeStyle(lessonType));
+        topRow->addWidget(typeBadge, 0);
+    }
 
     v->addLayout(topRow);
 
     auto* bottomRow = new QHBoxLayout();
     bottomRow->setContentsMargins(0, 0, 0, 0);
     bottomRow->setSpacing(6);
+
+    auto* roomBadge = new QLabel(room.isEmpty() ? QString("—") : room, body);
+    roomBadge->setAlignment(Qt::AlignCenter);
+    roomBadge->setMinimumHeight(22);
+    roomBadge->setStyleSheet(UiStyle::badgeNeutralStyle());
+    bottomRow->addWidget(roomBadge, 0);
 
     auto* teacherPill = new QLabel(teacher, body);
     teacherPill->setObjectName("LessonCardTeacher");
@@ -73,6 +81,9 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
     if (subgroup == 1 || subgroup == 2) {
         auto* sg = new QLabel(QString::number(subgroup), body);
         sg->setObjectName("LessonCardSubgroup");
+        sg->setAlignment(Qt::AlignCenter);
+        sg->setMinimumHeight(22);
+        sg->setStyleSheet(UiStyle::badgeNeutralStyle());
         bottomRow->addWidget(sg, 0, Qt::AlignRight);
     }
 

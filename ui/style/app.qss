@@ -8,6 +8,11 @@ QMainWindow {
     color: palette(WindowText);
 }
 
+QDialog, QMessageBox {
+    background: palette(Window);
+    color: palette(WindowText);
+}
+
 QToolBar {
     background: palette(Base);
     border: none;
@@ -54,6 +59,10 @@ QTabBar::tab:hover {
 QTabBar::tab:selected {
     background: palette(AlternateBase);
     border: 1px solid rgba(120,120,120,0.30);
+}
+
+QTabBar::tab:selected:hover {
+    background: rgba(80,160,220,0.18);
 }
 
 /* Input controls */
@@ -105,16 +114,16 @@ QPushButton {
     padding: 10px 16px;
     border-radius: 12px;
     border: 1px solid rgba(120,120,120,0.35);
-    background: rgba(80, 160, 220, 0.20);
+    background: rgba(80, 160, 220, 0.18);
     color: palette(ButtonText);
 }
 
 QPushButton:hover {
-    background: rgba(80, 160, 220, 0.30);
+    background: rgba(80, 160, 220, 0.26);
 }
 
 QPushButton:pressed {
-    background: rgba(80, 160, 220, 0.40);
+    background: rgba(80, 160, 220, 0.34);
 }
 
 QPushButton:disabled {
@@ -130,7 +139,7 @@ QTableView {
     background: palette(Base);
     gridline-color: rgba(120,120,120,0.25);
     selection-background-color: rgba(80,160,220,0.35);
-    selection-color: palette(Text);
+    selection-color: palette(HighlightedText);
 }
 
 QHeaderView::section {
@@ -184,9 +193,9 @@ QWidget#LessonCardStripe {
     border-bottom-left-radius: 10px;
 }
 
-QWidget#LessonCardStripe[stripeColor="#e85d5d"] { background: #e85d5d; }
-QWidget#LessonCardStripe[stripeColor="#4fb06a"] { background: #4fb06a; }
-QWidget#LessonCardStripe[stripeColor="#e6c14a"] { background: #e6c14a; }
+QWidget#LessonCardStripe[stripeColor="#ff9150"] { background: #ff9150; }
+QWidget#LessonCardStripe[stripeColor="#46aaff"] { background: #46aaff; }
+QWidget#LessonCardStripe[stripeColor="#aa78ff"] { background: #aa78ff; }
 QWidget#LessonCardStripe[stripeColor="#9aa0a6"] { background: #9aa0a6; }
 
 QWidget#LessonCardBody {
@@ -215,6 +224,22 @@ QLabel#LessonCardTeacher {
     font-weight: 600;
 }
 
+QGroupBox {
+    border: 1px solid rgba(120,120,120,0.22);
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 2px 8px;
+    left: 10px;
+    color: palette(WindowText);
+    background: rgba(120,120,120,0.10);
+    border-radius: 8px;
+}
+
 /* Таблицы: QTableWidget (нужно для вкладки "Пропуски") */
 QTableWidget {
     border-radius: 12px;
@@ -223,7 +248,7 @@ QTableWidget {
     alternate-background-color: palette(AlternateBase);
     color: palette(Text);
     selection-background-color: rgba(80,160,220,0.35);
-    selection-color: palette(Text);
+    selection-color: palette(HighlightedText);
 }
 
 QTableWidget::item {
@@ -232,6 +257,10 @@ QTableWidget::item {
 
 QTableWidget::item:selected {
     background: rgba(80,160,220,0.35);
+}
+
+QTableWidget::item:hover {
+    background: rgba(138, 180, 248, 0.12);
 }
 
 QTableCornerButton::section {

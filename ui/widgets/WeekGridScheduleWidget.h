@@ -18,6 +18,20 @@ public:
                      int resolvedWeekId,
                      int currentSubgroup);
 
+    void setTeacherSchedule(Database* db,
+                            int teacherId,
+                            int groupId,
+                            const QString& groupName,
+                            int weekOfCycle,
+                            int resolvedWeekId,
+                            int currentSubgroup);
+
+    void setTeacherScheduleAllGroups(Database* db,
+                                    int teacherId,
+                                    int weekOfCycle,
+                                    int resolvedWeekId,
+                                    int currentSubgroup);
+
 private:
     QScrollArea* scrollArea = nullptr;
     QWidget* contentWidget = nullptr;

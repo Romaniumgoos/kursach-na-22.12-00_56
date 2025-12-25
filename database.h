@@ -61,6 +61,9 @@ public:
     bool getSubjectsForTeacher(int teacherId,
                            std::vector<std::pair<int, std::string>>& outSubjects);
 
+    bool getSubjectsForTeacherInGroupSchedule(int teacherId, int groupId,
+                           std::vector<std::pair<int, std::string>>& outSubjects);
+
     bool getAllGroups(std::vector<std::pair<int, std::string>>& outGroups);
     bool getAllUsers(
         std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers
@@ -104,6 +107,28 @@ public:
                 int hours,
                 const std::string& date,
                 const std::string& type);
+
+    // ===== Teacher journal helpers (GUI) =====
+    // Find existing grade by (student, subject, semester, date). Returns true on SQL success.
+    bool findGradeId(int studentId, int subjectId, int semesterId,
+                     const std::string& date, int& outGradeId);
+
+    // Find existing absence by (student, subject, semester, date). Returns true on SQL success.
+    bool findAbsenceId(int studentId, int subjectId, int semesterId,
+                       const std::string& date, int& outAbsenceId);
+
+    // Update grade if exists for key, otherwise insert. Returns true on success.
+    bool upsertGradeByKey(int studentId, int subjectId, int semesterId,
+                          int value, const std::string& date, const std::string& gradeType = "");
+
+    bool getGradeById(int gradeId, int& outValue, std::string& outDate, std::string& outGradeType);
+
+    // Update absence if exists for key, otherwise insert. Returns true on success.
+    bool upsertAbsenceByKey(int studentId, int subjectId, int semesterId,
+                            int hours, const std::string& date, const std::string& type);
+
+    bool getAbsenceById(int absenceId, int& outHours, std::string& outDate, std::string& outType);
+    bool deleteAbsence(int absenceId);
 
     bool getStudentAbsencesForSemester(
     int studentId,
@@ -210,6 +235,25 @@ bool deleteScheduleEntry(int scheduleId);
         int weekOfCycle,
         int studentSubgroup,
         std::vector<std::tuple<int,int,int,int,int,std::string,std::string>>& outRows
+    );
+
+    // То же, что getScheduleForTeacherGroupWeek, но с аудиториями (room)
+    // outRows: scheduleId, subjectId, weekday, lessonNumber, subgroup, subjectName, room, lessonType
+    bool getScheduleForTeacherGroupWeekWithRoom(
+        int teacherId,
+        int groupId,
+        int weekOfCycle,
+        int studentSubgroup,
+        std::vector<std::tuple<int,int,int,int,int,std::string,std::string,std::string>>& outRows
+    );
+
+    // Расписание преподавателя за неделю по всем группам
+    // outRows: scheduleId, groupId, weekday, lessonNumber, subgroup, subjectName, room, lessonType, groupName
+    bool getScheduleForTeacherWeekWithRoom(
+        int teacherId,
+        int weekOfCycle,
+        int studentSubgroup,
+        std::vector<std::tuple<int,int,int,int,int,std::string,std::string,std::string,std::string>>& outRows
     );
 
     // Добавить запись расписания для всех групп, кроме basegroup_id, если это лекция

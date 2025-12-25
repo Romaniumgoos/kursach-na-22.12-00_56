@@ -6,11 +6,49 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QTableWidget>
 #include <QComboBox>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QSizePolicy>
+ #include <QDate>
+ #include <QScrollArea>
+ #include <QFrame>
+ #include <QGridLayout>
+ #include <algorithm>
+
+static QString cardFrameStyle()
+{
+    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
+           "QLabel{color: palette(Text); background: transparent;}";
+}
+
+static QWidget* buildMonthHeader(QWidget* parent, const QDate& d)
+{
+    auto* w = new QWidget(parent);
+    auto* row = new QHBoxLayout(w);
+    row->setContentsMargins(6, 8, 6, 6);
+    row->setSpacing(10);
+
+    const QString title = d.isValid() ? d.toString("MMMM yyyy") : QString("—");
+
+    auto* label = new QLabel(title, w);
+    label->setStyleSheet("font-weight: 900; font-size: 13px; color: palette(WindowText);");
+    row->addWidget(label);
+
+    auto* line = new QFrame(w);
+    line->setFrameShape(QFrame::HLine);
+    line->setFrameShadow(QFrame::Plain);
+    line->setStyleSheet("color: rgba(120,120,120,0.35);");
+    row->addWidget(line, 1);
+
+    return w;
+}
+
+static QString accentStripeStyleForAbsence(bool excused)
+{
+    if (excused) return "background: rgba(70, 170, 255, 0.85);";
+    return "background: rgba(235, 80, 80, 0.85);";
+}
 
 StudentAbsencesPage::StudentAbsencesPage(Database* db, int studentId, QWidget* parent)
     : QWidget(parent)
@@ -24,14 +62,15 @@ StudentAbsencesPage::StudentAbsencesPage(Database* db, int studentId, QWidget* p
     , stacked(nullptr)
     , contentWidget(nullptr)
     , emptyWidget(nullptr)
-    , table(nullptr)
+    , listScroll(nullptr)
+    , listContainer(nullptr)
+    , listLayout(nullptr)
     , totalAbsencesLabel(nullptr)
     , unexcusedAbsencesLabel(nullptr)
     , emptyStateLabel(nullptr)
     , retryButton(nullptr)
 {
     setupLayout();
-    setupTable();
     populateSemesters();
     reload();
 }
@@ -72,8 +111,18 @@ void StudentAbsencesPage::setupLayout()
     auto* contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setContentsMargins(0, 0, 0, 0);
 
-    table = new QTableWidget(contentWidget);
-    contentLayout->addWidget(table);
+    listScroll = new QScrollArea(contentWidget);
+    listScroll->setWidgetResizable(true);
+    listScroll->setFrameShape(QFrame::NoFrame);
+
+    listContainer = new QWidget(listScroll);
+    listLayout = new QVBoxLayout(listContainer);
+    listLayout->setContentsMargins(10, 10, 10, 10);
+    listLayout->setSpacing(10);
+    listLayout->addStretch();
+    listScroll->setWidget(listContainer);
+
+    contentLayout->addWidget(listScroll);
 
     auto* totalsRow = new QHBoxLayout();
     totalsRow->setContentsMargins(0, 0, 0, 0);
@@ -121,21 +170,76 @@ void StudentAbsencesPage::setupLayout()
     connect(filterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int) {
         filterMode = static_cast<FilterMode>(filterCombo->currentData().toInt());
-        applyFilterToTable();
+        applyFilterToTimeline();
     });
 }
 
-void StudentAbsencesPage::setupTable()
+QWidget* StudentAbsencesPage::buildAbsenceCard(const AbsenceRow& r)
 {
-    UiStyle::applyStandardTableStyle(table);
+    auto* card = new QFrame(contentWidget);
+    card->setStyleSheet(cardFrameStyle());
+    card->setFrameShape(QFrame::StyledPanel);
 
-    table->setColumnCount(4);
-    table->setHorizontalHeaderLabels({"Дата", "Предмет", "Часы", "Тип"});
+    auto* outer = new QHBoxLayout(card);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
 
-    table->setColumnWidth(0, 120);
-    table->setColumnWidth(1, 260);
-    table->setColumnWidth(2, 70);
-    table->setColumnWidth(3, 140);
+    const bool isExcused = (r.type == "excused");
+    auto* stripe = new QFrame(card);
+    stripe->setFixedWidth(6);
+    stripe->setStyleSheet(accentStripeStyleForAbsence(isExcused));
+    outer->addWidget(stripe);
+
+    auto* body = new QWidget(card);
+    outer->addWidget(body, 1);
+
+    auto* grid = new QGridLayout(body);
+    grid->setContentsMargins(14, 12, 14, 12);
+    grid->setHorizontalSpacing(10);
+    grid->setVerticalSpacing(4);
+
+    const QString date = QString::fromStdString(r.date);
+    const QString time = QString::fromStdString(r.lessonTime);
+    const QString subject = QString::fromStdString(r.subject);
+    const QString lessonType = QString::fromStdString(r.lessonType);
+
+    auto* title = new QLabel(subject, card);
+    title->setStyleSheet("font-weight: 800; font-size: 14px; color: palette(WindowText);");
+    grid->addWidget(title, 0, 0, 1, 2);
+
+    auto* meta = new QLabel(QString("%1  •  %2").arg(date, time.isEmpty() ? "—" : time), card);
+    meta->setStyleSheet("color: palette(mid); font-weight: 600;");
+    grid->addWidget(meta, 1, 0, 1, 2);
+
+    auto* right = new QWidget(card);
+    auto* rightCol = new QVBoxLayout(right);
+    rightCol->setContentsMargins(0, 0, 0, 0);
+    rightCol->setSpacing(6);
+
+    auto* hoursBadge = new QLabel(QString("%1 ч").arg(r.hours), right);
+    hoursBadge->setAlignment(Qt::AlignCenter);
+    hoursBadge->setMinimumHeight(22);
+    hoursBadge->setStyleSheet(UiStyle::badgeNeutralStyle());
+    rightCol->addWidget(hoursBadge, 0, Qt::AlignRight);
+
+    auto* typeBadge = new QLabel(isExcused ? "Уважительный" : "Неуважительный", right);
+    typeBadge->setAlignment(Qt::AlignCenter);
+    typeBadge->setMinimumHeight(22);
+    typeBadge->setStyleSheet(UiStyle::badgeAbsenceStyle(isExcused));
+    rightCol->addWidget(typeBadge, 0, Qt::AlignRight);
+
+    if (!lessonType.isEmpty() && lessonType != "—") {
+        auto* ltBadge = new QLabel(lessonType, right);
+        ltBadge->setAlignment(Qt::AlignCenter);
+        ltBadge->setMinimumHeight(22);
+        ltBadge->setStyleSheet(UiStyle::badgeLessonTypeStyle(lessonType));
+        rightCol->addWidget(ltBadge, 0, Qt::AlignRight);
+    }
+    rightCol->addStretch();
+
+    grid->addWidget(right, 0, 2, 2, 1, Qt::AlignRight | Qt::AlignTop);
+
+    return card;
 }
 
 void StudentAbsencesPage::populateSemesters()
@@ -197,42 +301,47 @@ void StudentAbsencesPage::updateTotalsFromCache()
     }
 }
 
-void StudentAbsencesPage::applyFilterToTable()
+void StudentAbsencesPage::applyFilterToTimeline()
 {
-    table->setRowCount(0);
+    if (!listLayout || !listContainer) return;
 
-    int shownRows = 0;
-    for (const auto& r : cachedAbsences) {
-        const bool isExcused = (r.type == "excused");
-
-        if (filterMode == FilterMode::Excused && !isExcused) continue;
-        if (filterMode == FilterMode::Unexcused && isExcused) continue;
-
-        const int row = table->rowCount();
-        table->insertRow(row);
-
-        const QString date = QString::fromStdString(r.date);
-        const QString subject = QString::fromStdString(r.subject);
-        const QString typeRu = isExcused ? "Уважительный" : "Неуважительный";
-
-        table->setItem(row, 0, new QTableWidgetItem(date));
-        table->setItem(row, 1, new QTableWidgetItem(subject));
-
-        auto* hoursItem = new QTableWidgetItem(QString::number(r.hours));
-        hoursItem->setTextAlignment(Qt::AlignCenter);
-        table->setItem(row, 2, hoursItem);
-
-        table->setItem(row, 3, new QTableWidgetItem(typeRu));
-
-        QColor rowColor = isExcused ? QColor(220, 245, 220) : QColor(245, 220, 220);
-        for (int col = 0; col < 4; ++col) {
-            table->item(row, col)->setBackground(rowColor);
+    while (listLayout->count() > 0) {
+        QLayoutItem* it = listLayout->takeAt(0);
+        if (it->widget()) {
+            it->widget()->deleteLater();
         }
-
-        ++shownRows;
+        delete it;
     }
 
-    if (shownRows == 0) {
+    std::vector<const AbsenceRow*> rows;
+    rows.reserve(cachedAbsences.size());
+    for (const auto& r : cachedAbsences) {
+        const bool isExcused = (r.type == "excused");
+        if (filterMode == FilterMode::Excused && !isExcused) continue;
+        if (filterMode == FilterMode::Unexcused && isExcused) continue;
+        rows.push_back(&r);
+    }
+
+    std::sort(rows.begin(), rows.end(), [](const AbsenceRow* a, const AbsenceRow* b) {
+        return a->date > b->date;
+    });
+
+    int shown = 0;
+    int lastYM = -1;
+    for (const auto* r : rows) {
+        const QDate d = QDate::fromString(QString::fromStdString(r->date), "yyyy-MM-dd");
+        const int ym = d.isValid() ? (d.year() * 100 + d.month()) : -1;
+        if (ym != lastYM) {
+            listLayout->addWidget(buildMonthHeader(listContainer, d));
+            lastYM = ym;
+        }
+
+        listLayout->addWidget(buildAbsenceCard(*r));
+        ++shown;
+    }
+    listLayout->addStretch();
+
+    if (shown == 0) {
         showEmptyState("Нет пропусков по выбранному фильтру");
     } else {
         showContent();
@@ -256,15 +365,57 @@ void StudentAbsencesPage::reload()
 
     cachedAbsences.clear();
     cachedAbsences.reserve(absences.size());
+
+    int groupId = 0;
+    int subgroup = 0;
+    if (db) {
+        db->getStudentGroupAndSubgroup(studentId, groupId, subgroup);
+    }
+
+    const QStringList pairTimes = {
+        "08:30-09:55", "10:05-11:30", "12:00-13:25",
+        "13:35-15:00", "15:30-16:55", "17:05-18:30"
+    };
+
     for (const auto& a : absences) {
         AbsenceRow r;
         r.subject = std::get<0>(a);
         r.hours = std::get<1>(a);
         r.date = std::get<2>(a);
         r.type = std::get<3>(a);
+
+        r.lessonTime = "—";
+        r.lessonType = "—";
+        if (db && groupId > 0 && !r.date.empty() && !r.subject.empty()) {
+            const QDate d = QDate::fromString(QString::fromStdString(r.date), "yyyy-MM-dd");
+            if (d.isValid()) {
+                const int weekday = d.dayOfWeek() - 1;
+                const int weekId = db->getWeekIdByDate(r.date);
+                const int weekOfCycle = (weekId > 0) ? db->getWeekOfCycleByWeekId(weekId) : 0;
+
+                if (weekday >= 0 && weekOfCycle > 0) {
+                    std::vector<std::tuple<int, int, int, std::string, std::string, std::string, std::string>> sched;
+                    if (db->getScheduleForGroup(groupId, weekday, weekOfCycle, sched)) {
+                        for (const auto& s : sched) {
+                            const int lessonNumber = std::get<1>(s);
+                            const std::string& subj = std::get<3>(s);
+                            const std::string& ltype = std::get<5>(s);
+                            if (subj == r.subject) {
+                                if (lessonNumber >= 1 && lessonNumber <= pairTimes.size()) {
+                                    r.lessonTime = pairTimes[lessonNumber - 1].toStdString();
+                                }
+                                r.lessonType = ltype.empty() ? "—" : ltype;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         cachedAbsences.push_back(std::move(r));
     }
 
     updateTotalsFromCache();
-    applyFilterToTable();
+    applyFilterToTimeline();
 }

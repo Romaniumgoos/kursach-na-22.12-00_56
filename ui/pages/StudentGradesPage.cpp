@@ -7,11 +7,51 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QTableWidget>
 #include <QComboBox>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QSizePolicy>
+ #include <QDate>
+ #include <QScrollArea>
+ #include <QFrame>
+ #include <QGridLayout>
+ #include <algorithm>
+
+static QString cardFrameStyle()
+{
+    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
+           "QLabel{color: palette(Text); background: transparent;}";
+}
+
+static QWidget* buildMonthHeader(QWidget* parent, const QDate& d)
+{
+    auto* w = new QWidget(parent);
+    auto* row = new QHBoxLayout(w);
+    row->setContentsMargins(6, 8, 6, 6);
+    row->setSpacing(10);
+
+    const QString title = d.isValid() ? d.toString("MMMM yyyy") : QString("—");
+
+    auto* label = new QLabel(title, w);
+    label->setStyleSheet("font-weight: 900; font-size: 13px; color: palette(WindowText);");
+    row->addWidget(label);
+
+    auto* line = new QFrame(w);
+    line->setFrameShape(QFrame::HLine);
+    line->setFrameShadow(QFrame::Plain);
+    line->setStyleSheet("color: rgba(120,120,120,0.35);");
+    row->addWidget(line, 1);
+
+    return w;
+}
+
+static QString accentStripeStyleForLessonType(const QString& lessonType)
+{
+    if (lessonType.contains("ЛР", Qt::CaseInsensitive)) return "background: rgba(255, 145, 80, 0.85);";
+    if (lessonType.contains("ПЗ", Qt::CaseInsensitive)) return "background: rgba(70, 170, 255, 0.85);";
+    if (lessonType.contains("ЛК", Qt::CaseInsensitive)) return "background: rgba(170, 120, 255, 0.85);";
+    return "background: rgba(120,120,120,0.55);";
+}
 
 StudentGradesPage::StudentGradesPage(Database* db, int studentId, QWidget* parent)
     : QWidget(parent)
@@ -19,19 +59,116 @@ StudentGradesPage::StudentGradesPage(Database* db, int studentId, QWidget* paren
     , studentId(studentId)
     , semesterId(1)
     , semesterCombo(nullptr)
+    , subjectCombo(nullptr)
     , refreshButton(nullptr)
     , stacked(nullptr)
     , contentWidget(nullptr)
     , emptyWidget(nullptr)
-    , table(nullptr)
+    , listScroll(nullptr)
+    , listContainer(nullptr)
+    , listLayout(nullptr)
     , averageLabel(nullptr)
+    , countLabel(nullptr)
     , emptyStateLabel(nullptr)
     , retryButton(nullptr)
 {
     setupLayout();
-    setupTable();
     populateSemesters();
     reload();
+}
+
+void StudentGradesPage::populateSubjectsFromCache()
+{
+    if (!subjectCombo) return;
+
+    const QString current = subjectCombo->currentText();
+    subjectCombo->blockSignals(true);
+    subjectCombo->clear();
+    subjectCombo->addItem("Все", "");
+
+    QStringList subjects;
+    subjects.reserve(static_cast<int>(cachedGrades.size()));
+    for (const auto& g : cachedGrades) {
+        const QString s = QString::fromStdString(g.subject);
+        if (!s.isEmpty() && !subjects.contains(s)) subjects.push_back(s);
+    }
+    subjects.sort();
+
+    for (const auto& s : subjects) {
+        subjectCombo->addItem(s, s);
+    }
+
+    const int idx = subjectCombo->findText(current);
+    if (idx >= 0) subjectCombo->setCurrentIndex(idx);
+    subjectCombo->blockSignals(false);
+}
+
+QWidget* StudentGradesPage::buildGradeCard(const GradeRow& g)
+{
+    auto* card = new QFrame(contentWidget);
+    card->setStyleSheet(cardFrameStyle());
+    card->setFrameShape(QFrame::StyledPanel);
+
+    auto* outer = new QHBoxLayout(card);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    const QString lessonType = QString::fromStdString(g.lessonType);
+    auto* stripe = new QFrame(card);
+    stripe->setFixedWidth(6);
+    stripe->setStyleSheet(accentStripeStyleForLessonType(lessonType));
+    outer->addWidget(stripe);
+
+    auto* body = new QWidget(card);
+    outer->addWidget(body, 1);
+
+    auto* grid = new QGridLayout(body);
+    grid->setContentsMargins(14, 12, 14, 12);
+    grid->setHorizontalSpacing(10);
+    grid->setVerticalSpacing(4);
+
+    const QString date = QString::fromStdString(g.date);
+    const QString time = QString::fromStdString(g.lessonTime);
+    const QString subject = QString::fromStdString(g.subject);
+    const QString gradeType = QString::fromStdString(g.type);
+
+    auto* title = new QLabel(subject, card);
+    title->setStyleSheet("font-weight: 800; font-size: 14px; color: palette(WindowText);");
+    grid->addWidget(title, 0, 0, 1, 2);
+
+    auto* meta = new QLabel(QString("%1  •  %2").arg(date, time.isEmpty() ? "—" : time), card);
+    meta->setStyleSheet("color: palette(mid); font-weight: 600;");
+    grid->addWidget(meta, 1, 0, 1, 2);
+
+    auto* right = new QWidget(card);
+    auto* rightCol = new QVBoxLayout(right);
+    rightCol->setContentsMargins(0, 0, 0, 0);
+    rightCol->setSpacing(6);
+
+    auto* gradeBadge = new QLabel(QString::number(g.value), right);
+    gradeBadge->setAlignment(Qt::AlignCenter);
+    gradeBadge->setMinimumSize(QSize(34, 34));
+    gradeBadge->setStyleSheet(UiStyle::badgeGradeStyle(g.value));
+    rightCol->addWidget(gradeBadge, 0, Qt::AlignRight);
+
+    if (!lessonType.isEmpty() && lessonType != "—") {
+        auto* ltBadge = new QLabel(lessonType, right);
+        ltBadge->setAlignment(Qt::AlignCenter);
+        ltBadge->setMinimumHeight(22);
+        ltBadge->setStyleSheet(UiStyle::badgeLessonTypeStyle(lessonType));
+        rightCol->addWidget(ltBadge, 0, Qt::AlignRight);
+    }
+    rightCol->addStretch();
+
+    grid->addWidget(right, 0, 2, 2, 1, Qt::AlignRight | Qt::AlignTop);
+
+    if (!gradeType.trimmed().isEmpty()) {
+        auto* gt = new QLabel(gradeType, card);
+        gt->setStyleSheet("color: palette(mid); font-weight: 600;");
+        grid->addWidget(gt, 2, 0, 1, 3, Qt::AlignLeft);
+    }
+
+    return card;
 }
 
 void StudentGradesPage::setupLayout()
@@ -50,6 +187,15 @@ void StudentGradesPage::setupLayout()
     semesterCombo->setMinimumWidth(140);
     topBar->addWidget(semesterCombo);
 
+    topBar->addSpacing(12);
+
+    auto* subjectLabel = new QLabel("Предмет:", this);
+    topBar->addWidget(subjectLabel);
+
+    subjectCombo = new QComboBox(this);
+    subjectCombo->setMinimumWidth(200);
+    topBar->addWidget(subjectCombo);
+
     topBar->addStretch();
 
     refreshButton = new QPushButton("Обновить", this);
@@ -65,12 +211,32 @@ void StudentGradesPage::setupLayout()
     auto* contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setContentsMargins(0, 0, 0, 0);
 
-    table = new QTableWidget(contentWidget);
-    contentLayout->addWidget(table);
+    listScroll = new QScrollArea(contentWidget);
+    listScroll->setWidgetResizable(true);
+    listScroll->setFrameShape(QFrame::NoFrame);
+
+    listContainer = new QWidget(listScroll);
+    listLayout = new QVBoxLayout(listContainer);
+    listLayout->setContentsMargins(10, 10, 10, 10);
+    listLayout->setSpacing(10);
+    listLayout->addStretch();
+    listScroll->setWidget(listContainer);
+
+    contentLayout->addWidget(listScroll);
+
+    auto* summaryRow = new QHBoxLayout();
+    summaryRow->setContentsMargins(0, 0, 0, 0);
 
     averageLabel = new QLabel(contentWidget);
     UiStyle::makeInfoLabel(averageLabel);
-    contentLayout->addWidget(averageLabel);
+    summaryRow->addWidget(averageLabel);
+
+    countLabel = new QLabel(contentWidget);
+    UiStyle::makeInfoLabel(countLabel);
+    summaryRow->addWidget(countLabel);
+
+    summaryRow->addStretch();
+    contentLayout->addLayout(summaryRow);
 
     // Empty state
     emptyWidget = new QWidget(this);
@@ -100,19 +266,63 @@ void StudentGradesPage::setupLayout()
         if (semesterId <= 0) semesterId = 1;
         reload();
     });
+
+    connect(subjectCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int) {
+        applyFilterToTimeline();
+    });
 }
 
-void StudentGradesPage::setupTable()
+void StudentGradesPage::applyFilterToTimeline()
 {
-    UiStyle::applyStandardTableStyle(table);
+    if (!listLayout || !listContainer) return;
 
-    table->setColumnCount(4);
-    table->setHorizontalHeaderLabels({"Предмет", "Оценка", "Дата", "Тип"});
+    const QString filter = subjectCombo ? subjectCombo->currentData().toString() : QString();
 
-    table->setColumnWidth(0, 260);
-    table->setColumnWidth(1, 80);
-    table->setColumnWidth(2, 120);
-    table->setColumnWidth(3, 140);
+    while (listLayout->count() > 0) {
+        QLayoutItem* it = listLayout->takeAt(0);
+        if (it->widget()) {
+            it->widget()->deleteLater();
+        }
+        delete it;
+    }
+
+    std::vector<const GradeRow*> rows;
+    rows.reserve(cachedGrades.size());
+    for (const auto& g : cachedGrades) {
+        const QString subject = QString::fromStdString(g.subject);
+        if (!filter.isEmpty() && subject != filter) continue;
+        rows.push_back(&g);
+    }
+
+    std::sort(rows.begin(), rows.end(), [](const GradeRow* a, const GradeRow* b) {
+        return a->date > b->date;
+    });
+
+    int shown = 0;
+    int lastYM = -1;
+    for (const auto* g : rows) {
+        const QDate d = QDate::fromString(QString::fromStdString(g->date), "yyyy-MM-dd");
+        const int ym = d.isValid() ? (d.year() * 100 + d.month()) : -1;
+        if (ym != lastYM) {
+            listLayout->addWidget(buildMonthHeader(listContainer, d));
+            lastYM = ym;
+        }
+
+        listLayout->addWidget(buildGradeCard(*g));
+        ++shown;
+    }
+    listLayout->addStretch();
+
+    if (countLabel) {
+        countLabel->setText(QString("Оценок: %1").arg(shown));
+    }
+
+    if (shown == 0) {
+        showEmptyState("Нет оценок по выбранному фильтру");
+    } else {
+        showContent();
+    }
 }
 
 void StudentGradesPage::populateSemesters()
@@ -166,25 +376,81 @@ void StudentGradesPage::reload()
         return;
     }
 
-    table->setRowCount(0);
-    for (const auto& grade : grades) {
-        const int row = table->rowCount();
-        table->insertRow(row);
+    cachedGrades.clear();
+    cachedGrades.reserve(grades.size());
 
-        QString subject = QString::fromStdString(std::get<0>(grade));
-        int value = std::get<1>(grade);
-        QString date = QString::fromStdString(std::get<2>(grade));
-        QString type = QString::fromStdString(std::get<3>(grade));
-
-        table->setItem(row, 0, new QTableWidgetItem(subject));
-
-        auto* valueItem = new QTableWidgetItem(QString::number(value));
-        valueItem->setTextAlignment(Qt::AlignCenter);
-        table->setItem(row, 1, valueItem);
-
-        table->setItem(row, 2, new QTableWidgetItem(date));
-        table->setItem(row, 3, new QTableWidgetItem(type));
+    int groupId = 0;
+    int subgroup = 0;
+    if (db) {
+        db->getStudentGroupAndSubgroup(studentId, groupId, subgroup);
     }
+
+    const QStringList pairTimes = {
+        "08:30-09:55", "10:05-11:30", "12:00-13:25",
+        "13:35-15:00", "15:30-16:55", "17:05-18:30"
+    };
+    for (const auto& grade : grades) {
+        GradeRow r;
+        r.subject = std::get<0>(grade);
+        r.value = std::get<1>(grade);
+        r.date = std::get<2>(grade);
+        r.type = std::get<3>(grade);
+
+        r.lessonTime = "—";
+        r.lessonType = "—";
+        if (db && groupId > 0 && !r.date.empty() && !r.subject.empty()) {
+            const QDate d = QDate::fromString(QString::fromStdString(r.date), "yyyy-MM-dd");
+            if (d.isValid()) {
+                const int weekday = d.dayOfWeek() - 1;
+                const int weekId = db->getWeekIdByDate(r.date);
+                const int weekOfCycle = (weekId > 0) ? db->getWeekOfCycleByWeekId(weekId) : 0;
+
+                if (weekday >= 0 && weekOfCycle > 0) {
+                    std::vector<std::tuple<int, int, int, std::string, std::string, std::string, std::string>> sched;
+                    if (db->getScheduleForGroup(groupId, weekday, weekOfCycle, sched)) {
+                        int bestLessonNumber = 0;
+                        std::string bestLessonType;
+                        bool foundAny = false;
+                        bool foundPreferred = false;
+
+                        for (const auto& s : sched) {
+                            const int lessonNumber = std::get<1>(s);
+                            const std::string& subj = std::get<3>(s);
+                            const std::string& ltype = std::get<5>(s);
+                            if (subj != r.subject) continue;
+
+                            if (!foundAny) {
+                                bestLessonNumber = lessonNumber;
+                                bestLessonType = ltype;
+                                foundAny = true;
+                            }
+
+                            const QString lt = QString::fromStdString(ltype);
+                            const bool isLecture = lt.contains("ЛК", Qt::CaseInsensitive);
+                            if (!isLecture) {
+                                bestLessonNumber = lessonNumber;
+                                bestLessonType = ltype;
+                                foundPreferred = true;
+                                break;
+                            }
+                        }
+
+                        if (foundAny) {
+                            if (bestLessonNumber >= 1 && bestLessonNumber <= pairTimes.size()) {
+                                r.lessonTime = pairTimes[bestLessonNumber - 1].toStdString();
+                            }
+                            (void)foundPreferred;
+                            r.lessonType = bestLessonType.empty() ? "—" : bestLessonType;
+                        }
+                    }
+                }
+            }
+        }
+        cachedGrades.push_back(std::move(r));
+    }
+
+    populateSubjectsFromCache();
+    applyFilterToTimeline();
 
     const double average = Statistics::calculateStudentAverage(*db, studentId, semesterId);
     averageLabel->setText(QString("Средний балл: %1").arg(average, 0, 'f', 2));

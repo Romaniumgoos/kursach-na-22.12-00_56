@@ -751,6 +751,169 @@ bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSeme
     return true;
 }
 
+bool Database::getSubjectsForTeacherInGroupSchedule(int teacherId, int groupId,
+                                                    std::vector<std::pair<int, std::string>>& outSubjects)
+{
+    outSubjects.clear();
+    if (!db) return false;
+
+    const char* sql = R"SQL(
+        SELECT DISTINCT s.id, s.name
+        FROM schedule sch
+        JOIN subjects s ON sch.subjectid = s.id
+        WHERE sch.teacherid = ?
+          AND (sch.groupid = ? OR sch.groupid = 0)
+        ORDER BY s.name
+    )SQL";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, groupId);
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        outSubjects.emplace_back(id, name);
+    }
+
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_DONE);
+}
+
+bool Database::getScheduleForTeacherWeekWithRoom(
+    int teacherId,
+    int weekOfCycle,
+    int studentSubgroup,
+    std::vector<std::tuple<int,int,int,int,int,std::string,std::string,std::string,std::string>>& outRows)
+{
+    outRows.clear();
+    if (!isConnected()) return false;
+
+    const char* sql = R"SQL(
+        SELECT sch.id,
+               sch.groupid,
+               sch.weekday,
+               sch.lessonnumber,
+               sch.subgroup,
+               subj.name,
+               COALESCE(sch.room, ''),
+               COALESCE(sch.lessontype, ''),
+               COALESCE(gr.name, '')
+        FROM schedule sch
+        JOIN subjects subj ON sch.subjectid = subj.id
+        LEFT JOIN groups gr ON sch.groupid = gr.id
+        WHERE sch.teacherid = ?
+          AND sch.weekofcycle = ?
+          AND (? = 0 OR sch.subgroup = 0 OR sch.subgroup = ?)
+        ORDER BY sch.weekday, sch.lessonnumber, sch.groupid, sch.subgroup
+    )SQL";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, weekOfCycle);
+    sqlite3_bind_int(stmt, 3, studentSubgroup);
+    sqlite3_bind_int(stmt, 4, studentSubgroup);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const int scheduleId = sqlite3_column_int(stmt, 0);
+        const int groupId = sqlite3_column_int(stmt, 1);
+        const int weekday = sqlite3_column_int(stmt, 2);
+        const int lessonNumber = sqlite3_column_int(stmt, 3);
+        const int subgroup = sqlite3_column_int(stmt, 4);
+
+        const char* subjName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        const char* room = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        const char* ltype = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+        const char* groupName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
+
+        outRows.emplace_back(
+            scheduleId,
+            groupId,
+            weekday,
+            lessonNumber,
+            subgroup,
+            subjName ? subjName : "",
+            room ? room : "",
+            ltype ? ltype : "",
+            groupName ? groupName : ""
+        );
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::getScheduleForTeacherGroupWeekWithRoom(
+    int teacherId,
+    int groupId,
+    int weekOfCycle,
+    int studentSubgroup,
+    std::vector<std::tuple<int, int, int, int, int, std::string, std::string, std::string>>& outRows)
+{
+    outRows.clear();
+    if (!isConnected()) return false;
+
+    const char* sql = R"SQL(
+        SELECT sch.id,
+               sch.subjectid,
+               sch.weekday,
+               sch.lessonnumber,
+               sch.subgroup,
+               subj.name,
+               COALESCE(sch.room, ''),
+               COALESCE(sch.lessontype, '')
+        FROM schedule sch
+        JOIN subjects subj ON sch.subjectid = subj.id
+        WHERE sch.teacherid = ?
+          AND (sch.groupid = ? OR sch.groupid = 0)
+          AND sch.weekofcycle = ?
+          AND (? = 0 OR sch.subgroup = 0 OR sch.subgroup = ?)
+        ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
+    )SQL";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, groupId);
+    sqlite3_bind_int(stmt, 3, weekOfCycle);
+    sqlite3_bind_int(stmt, 4, studentSubgroup);
+    sqlite3_bind_int(stmt, 5, studentSubgroup);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int scheduleId = sqlite3_column_int(stmt, 0);
+        int subjectId = sqlite3_column_int(stmt, 1);
+        int weekday = sqlite3_column_int(stmt, 2);
+        int lessonNumber = sqlite3_column_int(stmt, 3);
+        int subgroup = sqlite3_column_int(stmt, 4);
+        const char* subjName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        const char* room = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        const char* ltype = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+
+        outRows.emplace_back(
+            scheduleId,
+            subjectId,
+            weekday,
+            lessonNumber,
+            subgroup,
+            subjName ? subjName : "",
+            room ? room : "",
+            ltype ? ltype : ""
+        );
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
 bool Database::getAllGroups(std::vector<std::pair<int, std::string>>& outGroups) {
     outGroups.clear();
     if (!db) {
@@ -1130,6 +1293,78 @@ bool Database::addGrade(int studentId, int subjectId, int semesterId,
     return rc == SQLITE_DONE;
 }
 
+bool Database::findGradeId(int studentId, int subjectId, int semesterId,
+                           const std::string& date, int& outGradeId)
+{
+    outGradeId = 0;
+    if (!db) return false;
+
+    const char* sql =
+        "SELECT id FROM grades WHERE studentid = ? AND subjectid = ? AND semesterid = ? AND date = ? LIMIT 1;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
+    sqlite3_bind_text(stmt, 4, date.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        outGradeId = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::upsertGradeByKey(int studentId, int subjectId, int semesterId,
+                                int value, const std::string& date, const std::string& gradeType)
+{
+    if (!db) return false;
+
+    int gradeId = 0;
+    if (!findGradeId(studentId, subjectId, semesterId, date, gradeId)) return false;
+
+    if (gradeId > 0) {
+        return updateGrade(gradeId, value, date, gradeType);
+    }
+    return addGrade(studentId, subjectId, semesterId, value, date, gradeType);
+}
+
+bool Database::getGradeById(int gradeId, int& outValue, std::string& outDate, std::string& outGradeType)
+{
+    outValue = 0;
+    outDate.clear();
+    outGradeType.clear();
+    if (!db) return false;
+
+    const char* sql =
+        "SELECT value, COALESCE(date, ''), COALESCE(gradetype, '') FROM grades WHERE id = ? LIMIT 1;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, gradeId);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outValue = sqlite3_column_int(stmt, 0);
+        const unsigned char* dateText = sqlite3_column_text(stmt, 1);
+        const unsigned char* typeText = sqlite3_column_text(stmt, 2);
+        outDate = dateText ? reinterpret_cast<const char*>(dateText) : "";
+        outGradeType = typeText ? reinterpret_cast<const char*>(typeText) : "";
+        sqlite3_finalize(stmt);
+        return true;
+    }
+
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_DONE);
+}
+
 bool Database::deleteGrade(int gradeId) {
     if (!db) {
         std::cerr << "[✗] deleteGrade: DB not connected\n";
@@ -1207,6 +1442,104 @@ bool Database::deleteTodayAbsence(int studentId,
     int changes = sqlite3_changes(db);
     sqlite3_finalize(stmt);
     return changes > 0;
+}
+
+bool Database::findAbsenceId(int studentId, int subjectId, int semesterId,
+                             const std::string& date, int& outAbsenceId)
+{
+    outAbsenceId = 0;
+    if (!db) return false;
+
+    const char* sql =
+        "SELECT id FROM absences WHERE studentid = ? AND subjectid = ? AND semesterid = ? AND date = ? LIMIT 1;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
+    sqlite3_bind_text(stmt, 4, date.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        outAbsenceId = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::upsertAbsenceByKey(int studentId, int subjectId, int semesterId,
+                                  int hours, const std::string& date, const std::string& type)
+{
+    if (!db) return false;
+
+    int absenceId = 0;
+    if (!findAbsenceId(studentId, subjectId, semesterId, date, absenceId)) return false;
+
+    if (absenceId > 0) {
+        const char* sql = "UPDATE absences SET hours = ?, type = ? WHERE id = ?;";
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+        sqlite3_bind_int(stmt, 1, hours);
+        sqlite3_bind_text(stmt, 2, type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt, 3, absenceId);
+        const int rc = sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+        return (rc == SQLITE_DONE);
+    }
+
+    return addAbsence(studentId, subjectId, semesterId, hours, date, type);
+}
+
+bool Database::getAbsenceById(int absenceId, int& outHours, std::string& outDate, std::string& outType)
+{
+    outHours = 0;
+    outDate.clear();
+    outType.clear();
+    if (!db) return false;
+
+    const char* sql =
+        "SELECT hours, COALESCE(date, ''), COALESCE(type, '') FROM absences WHERE id = ? LIMIT 1;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, absenceId);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outHours = sqlite3_column_int(stmt, 0);
+        const unsigned char* dateText = sqlite3_column_text(stmt, 1);
+        const unsigned char* typeText = sqlite3_column_text(stmt, 2);
+        outDate = dateText ? reinterpret_cast<const char*>(dateText) : "";
+        outType = typeText ? reinterpret_cast<const char*>(typeText) : "";
+        sqlite3_finalize(stmt);
+        return true;
+    }
+
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_DONE);
+}
+
+bool Database::deleteAbsence(int absenceId)
+{
+    if (!db) return false;
+
+    const char* sql = "DELETE FROM absences WHERE id = ?";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, absenceId);
+    const int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return (rc == SQLITE_DONE);
 }
 
 bool Database::getGroupSubjectAbsencesSummary(
@@ -1502,7 +1835,7 @@ bool Database::getScheduleForTeacherGroupWeek(
         WHERE sch.teacherid = ?
           AND sch.groupid = ?
           AND sch.weekofcycle = ?
-          AND (sch.subgroup = 0 OR sch.subgroup = ?)
+          AND (? = 0 OR sch.subgroup = 0 OR sch.subgroup = ?)
         ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
     )SQL";
 
@@ -1513,6 +1846,7 @@ bool Database::getScheduleForTeacherGroupWeek(
     sqlite3_bind_int(stmt, 2, groupId);
     sqlite3_bind_int(stmt, 3, weekOfCycle);
     sqlite3_bind_int(stmt, 4, studentSubgroup);
+    sqlite3_bind_int(stmt, 5, studentSubgroup);
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         int scheduleId = sqlite3_column_int(stmt, 0);
