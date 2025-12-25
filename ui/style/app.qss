@@ -1,0 +1,60 @@
+/* Базовая типографика */
+QWidget {
+    font-size: 14px;
+}
+
+/* Поля ввода */
+QLineEdit {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(120,120,120,0.45);
+    background: palette(Base);
+    color: palette(Text);
+    selection-background-color: palette(Highlight);
+    selection-color: palette(HighlightedText);
+}
+
+QLineEdit:focus {
+    border: 2px solid palette(Highlight);
+}
+
+/* Кнопки */
+QPushButton {
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(120,120,120,0.35);
+    background: rgba(80, 160, 220, 0.20);
+    color: palette(ButtonText);
+}
+
+QPushButton:hover {
+    background: rgba(80, 160, 220, 0.30);
+}
+
+QPushButton:pressed {
+    background: rgba(80, 160, 220, 0.40);
+}
+
+QPushButton:disabled {
+    background: rgba(120,120,120,0.12);
+    color: rgba(120,120,120,0.75);
+    border: 1px solid rgba(120,120,120,0.25);
+}
+
+/* Таблички (на будущее — расписание/оценки/пропуски) */
+QTableView {
+    border-radius: 12px;
+    border: 1px solid rgba(120,120,120,0.25);
+    background: palette(Base);
+    gridline-color: rgba(120,120,120,0.25);
+    selection-background-color: rgba(80,160,220,0.35);
+    selection-color: palette(Text);
+}
+
+QHeaderView::section {
+    padding: 8px 10px;
+    border: none;
+    background: rgba(120,120,120,0.10);
+    color: palette(WindowText);
+    font-weight: 600;
+}

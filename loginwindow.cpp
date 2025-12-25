@@ -10,11 +10,14 @@
 #include "ui/widgets/ThemeToggleWidget.h"
 
 LoginWindow::LoginWindow(Database* db, QWidget *parent)
-    : QMainWindow(parent), db_(db) {
+    : QMainWindow(parent), db(db) {
     setupUI();
     setWindowTitle("Авторизация - Student Management System");
     resize(400, 250);
 
+    setMinimumSize(520, 380);
+    resize(560, 380);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
 }
 
@@ -51,45 +54,45 @@ void LoginWindow::setupUI() {
     QFormLayout* formLayout = new QFormLayout();
     formLayout->setSpacing(10);
 
-    usernameEdit_ = new QLineEdit(this);
-    usernameEdit_->setPlaceholderText("Введите логин");
-    usernameEdit_->setMinimumHeight(35);
-    formLayout->addRow("Логин:", usernameEdit_);
+    usernameEdit = new QLineEdit(this);
+    usernameEdit->setPlaceholderText("Введите логин");
+    usernameEdit->setMinimumHeight(35);
+    formLayout->addRow("Логин:", usernameEdit);
 
-    passwordEdit_ = new QLineEdit(this);
-    passwordEdit_->setPlaceholderText("Введите пароль");
-    passwordEdit_->setEchoMode(QLineEdit::Password);
-    passwordEdit_->setMinimumHeight(35);
-    formLayout->addRow("Пароль:", passwordEdit_);
+    passwordEdit = new QLineEdit(this);
+    passwordEdit->setPlaceholderText("Введите пароль");
+    passwordEdit->setEchoMode(QLineEdit::Password);
+    passwordEdit->setMinimumHeight(35);
+    formLayout->addRow("Пароль:", passwordEdit);
 
     mainLayout->addLayout(formLayout);
     mainLayout->addSpacing(10);
 
     // Кнопка входа
-    loginButton_ = new QPushButton("Войти", this);
-    loginButton_->setMinimumHeight(40);
-    loginButton_->setDefault(true);
-    mainLayout->addWidget(loginButton_);
+    loginButton = new QPushButton("Войти", this);
+    loginButton->setMinimumHeight(40);
+    loginButton->setDefault(true);
+    mainLayout->addWidget(loginButton);
 
     // Статус
-    statusLabel_ = new QLabel(this);
-    statusLabel_->setAlignment(Qt::AlignCenter);
-    statusLabel_->setStyleSheet("color: red;");
-    mainLayout->addWidget(statusLabel_);
+    statusLabel = new QLabel(this);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    statusLabel->setStyleSheet("color: red;");
+    mainLayout->addWidget(statusLabel);
 
     mainLayout->addStretch();
 
     // Подключить сигналы
-    connect(loginButton_, &QPushButton::clicked, this, &LoginWindow::onLoginClicked);
-    connect(passwordEdit_, &QLineEdit::returnPressed, this, &LoginWindow::onLoginClicked);
+    connect(loginButton, &QPushButton::clicked, this, &LoginWindow::onLoginClicked);
+    connect(passwordEdit, &QLineEdit::returnPressed, this, &LoginWindow::onLoginClicked);
 }
 
 void LoginWindow::onLoginClicked() {
-    QString username = usernameEdit_->text().trimmed();
-    QString password = passwordEdit_->text().trimmed();
+    QString username = usernameEdit->text().trimmed();
+    QString password = passwordEdit->text().trimmed();
 
     if (username.isEmpty() || password.isEmpty()) {
-        statusLabel_->setText("Введите логин и пароль");
+        statusLabel->setText("Введите логин и пароль");
         return;
     }
 
@@ -97,7 +100,7 @@ void LoginWindow::onLoginClicked() {
     int userId = 0;
     std::string userName, userRole;
 
-    bool success = db_->findUser(
+    bool success = db->findUser(
         username.toStdString(),
         password.toStdString(),
         userId,
@@ -106,14 +109,14 @@ void LoginWindow::onLoginClicked() {
     );
 
     if (!success) {
-        statusLabel_->setText("Неверный логин или пароль");
-        passwordEdit_->clear();
-        passwordEdit_->setFocus();
+        statusLabel->setText("Неверный логин или пароль");
+        passwordEdit->clear();
+        passwordEdit->setFocus();
         return;
     }
 
     // Успешная авторизация - открыть нужное окно
-    statusLabel_->setText("");
+    statusLabel->setText("");
     QString userNameQt = QString::fromStdString(userName);
 
     if (userRole == "student") {
@@ -126,7 +129,7 @@ void LoginWindow::onLoginClicked() {
 }
 
 void LoginWindow::openStudentWindow(int userId, const QString& userName) {
-    StudentWindow* studentWin = new StudentWindow(db_, userId, userName);
+    StudentWindow* studentWin = new StudentWindow(db, userId, userName);
     studentWin->show();
     this->hide();
 
@@ -135,7 +138,7 @@ void LoginWindow::openStudentWindow(int userId, const QString& userName) {
 }
 
 void LoginWindow::openTeacherWindow(int userId, const QString& userName) {
-    TeacherWindow* teacherWin = new TeacherWindow(db_, userId, userName);
+    TeacherWindow* teacherWin = new TeacherWindow(db, userId, userName);
     teacherWin->show();
     this->hide();
 
@@ -143,7 +146,7 @@ void LoginWindow::openTeacherWindow(int userId, const QString& userName) {
 }
 
 void LoginWindow::openAdminWindow(int userId, const QString& userName) {
-    AdminWindow* adminWin = new AdminWindow(db_, userId, userName);
+    AdminWindow* adminWin = new AdminWindow(db, userId, userName);
     adminWin->show();
     this->hide();
 

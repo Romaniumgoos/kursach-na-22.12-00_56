@@ -4,6 +4,9 @@
 #include <QPalette>
 #include <QColor>
 #include <QStyle>
+#include <QFile>
+#include <QTextStream>
+
 ThemeManager* ThemeManager::m_instance = nullptr;
 
 ThemeManager::ThemeManager(QObject* parent)
@@ -70,6 +73,19 @@ void ThemeManager::applyTheme(QApplication* app)
 
 
     app->setPalette(pal);
+    QFile f(":/style/app.qss");
+    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&f);
+        app->setStyleSheet(in.readAll());
+    } else {
+        // fallback: если не подключили ресурсы, попробуем файл по пути проекта
+        QFile f2("ui/style/app.qss");
+        if (f2.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in2(&f2);
+            app->setStyleSheet(in2.readAll());
+        }
+    }
+
 }
 
 void ThemeManager::saveSetting()

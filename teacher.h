@@ -8,18 +8,18 @@
 
 class Teacher : public User {
 private:
-    int teacher_id_;
-    Database* db_;
+    int teacherId;
+    Database* db;
 
 public:
     using User::User; // оставляем, если где‑то используется базовый конструктор
 
-    Teacher(int teacher_id,
+    Teacher(int teacherId,
             const std::string& username,
             const std::string& name,
             Database* db);
     // Просмотр СВОЕГО расписания на определённую неделю
-    bool viewMySchedule(int week_of_cycle);
+    bool viewMySchedule(int weekOfCycle);
 
     // Просмотр расписания на ВСЕ недели
     bool viewFullSchedule();

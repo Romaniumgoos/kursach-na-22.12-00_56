@@ -50,9 +50,9 @@ void Student::displayMenu(Database& db) {
             // subject -> список оценок
             std::map<std::string, std::vector<int>> subjectMarks;
             for (const auto& g : grades) {
-                std::string subj, date, grade_type;
+                std::string subj, date, gradeType;
                 int value = 0;
-                std::tie(subj, value, date, grade_type) = g;
+                std::tie(subj, value, date, gradeType) = g;
                 subjectMarks[subj].push_back(value);
             }
 

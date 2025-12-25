@@ -22,13 +22,13 @@ private slots:
     void onLoginClicked();
 
 private:
-    Database* db_;
+    Database* db;
 
     // UI элементы
-    QLineEdit* usernameEdit_;
-    QLineEdit* passwordEdit_;
-    QPushButton* loginButton_;
-    QLabel* statusLabel_;
+    QLineEdit* usernameEdit;
+    QLineEdit* passwordEdit;
+    QPushButton* loginButton;
+    QLabel* statusLabel;
 
     void setupUI();
     void openStudentWindow(int userId, const QString& userName);

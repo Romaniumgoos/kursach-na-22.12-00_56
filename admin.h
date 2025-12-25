@@ -8,8 +8,8 @@
 
 class Admin : public User {
 private:
-    int admin_id_;      // дублирующий ID, можно использовать getId() из User
-    Database* db_;
+    int adminId;      // дублирующий ID, можно использовать getId() из User
+    Database* db;
 
 public:
     // Базовый конструктор User: User(int id, const std::string& name, const std::string& role);
@@ -17,7 +17,7 @@ public:
 
     // Явный конструктор администратора
 
-    Admin(int admin_id,
+    Admin(int adminId,
           const std::string& username,
           const std::string& name,
           Database* db);

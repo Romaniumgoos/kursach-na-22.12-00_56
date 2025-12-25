@@ -9,7 +9,7 @@ StudentService::getStudentGroupAndSubgroup(int studentId) {
     int groupId = 0;
     int subgroup = 0;
 
-    if (!db_.getStudentGroupAndSubgroup(studentId, groupId, subgroup)) {
+    if (!db.getStudentGroupAndSubgroup(studentId, groupId, subgroup)) {
         return Result<GroupAndSubgroup>::Fail("DB: getStudentGroupAndSubgroup failed");
     }
 
@@ -26,7 +26,7 @@ StudentService::getGradesForSemester(int studentId, int semesterId) {
     }
 
     std::vector<GradeRow> grades;
-    if (!db_.getStudentGradesForSemester(studentId, semesterId, grades)) {
+    if (!db.getStudentGradesForSemester(studentId, semesterId, grades)) {
         return Result<std::vector<GradeRow>>::Fail("DB: getStudentGradesForSemester failed");
     }
 
@@ -43,7 +43,7 @@ StudentService::getAbsencesForSemester(int studentId, int semesterId) {
     }
 
     std::vector<AbsenceRow> absences;
-    if (!db_.getStudentAbsencesForSemester(studentId, semesterId, absences)) {
+    if (!db.getStudentAbsencesForSemester(studentId, semesterId, absences)) {
         return Result<std::vector<AbsenceRow>>::Fail("DB: getStudentAbsencesForSemester failed");
     }
 
@@ -64,7 +64,7 @@ StudentService::getScheduleForGroup(int groupId, int weekday, int weekOfCycle) {
     }
 
     std::vector<ScheduleRow> rows;
-    if (!db_.getScheduleForGroup(groupId, weekday, weekOfCycle, rows)) {
+    if (!db.getScheduleForGroup(groupId, weekday, weekOfCycle, rows)) {
         return Result<std::vector<ScheduleRow>>::Fail("DB: getScheduleForGroup failed");
     }
 
@@ -81,13 +81,10 @@ StudentService::getDateISO(int weekOfCycle, int weekday) {
     }
 
     std::string dateISO;
-    if (!db_.getDateForWeekday(weekOfCycle, weekday, dateISO)) {
+    if (!db.getDateForWeekday(weekOfCycle, weekday, dateISO)) {
         return Result<std::string>::Fail("DB: getDateForWeekday failed");
     }
 
     return Result<std::string>::Ok(std::move(dateISO));
 }
-Result<std::vector<LessonDto>> getWeekLessons(int studentId, int weekIdOrCycle);
-Result<std::vector<GradeDto>>  getGradesForSemester(int studentId, int semesterId);
-Result<std::vector<AbsenceDto>> getAbsencesForSemester(int studentId, int semesterId);
 

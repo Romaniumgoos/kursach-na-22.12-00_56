@@ -3,8 +3,6 @@
 
 #include <QMainWindow>
 #include <QTabWidget>
-#include <QTableWidget>
-#include <QComboBox>
 #include <QLabel>
 #include "database.h"
 class ThemeToggleWidget;
@@ -16,45 +14,19 @@ public:
                           QWidget *parent = nullptr);
     ~StudentWindow();
 
-private slots:
-    void loadGrades();
-    void loadAbsences();
-    void loadSchedule();
-    void onWeekChanged(int index);
-
 private:
-    Database* db_;
-    int studentId_;
-    QString studentName_;
-    int groupId_;
-    int subgroup_;
+    Database* db;
+    int studentId;
+    QString studentName;
 
     // UI элементы
-    QTabWidget* tabWidget_;
+    QTabWidget* tabWidget;
 
-    // Вкладка "Оценки"
-    QWidget* gradesTab_;
-    QTableWidget* gradesTable_;
-    QLabel* averageLabel_;
-
-    // Вкладка "Пропуски"
-    QWidget* absencesTab_;
-    QTableWidget* absencesTable_;
-    QLabel* totalAbsencesLabel_;
-
-    // Вкладка "Расписание"
-    QWidget* scheduleTab_;
-    QComboBox* weekComboBox_;
-    QTableWidget* scheduleTable_;
-
-    ThemeToggleWidget* themeToggle_ = nullptr;
+    ThemeToggleWidget* themeToggle = nullptr;
 
 
     void setupUI();
-    void setupGradesTab();
-    void setupAbsencesTab();
     void setupScheduleTab();
-    void loadStudentInfo();
 };
 
 #endif // STUDENTWINDOW_H

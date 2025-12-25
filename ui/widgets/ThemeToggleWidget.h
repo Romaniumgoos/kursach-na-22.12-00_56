@@ -1,20 +1,19 @@
 #pragma once
 
 #include <QWidget>
-#include <QPushButton>
+#include <QToolButton>
 #include "ui/style/ThemeManager.h"
 
 class ThemeToggleWidget : public QWidget {
     Q_OBJECT
-
 public:
     explicit ThemeToggleWidget(QWidget* parent = nullptr);
 
 private slots:
-    void onToggleTheme();
+    void onToggled(bool checked);
     void onThemeChanged(ThemeManager::Theme theme);
 
 private:
-    QPushButton* m_toggleButton;
-    void updateButtonText();
+    QToolButton* btn_ = nullptr;
+    void syncFromTheme();
 };

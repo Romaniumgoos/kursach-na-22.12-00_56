@@ -1,44 +1,76 @@
-#include "ThemeToggleWidget.h"
-#include <QVBoxLayout>
+#include "ui/widgets/ThemeToggleWidget.h"
+
+#include <QHBoxLayout>
 #include <QApplication>
 
 ThemeToggleWidget::ThemeToggleWidget(QWidget* parent)
     : QWidget(parent)
 {
-    auto layout = new QVBoxLayout(this);
+    auto* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
 
-    m_toggleButton = new QPushButton("🌙 Тёмная тема");
-    m_toggleButton->setMaximumWidth(150);
-    layout->addWidget(m_toggleButton);
-    layout->addStretch();
+    btn_ = new QToolButton(this);
+    btn_->setCheckable(true);
+    btn_->setAutoRaise(false);
+    btn_->setCursor(Qt::PointingHandCursor);
 
-    connect(m_toggleButton, &QPushButton::clicked, this, &ThemeToggleWidget::onToggleTheme);
+    // “Дорогой” стиль toggle-пилюли
+    btn_->setStyleSheet(R"(
+        QToolButton {
+            padding: 8px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(120,120,120,0.30);
+            background: rgba(120,120,120,0.12);
+            color: palette(WindowText);
+            font-weight: 600;
+        }
+        QToolButton:hover {
+            background: rgba(120,120,120,0.18);
+        }
+        QToolButton:checked {
+            border: 1px solid rgba(80,160,220,0.55);
+            background: rgba(80,160,220,0.28);
+        }
+        QToolButton:checked:hover {
+            background: rgba(80,160,220,0.36);
+        }
+        QToolButton:focus {
+            outline: none;
+        }
+    )");
+
+    layout->addWidget(btn_);
+
+    connect(btn_, &QToolButton::toggled, this, &ThemeToggleWidget::onToggled);
     connect(ThemeManager::instance(), &ThemeManager::themeChanged,
             this, &ThemeToggleWidget::onThemeChanged);
 
-    updateButtonText();
+    syncFromTheme();
 }
 
-void ThemeToggleWidget::onToggleTheme()
+void ThemeToggleWidget::syncFromTheme()
 {
-    auto manager = ThemeManager::instance();
-    ThemeManager::Theme newTheme = (manager->currentTheme() == ThemeManager::Dark)
-                                       ? ThemeManager::Light
-                                       : ThemeManager::Dark;
-    manager->setTheme(newTheme);
-    ThemeManager::instance()->applyTheme(qApp);
+    const bool isDark = (ThemeManager::instance()->currentTheme() == ThemeManager::Dark);
+
+    // checked=true будем трактовать как "Dark"
+    btn_->blockSignals(true);
+    btn_->setChecked(isDark);
+    btn_->blockSignals(false);
+
+    // Текст (и “иконка” юникодом)
+    if (isDark) btn_->setText(QString::fromUtf8("🌙 Dark"));
+    else        btn_->setText(QString::fromUtf8("☀ Light"));
 }
 
-void ThemeToggleWidget::onThemeChanged(ThemeManager::Theme theme)
+void ThemeToggleWidget::onToggled(bool checked)
 {
-    updateButtonText();
+    auto* tm = ThemeManager::instance();
+    tm->setTheme(checked ? ThemeManager::Dark : ThemeManager::Light);
+    tm->applyTheme(qApp); // применяем на всё приложение [web:207]
+    syncFromTheme();
 }
 
-void ThemeToggleWidget::updateButtonText()
+void ThemeToggleWidget::onThemeChanged(ThemeManager::Theme)
 {
-    if (ThemeManager::instance()->currentTheme() == ThemeManager::Dark) {
-        m_toggleButton->setText("☀️ Светлая тема");
-    } else {
-        m_toggleButton->setText("🌙 Тёмная тема");
-    }
+    syncFromTheme();
 }

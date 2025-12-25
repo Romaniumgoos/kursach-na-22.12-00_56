@@ -22,7 +22,7 @@
 
 class Database {
 private:
-    sqlite3* db_;
+    sqlite3* db;
     std::string fileName;
 
 
@@ -56,104 +56,104 @@ public:
 
 
     // Доступ к "сырому" указателю sqlite3*, если понадобится позже
-    sqlite3* rawHandle() const { return db_; }
+    sqlite3* rawHandle() const { return db; }
     bool getAllSemesters(std::vector<std::pair<int, std::string>>& outSemesters);
-    bool getSubjectsForTeacher(int teacher_id,
+    bool getSubjectsForTeacher(int teacherId,
                            std::vector<std::pair<int, std::string>>& outSubjects);
 
     bool getAllGroups(std::vector<std::pair<int, std::string>>& outGroups);
     bool getAllUsers(
         std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers
     );
-    bool getStudentGradesForSemester(int student_id, int semester_id,
-    std::vector<std::tuple<std::string, int, std::string, std::string>>& out_grades);
+    bool getStudentGradesForSemester(int studentId, int semesterId,
+    std::vector<std::tuple<std::string, int, std::string, std::string>>& outGrades);
     // (subjectName, value, date, grade_type)
 
-    bool getStudentsOfGroup(int group_id,
+    bool getStudentsOfGroup(int groupId,
                             std::vector<std::pair<int, std::string>>& outStudents);
-    bool getStudentSubjectGrades(int student_id,
-                                 int subject_id,
-                                 int semester_id,
+    bool getStudentSubjectGrades(int studentId,
+                                 int subjectId,
+                                 int semesterId,
                                  std::vector<std::tuple<int, std::string, std::string>>& outGrades);
-    bool addGrade(int student_id, int subject_id, int semester_id,
-              int value, const std::string& date, const std::string& grade_type = "");
+    bool addGrade(int studentId, int subjectId, int semesterId,
+              int value, const std::string& date, const std::string& gradeType = "");
 
     bool insertUser(const std::string& username,
                 const std::string& password,
                 const std::string& role,
                 const std::string& name,
-                int group_id,
-                int sub_group);
+                int groupId,
+                int subgroup);
     // для admin/teacher можно передавать 0
     bool deleteUserById(int userId);
     // Правильное объявление (строка ~87, оставь это):
-    bool updateGrade(int grade_id, int newValue, const std::string& newDate,
+    bool updateGrade(int gradeId, int newValue, const std::string& newDate,
                      const std::string& newType);
 
     // УДАЛИ дубликат на строке 188, если он там есть!
 
-    bool getGradesForStudentSubject(int student_id,
-                                    int subject_id,
-                                    int semester_id,
+    bool getGradesForStudentSubject(int studentId,
+                                    int subjectId,
+                                    int semesterId,
                                     std::vector<std::tuple<int, int, std::string, std::string>>& outGrades);
 
     // ===== МЕТОДЫ ДЛЯ ПРОПУСКОВ =====
-    bool addAbsence(int student_id,
-                int subject_id,
-                int semester_id,
+    bool addAbsence(int studentId,
+                int subjectId,
+                int semesterId,
                 int hours,
                 const std::string& date,
                 const std::string& type);
 
     bool getStudentAbsencesForSemester(
-    int student_id,
-    int semester_id,
+    int studentId,
+    int semesterId,
     std::vector<std::tuple<std::string, int, std::string, std::string>>& outAbsences);
     // (subject_name, hours, date, type)
 
-    bool getStudentTotalAbsences(int student_id,
-                                 int semester_id,
+    bool getStudentTotalAbsences(int studentId,
+                                 int semesterId,
                                  int& outTotalHours);
 
-    bool getStudentUnexcusedAbsences(int student_id,
-                             int semester_id,
+    bool getStudentUnexcusedAbsences(int studentId,
+                             int semesterId,
                              int& outUnexcusedHours);
 
-    bool deleteTodayAbsence(int student_id,
-                        int subject_id,
-                        int semester_id,
+    bool deleteTodayAbsence(int studentId,
+                        int subjectId,
+                        int semesterId,
                         const std::string& date);
-    bool addTeacherGroup(int teacher_id, int group_id);
+    bool addTeacherGroup(int teacherId, int groupId);
 
-    bool getGroupsForTeacher(int teacher_id,
+    bool getGroupsForTeacher(int teacherId,
                              std::vector<std::pair<int, std::string>>& outGroups);
     // ===== РАСПИСАНИЕ ПАР (LESSONS) =====
-    bool addLesson(int group_id,
-                   int subject_id,
-                   int teacher_id,
+    bool addLesson(int groupId,
+                   int subjectId,
+                   int teacherId,
                    const std::string& date,
-                   int time_slot );
+                   int timeSlot );
 
     // Получить пары группы на конкретную дату
-    bool getLessonsForGroupAndDate(int group_id,
+    bool getLessonsForGroupAndDate(int groupId,
                                    const std::string& date,
                                    std::vector<std::tuple<int,int,std::string>>& outLessons);
     // outLessons: (time_slot, subject_id, subject_name)
     bool getGroupSubjectAbsencesSummary(
-        int group_id,
-        int subject_id,
-        int semester_id,
+        int groupId,
+        int subjectId,
+        int semesterId,
         std::vector<std::tuple<int, std::string, int>>& outRows);
     // (student_id, student_name, total_hours)
-    bool addScheduleEntry(int group_id, int sub_group, int weekday,
-                          int lesson_number, int week_of_cycle,
-                          int subject_id, int teacher_id,
+    bool addScheduleEntry(int groupId, int subgroup, int weekday,
+                          int lessonNumber, int weekOfCycle,
+                          int subjectId, int teacherId,
                           const std::string& room);
 
     bool getScheduleForGroup(
-     int group_id,
+     int groupId,
      int weekday,
-     int week_of_cycle,
+     int weekOfCycle,
      std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>>& rows
  );
 
@@ -164,37 +164,40 @@ public:
     // уже добавленные раньше:
     bool getAllSubjects(std::vector<std::pair<int, std::string>>& outSubjects);
     bool getAllTeachers(std::vector<std::pair<int, std::string>>& outTeachers);
-    bool getStudentGroupAndSubgroup(int student_id, int& out_group_id, int& out_sub_group);
+    bool getStudentGroupAndSubgroup(int studentId, int& outGroupId, int& outSubgroup);
     bool getScheduleForTeacherGroup(
-    int teacher_id,
-    int group_id,
+    int teacherId,
+    int groupId,
     std::vector<std::tuple<int,int,int,int,int,std::string>>& rows
 );
 
     bool isScheduleEmpty(bool& outEmpty);
+
+    void dumpDbStats();
+    void dumpSchemaAndCounts();
     // Загрузить расписание из SQL файла
     bool loadScheduleFromFile(const std::string& filePath);
 
     // Загрузить расписание конкретной группы
-    bool loadGroupSchedule(int group_id, const std::string& filePath);
+    bool loadGroupSchedule(int groupId, const std::string& filePath);
 
-    sqlite3* getHandle() { return db_; }
-    sqlite3* getRawHandle() const { return db_; }
-    int  getweekofcycleForDate(const std::string& dateISO);
+    sqlite3* getHandle() { return db; }
+    sqlite3* getRawHandle() const { return db; }
+    int  getWeekOfCycleForDate(const std::string& dateISO);
     bool getCycleWeeks(std::vector<std::tuple<int,int,std::string,std::string>>& out);
     bool getDateForWeekdayByWeekId(int weekId, int weekday, std::string& outDateISO);
     int getWeekOfCycleByWeekId(int weekId);
-    bool getDateForWeekday(int week_of_cycle, int weekday, std::string& outDateISO);
+    bool getDateForWeekday(int weekOfCycle, int weekday, std::string& outDateISO);
     // Проверить, не занята ли ячейка расписания (группа+день+пара+неделя+подгруппа)
-    bool isScheduleSlotBusy(int group_id, int sub_group,
-                            int weekday, int lesson_number, int week_of_cycle);
+    bool isScheduleSlotBusy(int groupId, int subgroup,
+                            int weekday, int lessonNumber, int weekOfCycle);
 
     // Обновить существующую запись расписания по id
 
     // Удалить запись расписания по id
-    bool addScheduleEntry(int group_id, int sub_group, int weekday, int lesson_number,
-                      int week_of_cycle, int subject_id, int teacher_id,
-                      const std::string& room, const std::string& lesson_type );
+    bool addScheduleEntry(int groupId, int subgroup, int weekday, int lessonNumber,
+                      int weekOfCycle, int subjectId, int teacherId,
+                      const std::string& room, const std::string& lessonType );
 
 // Удалить запись расписания по id
 bool deleteScheduleEntry(int scheduleId);
@@ -202,35 +205,35 @@ bool deleteScheduleEntry(int scheduleId);
     // возвращает: id, weekday, lesson_number, sub_group, subject_name, teacher_name, room, lesson_type
     // scheduleId, subjectId, weekday, lessonNumber, subgroup, subjectName, lessonType
     bool getScheduleForTeacherGroupWeek(
-        int teacher_Id,
-        int group_Id,
-        int week_Of_Cycle,
-        int studentSub_group,
+        int teacherId,
+        int groupId,
+        int weekOfCycle,
+        int studentSubgroup,
         std::vector<std::tuple<int,int,int,int,int,std::string,std::string>>& outRows
     );
 
     // Добавить запись расписания для всех групп, кроме basegroup_id, если это лекция
-    bool addLectureForAllGroups(int basegroup_id, int sub_group,
-                                int weekday, int lesson_number, int week_of_cycle,
-                                int subject_id, int teacher_id,
-                                const std::string& room, const std::string& lesson_type );
+    bool addLectureForAllGroups(int basegroupId, int subgroup,
+                                int weekday, int lessonNumber, int weekOfCycle,
+                                int subjectId, int teacherId,
+                                const std::string& room, const std::string& lessonType );
     // ===== НОВЫЕ МЕТОДЫ ДЛЯ ПРОВЕРКИ КОНФЛИКТОВ =====
 
     // Проверка занятости преподавателя в указанный слот
-    bool isTeacherBusy(int teacher_id, int weekday, int lesson_number, int week_of_cycle);
+    bool isTeacherBusy(int teacherId, int weekday, int lessonNumber, int weekOfCycle);
 
     // Проверка занятости аудитории в указанный слот
-    bool isRoomBusy(const std::string& room, int weekday, int lesson_number, int week_of_cycle);
+    bool isRoomBusy(const std::string& room, int weekday, int lessonNumber, int weekOfCycle);
 
     // Получить список преподавателей с их предметами (для удобного выбора)
     // Возвращает: (teacher_id, teacher_name, "Предмет1, Предмет2, ...")
     bool getTeachersWithSubjects(
         std::vector<std::tuple<int, std::string, std::string>>& outTeachers);
-    bool deleteGrade(int grade_id);
+    bool deleteGrade(int gradeId);
     // Где-то рядом с другими методами расписания добавь:
-    bool updateScheduleEntry(int schedule_id, int group_id, int sub_group, int weekday,
-                             int lesson_number, int week_of_cycle, int subject_id,
-                             int teacher_id, const std::string& room, const std::string& lesson_type);
+    bool updateScheduleEntry(int scheduleId, int groupId, int subgroup, int weekday,
+                             int lessonNumber, int weekOfCycle, int subjectId,
+                             int teacherId, const std::string& room, const std::string& lessonType);
     int getWeekIdByDate(const std::string& dateISO);
 
 

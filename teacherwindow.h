@@ -14,9 +14,9 @@ public:
     ~TeacherWindow();
 
 private:
-    Database* db_;
-    int teacherId_;
-    QString teacherName_;
+    Database* db;
+    int teacherId;
+    QString teacherName;
 
     void setupUI();
 };

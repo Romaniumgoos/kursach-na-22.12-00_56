@@ -68,10 +68,10 @@ int main() {
         {
             sqlite3_stmt* dupStmt = nullptr;
             const char* dupSql =
-                "SELECT weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room, lesson_type, COUNT(*) "
+                "SELECT weekday, lessonnumber, weekofcycle, subjectid, teacherid, room, lessontype, COUNT(*) "
                 "FROM schedule "
-                "WHERE group_id = 0 AND lesson_type = 'ЛК' "
-                "GROUP BY weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room, lesson_type "
+                "WHERE groupid = 0 AND lessontype = 'ЛК' "
+                "GROUP BY weekday, lessonnumber, weekofcycle, subjectid, teacherid, room, lessontype "
                 "HAVING COUNT(*) > 1;";
 
             if (sqlite3_prepare_v2(db.getHandle(), dupSql, -1, &dupStmt, nullptr) == SQLITE_OK) {
@@ -96,12 +96,12 @@ int main() {
 
                     std::cerr
                         << "  weekday=" << weekday
-                        << ", lesson_number=" << lessonNumber
-                        << ", week_of_cycle=" << weekOfCycle
-                        << ", subject_id=" << subjectId
-                        << ", teacher_id=" << teacherId
+                        << ", lessonnumber=" << lessonNumber
+                        << ", weekofcycle=" << weekOfCycle
+                        << ", subjectid=" << subjectId
+                        << ", teacherid=" << teacherId
                         << ", room='" << room << "'"
-                        << ", lesson_type='" << lessonType << "'"
+                        << ", lessontype='" << lessonType << "'"
                         << ", count=" << cnt << "\n";
                 }
                 sqlite3_finalize(dupStmt);

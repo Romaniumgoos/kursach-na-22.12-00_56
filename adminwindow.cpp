@@ -5,10 +5,10 @@
 
 AdminWindow::AdminWindow(Database* db, int adminId, const QString& adminName,
                          QWidget *parent)
-    : QMainWindow(parent), db_(db), adminId_(adminId), adminName_(adminName) {
+    : QMainWindow(parent), db(db), adminId(adminId), adminName(adminName) {
 
     setupUI();
-    setWindowTitle(QString("Администратор: %1").arg(adminName_));
+    setWindowTitle(QString("Администратор: %1").arg(adminName));
     resize(1100, 750);
 }
 
@@ -21,7 +21,7 @@ void AdminWindow::setupUI() {
 
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
 
-    QLabel* titleLabel = new QLabel(QString("Добро пожаловать, %1!").arg(adminName_), this);
+    QLabel* titleLabel = new QLabel(QString("Добро пожаловать, %1!").arg(adminName), this);
     QFont titleFont = titleLabel->font();
     titleFont.setPointSize(14);
     titleFont.setBold(true);

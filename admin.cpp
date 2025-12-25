@@ -13,40 +13,40 @@
 #include <algorithm>
 
 // ===== КОНСТРУКТОР =====
-Admin::Admin(int admin_id,
+Admin::Admin(int adminId,
              const std::string& username,
              const std::string& name,
              Database* db)
-    : User(admin_id, username, name, "admin"),
-      admin_id_(admin_id),
-      db_(db) {}
+    : User(adminId, username, name, "admin"),
+      adminId(adminId),
+      db(db) {}
 
 
 // ===== НОВЫЕ ФУНКЦИИ РАСПИСАНИЯ =====
 
-bool Admin::viewScheduleForGroup(int group_Id, int sub_group, int week_of_cycle) {
-    if (!db_ || !db_->isConnected()) {
+bool Admin::viewScheduleForGroup(int groupId, int subgroup, int weekOfCycle) {
+    if (!db || !db->isConnected()) {
         std::cerr << "[✗] БД не инициализирована\n";
         return false;
     }
 
-    sqlite3* raw_db = db_->getHandle();
+    sqlite3* raw_db = db->getHandle();
     const char* sql = R"(
         SELECT
             sch.id,            -- 0
             sch.weekday,       -- 1
-            sch.lesson_number, -- 2
+            sch.lessonnumber,  -- 2
             subj.name,         -- 3
             u.name,            -- 4
             sch.room,          -- 5
-            sch.sub_group,     -- 6
-            sch.lesson_type    -- 7
+            sch.subgroup,      -- 6
+            sch.lessontype     -- 7
         FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        JOIN users    u    ON sch.teacher_id = u.id
-        WHERE (sch.group_id = ? OR sch.group_id = 0)
-          AND sch.week_of_cycle = ?
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+        JOIN subjects subj ON sch.subjectid = subj.id
+        JOIN users    u    ON sch.teacherid = u.id
+        WHERE (sch.groupid = ? OR sch.groupid = 0)
+          AND sch.weekofcycle = ?
+        ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -56,15 +56,15 @@ bool Admin::viewScheduleForGroup(int group_Id, int sub_group, int week_of_cycle)
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, group_Id);
-    sqlite3_bind_int(stmt, 2, week_of_cycle);
+    sqlite3_bind_int(stmt, 1, groupId);
+    sqlite3_bind_int(stmt, 2, weekOfCycle);
 
     const auto& dayNames  = getDayNames();
     const auto& pairTimes = getPairTimes();
 
     std::cout << "\n╔════════════════════════════════════════╗\n"
-              << "║ РАСПИСАНИЕ ГРУППЫ " << group_Id
-              << " (неделя " << week_of_cycle << ")"
+              << "║ РАСПИСАНИЕ ГРУППЫ " << groupId
+              << " (неделя " << weekOfCycle << ")"
               << " ║\n"
               << "╚════════════════════════════════════════╝\n";
 
@@ -84,7 +84,7 @@ bool Admin::viewScheduleForGroup(int group_Id, int sub_group, int week_of_cycle)
         if (weekday < 0 || weekday > 5) continue;
 
         // фильтр подгруппы: 0 -> все, иначе показываем 0 и выбранную
-        if (sub_group != 0 && rowSubGroup != 0 && rowSubGroup != sub_group) continue;
+        if (subgroup != 0 && rowSubGroup != 0 && rowSubGroup != subgroup) continue;
 
         found = true;
 
@@ -93,7 +93,7 @@ bool Admin::viewScheduleForGroup(int group_Id, int sub_group, int week_of_cycle)
 
             std::string dateISO;
             std::string dateLabel;
-            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO)) {
+            if (db->getDateForWeekday(weekOfCycle, weekday, dateISO)) {
                 dateLabel = formatDateLabel(dateISO);
             }
 
@@ -131,28 +131,28 @@ bool Admin::viewScheduleForGroup(int group_Id, int sub_group, int week_of_cycle)
 }
 
 
-bool Admin::viewScheduleForTeacher(int teacherId, int week_of_cycle) {
-    if (!db_ || !db_->isConnected()) {
+bool Admin::viewScheduleForTeacher(int teacherId, int weekOfCycle) {
+    if (!db || !db->isConnected()) {
         std::cerr << "[✗] Нет соединения с БД.\n";
         return false;
     }
 
-    sqlite3* raw_db = db_->getHandle();
+    sqlite3* raw_db = db->getHandle();
     const char* sql = R"(
         SELECT
             sch.weekday,        -- 0
-            sch.lesson_number,  -- 1
-            g.name AS group_name, -- 2
+            sch.lessonnumber,   -- 1
+            g.name AS groupname, -- 2
             subj.name AS subject, -- 3
             sch.room,           -- 4
-            sch.sub_group,      -- 5
-            sch.lesson_type     -- 6
+            sch.subgroup,       -- 5
+            sch.lessontype      -- 6
         FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        JOIN groups   g    ON sch.group_id   = g.id
-        WHERE sch.teacher_id    = ?
-          AND sch.week_of_cycle = ?
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+        JOIN subjects subj ON sch.subjectid = subj.id
+        JOIN groups   g    ON sch.groupid   = g.id
+        WHERE sch.teacherid    = ?
+          AND sch.weekofcycle  = ?
+        ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -163,13 +163,13 @@ bool Admin::viewScheduleForTeacher(int teacherId, int week_of_cycle) {
     }
 
     sqlite3_bind_int(stmt, 1, teacherId);
-    sqlite3_bind_int(stmt, 2, week_of_cycle);
+    sqlite3_bind_int(stmt, 2, weekOfCycle);
 
     const auto& dayNames  = getDayNames();
     const auto& pairTimes = getPairTimes();
 
     std::cout << "\n╔═══ РАСПИСАНИЕ ПРЕПОДАВАТЕЛЯ ID "
-              << teacherId << " (неделя " << week_of_cycle << ") ═══╗\n";
+              << teacherId << " (неделя " << weekOfCycle << ") ═══╗\n";
 
     bool found = false;
     int currentDay = -1;
@@ -192,7 +192,7 @@ bool Admin::viewScheduleForTeacher(int teacherId, int week_of_cycle) {
 
             std::string dateISO;
             std::string dateLabel;
-            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO)) {
+            if (db->getDateForWeekday(weekOfCycle, weekday, dateISO)) {
                 dateLabel = formatDateLabel(dateISO);
             }
 
@@ -236,10 +236,10 @@ bool Admin::viewScheduleForTeacher(int teacherId, int week_of_cycle) {
 
 
 bool Admin::listAllGroups() {
-    if (!db_) return false;
+    if (!db) return false;
 
     std::vector<std::pair<int, std::string>> groups;
-    if (!db_->getAllGroups(groups) || groups.empty()) {
+    if (!db->getAllGroups(groups) || groups.empty()) {
         std::cout << "Нет групп.\n";
         return false;
     }

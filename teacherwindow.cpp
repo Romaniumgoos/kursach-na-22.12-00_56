@@ -5,10 +5,10 @@
 
 TeacherWindow::TeacherWindow(Database* db, int teacherId, const QString& teacherName,
                              QWidget *parent)
-    : QMainWindow(parent), db_(db), teacherId_(teacherId), teacherName_(teacherName) {
+    : QMainWindow(parent), db(db), teacherId(teacherId), teacherName(teacherName) {
 
     setupUI();
-    setWindowTitle(QString("Преподаватель: %1").arg(teacherName_));
+    setWindowTitle(QString("Преподаватель: %1").arg(teacherName));
     resize(1000, 700);
 }
 
@@ -21,7 +21,7 @@ void TeacherWindow::setupUI() {
 
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
 
-    QLabel* titleLabel = new QLabel(QString("Добро пожаловать, %1!").arg(teacherName_), this);
+    QLabel* titleLabel = new QLabel(QString("Добро пожаловать, %1!").arg(teacherName), this);
     QFont titleFont = titleLabel->font();
     titleFont.setPointSize(14);
     titleFont.setBold(true);

@@ -17,7 +17,7 @@ double Statistics::calculateStudentAverage(Database& db,
     const char* sql =
         "SELECT AVG(value) "
         "FROM grades "
-        "WHERE student_id = ? AND semester_id = ?;";
+        "WHERE studentid = ? AND semesterid = ?;";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(handle, sql, -1, &stmt, nullptr);
@@ -57,7 +57,7 @@ double Statistics::calculateStudentSubjectAverage(Database& db,
     const char* sql =
         "SELECT AVG(value) "
         "FROM grades "
-        "WHERE student_id = ? AND subject_id = ? AND semester_id = ?;";
+        "WHERE studentid = ? AND subjectid = ? AND semesterid = ?;";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(handle, sql, -1, &stmt, nullptr);
@@ -98,8 +98,8 @@ double Statistics::calculateGroupSubjectAverage(Database& db,
     const char* sql =
         "SELECT AVG(g.value) "
         "FROM grades g "
-        "JOIN users u ON g.student_id = u.id "
-        "WHERE u.group_id = ? AND g.subject_id = ? AND g.semester_id = ?;";
+        "JOIN users u ON g.studentid = u.id "
+        "WHERE u.groupid = ? AND g.subjectid = ? AND g.semesterid = ?;";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(handle, sql, -1, &stmt, nullptr);

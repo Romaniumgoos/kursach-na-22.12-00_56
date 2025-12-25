@@ -50,7 +50,7 @@ public:
         std::tuple<int, int, int, std::string, std::string, std::string, std::string>;
 
 public:
-    explicit StudentService(Database& db) : db_(db) {}
+    explicit StudentService(Database& db) : db(db) {}
 
     [[nodiscard]] Result<GroupAndSubgroup> getStudentGroupAndSubgroup(int studentId);
 
@@ -63,5 +63,5 @@ public:
     [[nodiscard]] Result<std::string> getDateISO(int weekOfCycle, int weekday);
 
 private:
-    Database& db_;
+    Database& db;
 };

@@ -55,6 +55,10 @@ set(GUI_SOURCES
 
         ui/style/ThemeManager.cpp
         ui/widgets/ThemeToggleWidget.cpp
+        ui/widgets/PeriodSelectorWidget.cpp
+        ui/pages/StudentSchedulePage.cpp
+        ui/pages/StudentGradesPage.cpp
+        ui/pages/StudentAbsencesPage.cpp
 )
 
 set(GUI_HEADERS
@@ -65,14 +69,22 @@ set(GUI_HEADERS
 
         ui/style/ThemeManager.h
         ui/widgets/ThemeToggleWidget.h
+        ui/widgets/PeriodSelectorWidget.h
+        ui/pages/StudentSchedulePage.h
+        ui/pages/StudentGradesPage.h
+        ui/pages/StudentAbsencesPage.h
+        ui/models/WeekSelection.h
+        ui/util/TableWidgetStyle.h
+        ui/util/UiStyle.h
 )
 
-add_executable(app_gui
+add_executable(app_gui WIN32
         ${GUI_SOURCES}
         ${GUI_HEADERS}
         ${BACKEND_SOURCES}
         ${BACKEND_HEADERS}
 )
+
 
 target_include_directories(app_gui PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}

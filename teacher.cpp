@@ -11,13 +11,13 @@
 #include <algorithm>
 // ===== КОНСТРУКТОР =====
 
-Teacher::Teacher(int teacher_id,
+Teacher::Teacher(int teacherId,
                  const std::string& username,
                  const std::string& name,
                  Database* db)
-    : User(teacher_id, username, name, "teacher"),
-      teacher_id_(teacher_id),
-      db_(db) {}
+    : User(teacherId, username, name, "teacher"),
+      teacherId(teacherId),
+      db(db) {}
 
 
 // ===== СТРУКТУРА ДЛЯ РАСПИСАНИЯ ПАР =====
@@ -330,20 +330,20 @@ void Teacher::displayMenu(Database& db) {
             const char* sql = R"(
                 SELECT
 sch.id,
-                       sch.subject_id,
+                       sch.subjectid,
                        sch.weekday,
-                       sch.lesson_number,
-                       sch.sub_group,
+                       sch.lessonnumber,
+                       sch.subgroup,
                        subj.name,
-                       sch.lesson_type
+                       sch.lessontype
                 FROM schedule sch
-                JOIN subjects subj ON sch.subject_id = subj.id
-                WHERE sch.teacher_id = ?
-                  AND sch.group_id = ?
-                  AND sch.week_of_cycle = ?
-                  AND (sch.sub_group = 0 OR sch.sub_group = ?)
-                  AND sch.lesson_type != 'ЛК'
-                ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+                JOIN subjects subj ON sch.subjectid = subj.id
+                WHERE sch.teacherid = ?
+                  AND sch.groupid = ?
+                  AND sch.weekofcycle = ?
+                  AND (sch.subgroup = 0 OR sch.subgroup = ?)
+                  AND sch.lessontype != 'ЛК'
+                ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
             )";
 
             sqlite3_stmt* stmt = nullptr;
@@ -431,7 +431,7 @@ sch.id,
             sqlite3_stmt* absStmt = nullptr;
             const char* absSQL =
                 "SELECT COUNT(*) FROM absences "
-                "WHERE student_id = ? AND subject_id = ? AND semester_id = ? AND date = ?";
+                "WHERE studentid = ? AND subjectid = ? AND semesterid = ? AND date = ?";
 
             if (sqlite3_prepare_v2(rawdb, absSQL, -1, &absStmt, nullptr) == SQLITE_OK) {
                 sqlite3_bind_int(absStmt, 1, studentId);
@@ -894,7 +894,7 @@ void Teacher::addAbsence(Database& db)
     sqlite3_stmt* gradeStmt = nullptr;
     const char* gradeSQL =
         "SELECT COUNT(*) FROM grades "
-        "WHERE student_id = ? AND subject_id = ? AND semester_id = ? AND date = ?";
+        "WHERE studentid = ? AND subjectid = ? AND semesterid = ? AND date = ?";
     sqlite3* rawdb = db.getHandle();
 
     if (sqlite3_prepare_v2(rawdb, gradeSQL, -1, &gradeStmt, nullptr) == SQLITE_OK) {
@@ -1001,29 +1001,29 @@ void Teacher::viewStudentAbsences(Database& db, int semesterId)
 
 
 // ===== НОВЫЕ ФУНКЦИИ РАСПИСАНИЯ ДЛЯ ПРЕПОДАВАТЕЛЯ =====
-bool Teacher::viewMySchedule(int week_of_cycle)
+bool Teacher::viewMySchedule(int weekOfCycle)
 {
-    if (!db_ || !db_->isConnected()) {
+    if (!db || !db->isConnected()) {
         std::cerr << "[✗] БД не инициализирована\n";
         return false;
     }
 
-    sqlite3* raw_db = db_->getHandle();
+    sqlite3* raw_db = db->getHandle();
     const char* sql = R"(
         SELECT
-            sch.lesson_number, -- 0
+            sch.lessonnumber, -- 0
             sch.weekday,      -- 1
             g.name AS group_name, -- 2
             subj.name AS subject, -- 3
             sch.room,         -- 4
-            sch.sub_group,     -- 5
-            sch.lesson_type    -- 6
+            sch.subgroup,     -- 5
+            sch.lessontype    -- 6
         FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        JOIN groups g ON sch.group_id = g.id
-        WHERE sch.teacher_id = ?
-          AND sch.week_of_cycle = ?
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+        JOIN subjects subj ON sch.subjectid = subj.id
+        JOIN groups g ON sch.groupid = g.id
+        WHERE sch.teacherid = ?
+          AND sch.weekofcycle = ?
+        ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -1033,11 +1033,11 @@ bool Teacher::viewMySchedule(int week_of_cycle)
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, teacher_id_);
-    sqlite3_bind_int(stmt, 2, week_of_cycle);
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, weekOfCycle);
 
     std::cout << "\n╔══════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║ МОЁ РАСПИСАНИЕ - НЕДЕЛЯ " << week_of_cycle << "\n";
+    std::cout << "║ МОЁ РАСПИСАНИЕ - НЕДЕЛЯ " << weekOfCycle << "\n";
     std::cout << "╚══════════════════════════════════════════════════════════════╝\n";
 
     const auto& dayNames = getDayNames();
@@ -1063,7 +1063,7 @@ bool Teacher::viewMySchedule(int week_of_cycle)
 
             std::string dateISO;
             std::string dateLabel;
-            if (db_->getDateForWeekday(week_of_cycle, weekday, dateISO)) {
+            if (db->getDateForWeekday(weekOfCycle, weekday, dateISO)) {
                 dateLabel = formatDateLabel(dateISO);
             }
 
@@ -1104,7 +1104,7 @@ bool Teacher::viewMySchedule(int week_of_cycle)
 
 bool Teacher::viewFullSchedule()
 {
-    if (!db_) {
+    if (!db) {
         std::cerr << "[✗] БД не инициализирована\n";
         return false;
     }

@@ -14,9 +14,9 @@ public:
     ~AdminWindow();
 
 private:
-    Database* db_;
-    int adminId_;
-    QString adminName_;
+    Database* db;
+    int adminId;
+    QString adminName;
 
     void setupUI();
 };

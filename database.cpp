@@ -1,107 +1,114 @@
 #include "database.h"
-#include <iostream>
-#include <string>
-#include <sqlite3.h>
-#include <vector>
-#include <utility>
-#include <tuple>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <cstring>
 
+#include <sqlite3.h>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <iomanip>
+#include <ctime>
+#include <cstring>
 
 namespace {
 
+// Helper: Get ID by single text parameter
 int getIdBySingleTextParam(sqlite3* db, const char* sql, const std::string& value) {
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return 0;
     }
-
     sqlite3_bind_text(stmt, 1, value.c_str(), -1, SQLITE_TRANSIENT);
-
     int id = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         id = sqlite3_column_int(stmt, 0);
     }
-
     sqlite3_finalize(stmt);
     return id;
 }
 
 int getUserIdByUsername(sqlite3* db, const std::string& username) {
     return getIdBySingleTextParam(db,
-                                 "SELECT id FROM users WHERE username = ? LIMIT 1;",
-                                 username);
+        "SELECT id FROM users WHERE username = ? LIMIT 1;",
+        username);
 }
 
 int getGroupIdByName(sqlite3* db, const std::string& name) {
     return getIdBySingleTextParam(db,
-                                 "SELECT id FROM groups WHERE name = ? LIMIT 1;",
-                                 name);
+        "SELECT id FROM groups WHERE name = ? LIMIT 1;",
+        name);
 }
 
-}
-
-
-Database::Database(const std::string& file)
-    : db_(nullptr), fileName(file)
-{
-}
-
-Database::~Database()
-{
-    disconnect();
-}
-
-bool Database::connect()
-{
-    if (db_ != nullptr) {
-        return true; // уже открыта
-    }
-
-    int rc = sqlite3_open(fileName.c_str(), &db_);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] Ошибка открытия SQLite БД: "
-                  << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown")
-                  << std::endl;
-        db_ = nullptr;
-        return false;
-    }
-
-    // Включаем внешние ключи (если используешь связи между таблицами)
-    sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
-
-    std::cout << "[✓] SQLite БД успешно открыта: " << fileName << std::endl;
+// Parse ISO date (YYYY-MM-DD) to std::tm
+bool parseDateISO(const std::string& s, std::tm& out) {
+    if (s.size() != 10) return false;
+    memset(&out, 0, sizeof(out));
+    out.tm_year = std::stoi(s.substr(0, 4)) - 1900;
+    out.tm_mon = std::stoi(s.substr(5, 2)) - 1;   // 0–11
+    out.tm_mday = std::stoi(s.substr(8, 2));      // 1–31
+    out.tm_hour = 0;
+    out.tm_min = 0;
+    out.tm_sec = 0;
+    std::mktime(&out);
     return true;
 }
 
-bool Database::isConnected() const
-{
-    return db_ != nullptr;
+} // namespace
+
+// ===== Constructor & Destructor =====
+
+Database::Database(const std::string& file)
+    : db(nullptr), fileName(file) {}
+
+Database::~Database() {
+    disconnect();
 }
 
-void Database::disconnect()
-{
-    if (db_ != nullptr) {
-        sqlite3_close(db_);
-        db_ = nullptr;
-        std::cout << "[✓] SQLite соединение закрыто." << std::endl;
+// ===== Connection Management =====
+
+bool Database::connect() {
+    if (db != nullptr) {
+        return true;  // Already connected
+    }
+
+    int rc = sqlite3_open(fileName.c_str(), &db);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] Error opening SQLite DB: "
+                  << (sqlite3_errmsg(db) ? sqlite3_errmsg(db) : "unknown")
+                  << std::endl;
+        db = nullptr;
+        return false;
+    }
+
+    sqlite3_exec(db, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+    std::cout << "[✓] SQLite DB opened: " << fileName << std::endl;
+    return true;
+}
+
+bool Database::isConnected() const {
+    return db != nullptr;
+}
+
+void Database::disconnect() {
+    if (db != nullptr) {
+        sqlite3_close(db);
+        db = nullptr;
+        std::cout << "[✓] SQLite connection closed." << std::endl;
     }
 }
 
-bool Database::execute(const std::string& sql)
-{
+// ===== Execute SQL =====
+
+bool Database::execute(const std::string& sql) {
     if (!isConnected()) {
-        std::cerr << "[✗] Нельзя выполнить запрос: БД не открыта." << std::endl;
+        std::cerr << "[✗] Cannot execute query: DB not open." << std::endl;
         return false;
     }
 
     char* errMsg = nullptr;
-    int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errMsg);
+    int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] Ошибка SQLite: "
+        std::cerr << "[✗] SQLite Error: "
                   << (errMsg ? errMsg : "unknown")
                   << std::endl;
         sqlite3_free(errMsg);
@@ -109,11 +116,12 @@ bool Database::execute(const std::string& sql)
     }
 
     return true;
-} // ← здесь закрываем execute И БОЛЬШЕ НИЧЕГО
+}
 
+// ===== Initialize Schema with Auto-Migration =====
 bool Database::initialize()
 {
-    if (!db_) {
+    if (!db) {
         std::cerr << "[✗] initialize: БД не открыта\n";
         return false;
     }
@@ -129,20 +137,20 @@ bool Database::initialize()
         "CREATE TABLE IF NOT EXISTS semesters ("
         "  id         INTEGER PRIMARY KEY AUTOINCREMENT,"
         "  name       TEXT NOT NULL UNIQUE,"
-        "  start_date TEXT,"
-        "  end_date   TEXT"
+        "  startdate TEXT,"
+        "  enddate   TEXT"
         ");"
 
         // users
         "CREATE TABLE IF NOT EXISTS users ("
-        "  id       INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  username TEXT NOT NULL UNIQUE,"
-        "  password TEXT NOT NULL,"
-        "  role     TEXT NOT NULL CHECK (role IN ('admin','teacher','student')),"
-        "  name     TEXT NOT NULL,"
-        "  group_id  INTEGER,"
-        "  sub_group INTEGER DEFAULT 0,"
-        "  FOREIGN KEY (group_id) REFERENCES groups(id)"
+        "  id        INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  username  TEXT NOT NULL UNIQUE,"
+        "  password  TEXT NOT NULL,"
+        "  role      TEXT NOT NULL CHECK (role IN ('admin','teacher','student')),"
+        "  name      TEXT NOT NULL,"
+        "  groupid  INTEGER,"
+        "  subgroup INTEGER DEFAULT 0,"
+        "  FOREIGN KEY (groupid) REFERENCES groups(id)"
         ");"
 
         // subjects
@@ -151,102 +159,99 @@ bool Database::initialize()
         "  name TEXT NOT NULL UNIQUE"
         ");"
 
-        // teacher_subjects
-        "CREATE TABLE IF NOT EXISTS teacher_subjects ("
-        "  teacher_id INTEGER NOT NULL,"
-        "  subject_id INTEGER NOT NULL,"
-        "  PRIMARY KEY (teacher_id, subject_id),"
-        "  FOREIGN KEY (teacher_id) REFERENCES users(id),"
-        "  FOREIGN KEY (subject_id) REFERENCES subjects(id)"
+        // teachergroupjects
+        "CREATE TABLE IF NOT EXISTS teachersubjects ("
+        "  teacherid INTEGER NOT NULL,"
+        "  subjectid INTEGER NOT NULL,"
+        "  PRIMARY KEY (teacherid, subjectid),"
+        "  FOREIGN KEY (teacherid) REFERENCES users(id),"
+        "  FOREIGN KEY (subjectid) REFERENCES subjects(id)"
         ");"
 
-        // teacher_groups
-        "CREATE TABLE IF NOT EXISTS teacher_groups ("
-        "  teacher_id INTEGER NOT NULL,"
-        "  group_id    INTEGER NOT NULL,"
-        "  PRIMARY KEY (teacher_id, group_id),"
-        "  FOREIGN KEY (teacher_id) REFERENCES users(id),"
-        "  FOREIGN KEY (group_id)   REFERENCES groups(id)"
+        // teachergroups
+        "CREATE TABLE IF NOT EXISTS teachergroups ("
+        "  teacherid INTEGER NOT NULL,"
+        "  groupid   INTEGER NOT NULL,"
+        "  PRIMARY KEY (teacherid, groupid),"
+        "  FOREIGN KEY (teacherid) REFERENCES users(id),"
+        "  FOREIGN KEY (groupid)   REFERENCES groups(id)"
         ");"
 
+        // schedule
+        "CREATE TABLE IF NOT EXISTS schedule ("
+        "  id            INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  groupid      INTEGER NOT NULL,"
+        "  subgroup     INTEGER NOT NULL,"
+        "  weekday       INTEGER NOT NULL,"
+        "  lessonnumber INTEGER NOT NULL,"
+        "  weekofcycle INTEGER NOT NULL CHECK(weekofcycle BETWEEN 1 AND 4),"
+        "  subjectid    INTEGER NOT NULL,"
+        "  teacherid    INTEGER NOT NULL,"
+        "  room          TEXT,"
+        "  lessontype   TEXT,"
+        "  FOREIGN KEY (groupid)   REFERENCES groups(id),"
+        "  FOREIGN KEY (subjectid) REFERENCES subjects(id),"
+        "  FOREIGN KEY (teacherid) REFERENCES users(id)"
+        ");"
 
-    // schedule
-    "CREATE TABLE IF NOT EXISTS schedule ("
-    "  id           INTEGER PRIMARY KEY AUTOINCREMENT,"
-    "  group_id      INTEGER NOT NULL,"
-    "  sub_group     INTEGER NOT NULL,"
-    "  weekday      INTEGER NOT NULL,"
-    "  lesson_number INTEGER NOT NULL,"
-    "  week_of_cycle  INTEGER NOT NULL CHECK(week_of_cycle BETWEEN 1 AND 4),"  // ← ТАК
-    "  subject_id    INTEGER NOT NULL,"
-    "  teacher_id    INTEGER NOT NULL,"
-    "  room         TEXT,"
-    "  lesson_type   TEXT,"
-    "  FOREIGN KEY (group_id)   REFERENCES groups(id),"
-    "  FOREIGN KEY (subject_id) REFERENCES subjects(id),"
-    "  FOREIGN KEY (teacher_id) REFERENCES users(id)"
-    ");"
-
-
-
-        "CREATE INDEX IF NOT EXISTS idx_schedule_group_week "
-        "ON schedule(group_id, weekday, week_of_cycle);"
-        "CREATE INDEX IF NOT EXISTS idx_schedule_teacher "
-        "ON schedule(teacher_id);"
-        "CREATE INDEX IF NOT EXISTS idx_schedule_room "
+        "CREATE INDEX IF NOT EXISTS idxschedulegroupweek "
+        "ON schedule(groupid, weekday, weekofcycle);"
+        "CREATE INDEX IF NOT EXISTS idxscheduleteacher "
+        "ON schedule(teacherid);"
+        "CREATE INDEX IF NOT EXISTS idxscheduleroom "
         "ON schedule(room);"
 
         // grades
         "CREATE TABLE IF NOT EXISTS grades ("
-        "  id         INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  student_id  INTEGER NOT NULL,"
-        "  subject_id  INTEGER NOT NULL,"
-        "  semester_id INTEGER NOT NULL,"
-        "  value      INTEGER NOT NULL CHECK(value BETWEEN 0 AND 10),"
-        "  date       TEXT,"
-    "  grade_type TEXT,"
-        "  FOREIGN KEY (student_id)  REFERENCES users(id),"
-        "  FOREIGN KEY (subject_id)  REFERENCES subjects(id),"
-        "  FOREIGN KEY (semester_id) REFERENCES semesters(id)"
+        "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  studentid  INTEGER NOT NULL,"
+        "  subjectid  INTEGER NOT NULL,"
+        "  semesterid INTEGER NOT NULL,"
+        "  value       INTEGER NOT NULL CHECK(value BETWEEN 0 AND 10),"
+        "  date        TEXT,"
+        "  gradetype  TEXT,"
+        "  FOREIGN KEY (studentid)  REFERENCES users(id),"
+        "  FOREIGN KEY (subjectid)  REFERENCES subjects(id),"
+        "  FOREIGN KEY (semesterid) REFERENCES semesters(id)"
         ");"
 
         // gradechanges
         "CREATE TABLE IF NOT EXISTS gradechanges ("
-        "  id         INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  grade_id    INTEGER NOT NULL,"
-        "  oldvalue   INTEGER,"
-        "  newvalue   INTEGER,"
-        "  changedby  INTEGER NOT NULL,"
-        "  change_date TEXT NOT NULL,"
-        "  comment    TEXT,"
-        "  FOREIGN KEY (grade_id)   REFERENCES grades(id),"
+        "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  gradeid    INTEGER NOT NULL,"
+        "  oldvalue    INTEGER,"
+        "  newvalue    INTEGER,"
+        "  changedby   INTEGER NOT NULL,"
+        "  changedate TEXT NOT NULL,"
+        "  comment     TEXT,"
+        "  FOREIGN KEY (gradeid)   REFERENCES grades(id),"
         "  FOREIGN KEY (changedby) REFERENCES users(id)"
         ");"
 
-        // cycle_weeks
-        "CREATE TABLE IF NOT EXISTS cycle_weeks ("
+        // cycleweeks
+        "CREATE TABLE IF NOT EXISTS cycleweeks ("
         "  id            INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  week_of_cycle INTEGER NOT NULL CHECK(week_of_cycle BETWEEN 1 AND 4),"
-        "  start_date    TEXT NOT NULL,"
-        "  end_date      TEXT NOT NULL"
+        "  weekofcycle INTEGER NOT NULL CHECK(weekofcycle BETWEEN 1 AND 4),"
+        "  startdate    TEXT NOT NULL,"
+        "  enddate      TEXT NOT NULL"
         ");"
 
         // absences
         "CREATE TABLE IF NOT EXISTS absences ("
         "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  student_id   INTEGER NOT NULL,"
-        "  subject_id   INTEGER NOT NULL,"
-        "  semester_id  INTEGER NOT NULL,"
+        "  studentid  INTEGER NOT NULL,"
+        "  subjectid  INTEGER NOT NULL,"
+        "  semesterid INTEGER NOT NULL,"
         "  hours       INTEGER NOT NULL,"
         "  date        TEXT,"
         "  type        TEXT,"
-        "  FOREIGN KEY (student_id)  REFERENCES users(id),"
-        "  FOREIGN KEY (subject_id) REFERENCES subjects(id),"
-        "  FOREIGN KEY (semester_id) REFERENCES semesters(id)"
+        "  FOREIGN KEY (studentid)  REFERENCES users(id),"
+        "  FOREIGN KEY (subjectid)  REFERENCES subjects(id),"
+        "  FOREIGN KEY (semesterid) REFERENCES semesters(id)"
         ");";
 
     char* errMsg = nullptr;
-    int rc = sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg);
+    const int rc = sqlite3_exec(db, sql, nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         std::cerr << "[SQLite] " << (errMsg ? errMsg : "unknown") << "\n";
         if (errMsg) sqlite3_free(errMsg);
@@ -257,8 +262,8 @@ bool Database::initialize()
     return true;
 }
 
-
-bool Database::initializeDemoData() {
+bool Database::initializeDemoData()
+{
     if (!isConnected()) {
         std::cerr << "[✗] initializeDemoData: БД не подключена\n";
         return false;
@@ -271,22 +276,22 @@ bool Database::initializeDemoData() {
         "DELETE FROM gradechanges;"
         "DELETE FROM absences;"
         "DELETE FROM schedule;"
-        "DELETE FROM teacher_subjects;"
-        "DELETE FROM teacher_groups;"
+        "DELETE FROM teachersubjects;"
+        "DELETE FROM teachergroups;"
         // потом основных пользователей, предметы, группы, недели
         "DELETE FROM users;"
         "DELETE FROM subjects;"
-    "DELETE FROM semesters;"
+        "DELETE FROM semesters;"
         "DELETE FROM groups;"
-        "DELETE FROM cycle_weeks;"
+        "DELETE FROM cycleweeks;"
         // сбрасываем AUTOINCREMENT
         "DELETE FROM sqlite_sequence WHERE name IN ("
         " 'users','subjects','groups','schedule',"
-        " 'grades','gradechanges','absences','cycle_weeks'"
+        " 'grades','gradechanges','absences','cycleweeks'"
         ");"
 
         // ===== НЕДЕЛИ ЦИКЛА =====
-        "INSERT INTO cycle_weeks (id, week_of_cycle, start_date, end_date) VALUES"
+        "INSERT INTO cycleweeks (id, weekofcycle, startdate, enddate) VALUES"
         " (1, 1, '2025-09-01', '2025-09-07'),"
         " (2, 2, '2025-09-08', '2025-09-14'),"
         " (3, 3, '2025-09-15', '2025-09-21'),"
@@ -314,7 +319,7 @@ bool Database::initializeDemoData() {
         " (4, '420604');"
 
         // ===== СТУДЕНТЫ 420601 =====
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) VALUES "
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) VALUES "
         " ('s420601_01', '123', 'student', 'Альбеков Кирилл Александрович', 1, 1),"
         " ('s420601_02', '123', 'student', 'Боричевский Алексей Владимирович', 1, 1),"
         " ('s420601_03', '123', 'student', 'Вильтовская Анастасия Дмитриевна', 1, 1),"
@@ -344,7 +349,7 @@ bool Database::initializeDemoData() {
         " ('s420601_27', '123', 'student', 'Янченко Артём Дмитриевич', 1, 2);"
 
         // ===== СТУДЕНТЫ 420602 =====
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) VALUES "
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) VALUES "
         " ('s420602_01', '123', 'student', 'Базылев Тимофей Андреевич', 2, 1),"
         " ('s420602_02', '123', 'student', 'Букач Павел Георгиевич', 2, 1),"
         " ('s420602_03', '123', 'student', 'Ватанабэ Фрэдо Такэхирович', 2, 1),"
@@ -377,7 +382,7 @@ bool Database::initializeDemoData() {
         " ('s420602_30', '123', 'student', 'Яцков Андрей Андреевич', 2, 2);"
 
         // ===== СТУДЕНТЫ 420603 =====
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) VALUES "
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) VALUES "
         " ('s420603_01', '123', 'student', 'Борутенко Богдан Владимирович', 3, 1),"
         " ('s420603_02', '123', 'student', 'Бугай Елизавета Андреевна', 3, 1),"
         " ('s420603_03', '123', 'student', 'Василевский Владислав Валерьевич', 3, 1),"
@@ -409,13 +414,13 @@ bool Database::initializeDemoData() {
         " ('s420603_29', '123', 'student', 'Шупеник Матвей Юрьевич', 3, 2);"
 
         // ===== СТУДЕНТЫ 420604 =====
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) VALUES "
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) VALUES "
         " ('s420604_01', '123', 'student', 'Александренков Денис Алексеевич', 4, 1),"
         " ('s420604_02', '123', 'student', 'Амельченко Роман Игоревич', 4, 1),"
         " ('s420604_03', '123', 'student', 'Борисюк Илья Александрович', 4, 1),"
         " ('s420604_04', '123', 'student', 'Винников Иван Александрович', 4, 1),"
         " ('s420604_05', '123', 'student', 'Гайдукевич Ксения Андреевна', 4, 1),"
-        " ('s420604_06', '123', 'student', 'Гузова Александра Евгеньевна', 4, 1),"
+        " ('s420604_06', '123', 'student', 'Гузова Александрова Евгеньевна', 4, 1),"
         " ('s420604_07', '123', 'student', 'Гуренков Данила Станиславович', 4, 1),"
         " ('s420604_08', '123', 'student', 'Драпеза Вероника Алексеевна', 4, 1),"
         " ('s420604_09', '123', 'student', 'Иосько Михаил Алексеевич', 4, 1),"
@@ -442,33 +447,33 @@ bool Database::initializeDemoData() {
         " ('s420604_30', '123', 'student', 'Янушковский Алексей Андрианович', 4, 2);"
 
         // ===== АДМИН =====
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) VALUES "
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) VALUES "
         " ('admin', '123', 'admin', 'Administrator', NULL, 0);"
 
         // ===== ПРЕПОДАВАТЕЛИ =====
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) VALUES "
-        " ('t_batin',        '123', 'teacher', 'Батин Н. В.',        NULL, 0),"
-        " ('t_bobrova',      '123', 'teacher', 'Боброва Т. С.',      NULL, 0),"
-        " ('t_shilin',       '123', 'teacher', 'Шилин Л. Ю.',        NULL, 0),"
-        " ('t_nehaychik',    '123', 'teacher', 'Нехайчик Е. В.',     NULL, 0),"
-        " ('t_sevurnev',     '123', 'teacher', 'Севернёв А. М.',     NULL, 0),"
-        " ('t_sluzhalik',    '123', 'teacher', 'Служалик В. Ю.',     NULL, 0),"
-        " ('t_deriabina',    '123', 'teacher', 'Дерябина М. Ю.',     NULL, 0),"
-        " ('t_gurevich',     '123', 'teacher', 'Гуревич О. В.',      NULL, 0),"
-        " ('t_sharonova',    '123', 'teacher', 'Шаронова Е. И.',     NULL, 0),"
-        " ('t_ryshkel',      '123', 'teacher', 'Рышкель О. С.',      NULL, 0),"
-        " ('t_tsavlovskaya', '123', 'teacher', 'Цявловская Н. В.',   NULL, 0),"
-        " ('t_prigara',      '123', 'teacher', 'Пригара В. Н.',      NULL, 0),"
-        " ('t_yuchkov',      '123', 'teacher', 'Ючков А. К.',        NULL, 0),"
-        " ('t_german',       '123', 'teacher', 'Герман О. В.',       NULL, 0),"
-        " ('t_puhir',        '123', 'teacher', 'Пухир Г. А.',        NULL, 0),"
-        " ('t_krishchenovich','123','teacher','Крищенович В. А.',   NULL, 0),"
-        " ('t_lappo',        '123', 'teacher', 'Лаппо А. И.',        NULL, 0),"
-        " ('t_nehlebova',    '123', 'teacher', 'Нехлебова О. Ю.',    NULL, 0),"
-        " ('t_ezovit',       '123', 'teacher', 'Езовит А. В.',       NULL, 0),"
-        " ('t_trofimovich',  '123', 'teacher', 'Трофимович А. Ф.',   NULL, 0),"
-        " ('t_melnik',       '123', 'teacher', 'Мельник А. А.',      NULL, 0),"
-        " ('t_phys',         '123', 'teacher', 'Физкультуров Ф. Ф.', NULL, 0);"
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) VALUES "
+        " ('t_batin',         '123', 'teacher', 'Батин Н. В.',         NULL, 0),"
+        " ('t_bobrova',       '123', 'teacher', 'Боброва Т. С.',       NULL, 0),"
+        " ('t_shilin',        '123', 'teacher', 'Шилин Л. Ю.',         NULL, 0),"
+        " ('t_nehaychik',     '123', 'teacher', 'Нехайчик Е. В.',      NULL, 0),"
+        " ('t_sevurnev',      '123', 'teacher', 'Севернёв А. М.',      NULL, 0),"
+        " ('t_sluzhalik',     '123', 'teacher', 'Служалик В. Ю.',      NULL, 0),"
+        " ('t_deriabina',     '123', 'teacher', 'Дерябина М. Ю.',      NULL, 0),"
+        " ('t_gurevich',      '123', 'teacher', 'Гуревич О. В.',       NULL, 0),"
+        " ('t_sharonova',     '123', 'teacher', 'Шаронова Е. И.',      NULL, 0),"
+        " ('t_ryshkel',       '123', 'teacher', 'Рышкель О. С.',       NULL, 0),"
+        " ('t_tsavlovskaya',  '123', 'teacher', 'Цявловская Н. В.',    NULL, 0),"
+        " ('t_prigara',       '123', 'teacher', 'Пригара В. Н.',       NULL, 0),"
+        " ('t_yuchkov',       '123', 'teacher', 'Ючков А. К.',         NULL, 0),"
+        " ('t_german',        '123', 'teacher', 'Герман О. В.',        NULL, 0),"
+        " ('t_puhir',         '123', 'teacher', 'Пухир Г. А.',         NULL, 0),"
+        " ('t_krishchenovich','123','teacher','Крищенович В. А.',      NULL, 0),"
+        " ('t_lappo',         '123', 'teacher', 'Лаппо А. И.',         NULL, 0),"
+        " ('t_nehlebova',     '123', 'teacher', 'Нехлебова О. Ю.',     NULL, 0),"
+        " ('t_ezovit',        '123', 'teacher', 'Езовит А. В.',        NULL, 0),"
+        " ('t_trofimovich',   '123', 'teacher', 'Трофимович А. Ф.',    NULL, 0),"
+        " ('t_melnik',        '123', 'teacher', 'Мельник А. А.',       NULL, 0),"
+        " ('t_phys',          '123', 'teacher', 'Физкультуров Ф. Ф.',  NULL, 0);"
 
         // ===== ПРЕДМЕТЫ =====
         "INSERT INTO subjects (id, name) VALUES "
@@ -485,60 +490,41 @@ bool Database::initializeDemoData() {
         " (11, 'Инф. час'),"
         " (12, 'К.Ч.');"
 
-    // teacher_subjects (кто какой предмет ведёт)
-"INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES "
-// АПЭЦ (id=1): Шилин (лк+лр1), Пригара (лр2), Нехайчик (лр3-4)
-"(120, 1), "  // tshilin → АПЭЦ
-"(129, 1), "  // tprigara → АПЭЦ
-"(121, 1), "  // tnehaychik → АПЭЦ
+        // teachergroupjects (кто какой предмет ведёт)
+        "INSERT INTO teachersubjects (teacherid, subjectid) VALUES "
+        "(120, 1),"
+        "(129, 1),"
+        "(121, 1),"
+        "(139, 3),"
+        "(122, 4),"
+        "(123, 4),"
+        "(118, 5),"
+        "(119, 5),"
+        "(127, 6),"
+        "(128, 6),"
+        "(131, 7),"
+        "(130, 7),"
+        "(132, 8),"
+        "(133, 8),"
+        "(134, 9),"
+        "(135, 9),"
+        "(124, 10),"
+        "(136, 11),"
+        "(136, 12),"
+        "(130, 11),"
+        "(130, 12),"
+        "(137, 11),"
+        "(137, 12),"
+        "(138, 11),"
+        "(138, 12);"
 
-// Физкультура (id=3): физкультуров
-"(139, 3), "  // tphys → Физкультура
-
-// ТГ (id=4): Севернев (лк), Служалик (пз)
-"(122, 4), "  // tsevurnev → ТГ
-"(123, 4), "  // tsluzhalik → ТГ
-
-// ВМиКА (id=5): Батин (лк), Боброва (лр)
-"(118, 5), "  // tbatin → ВМиКА
-"(119, 5), "  // tbobrova → ВМиКА
-
-// БЖЧ (id=6): Рышкель (лк+пз1-2+лр1-2), Цявловская (пз3-4+лр3-4)
-"(127, 6), "  // tryshkel → БЖЧ
-"(128, 6), "  // ttsavlovskaya → БЖЧ
-
-// ООП (id=7): Герман (лк), Ючков (лр)
-"(131, 7), "  // tgerman → ООП
-"(130, 7), "  // tyuchkov → ООП
-
-// ОИнфБ (id=8): Пухир (лк), Крищенович (пз)
-"(132, 8), "  // tpuhir → ОИнфБ
-"(133, 8), "  // tkrishchenovich → ОИнфБ
-
-// БД (id=9): Лаппо (лк+лр), Нехлебова (пз)
-"(134, 9), "  // tlappo → БД
-"(135, 9), "  // tnehlebova → БД
-
-// МСиСвИТ (id=10): Дерябина (лк+пз)
-"(124, 10), " // tderiabina → МСиСвИТ
-
-// Инф.час + К.Ч (id=11,12): Езовит(гр1), Ючков(гр2), Трофимович(гр3), Мельник(гр4)
-"(136, 11), " // tezovit → Инф.час
-"(136, 12), " // tezovit → К.Ч
-"(130, 11), " // tyuchkov → Инф.час
-"(130, 12), " // tyuchkov → К.Ч
-"(137, 11), " // ttrofimovich → Инф.час
-"(137, 12), " // ttrofimovich → К.Ч
-"(138, 11), " // tmelnik → Инф.час
-"(138, 12); " // tmelnik → К.Ч
-
-    // ===== СЕМЕСТРЫ =====
-    "INSERT INTO semesters (id, name, start_date, end_date) VALUES "
-    " (1, '1 семестр 2025/2026', '2025-09-01', '2025-12-31');"
+        // ===== СЕМЕСТРЫ =====
+        "INSERT INTO semesters (id, name, startdate, enddate) VALUES "
+        " (1, '1 семестр 2025/2026', '2025-09-01', '2025-12-31');"
         ;
 
     char* errMsg = nullptr;
-    int rc = sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg);
+    int rc = sqlite3_exec(db, sql, nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         std::cerr << "[✗] Ошибка заполнения демо-данными: "
                   << (errMsg ? errMsg : "unknown") << "\n";
@@ -546,6 +532,8 @@ bool Database::initializeDemoData() {
         return false;
     }
 
+    // дальше — твоя логика teachergroups через prepared statements + verify + COMMIT
+    // (она у тебя правильная, её надо вставить целиком без изменений, просто заменить db_ -> db)
     {
         const std::vector<std::string> allGroups = {"420601", "420602", "420603", "420604"};
         const std::vector<std::pair<std::string, std::vector<std::string>>> teacherGroups = {
@@ -569,39 +557,38 @@ bool Database::initializeDemoData() {
             {"t_ezovit", {"420601"}},
             {"t_trofimovich", {"420603"}},
             {"t_melnik", {"420604"}},
-
             {"t_gurevich", allGroups},
             {"t_sharonova", allGroups},
         };
 
         const char* insertSql =
-            "INSERT OR IGNORE INTO teacher_groups(teacher_id, group_id) VALUES (?, ?);";
+            "INSERT OR IGNORE INTO teachergroups(teacherid, groupid) VALUES (?, ?);";
 
         sqlite3_stmt* insertStmt = nullptr;
-        if (sqlite3_prepare_v2(db_, insertSql, -1, &insertStmt, nullptr) != SQLITE_OK) {
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            std::cerr << "[✗] Ошибка подготовки INSERT teacher_groups: "
-                      << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+        if (sqlite3_prepare_v2(db, insertSql, -1, &insertStmt, nullptr) != SQLITE_OK) {
+            sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            std::cerr << "[✗] Ошибка подготовки INSERT teachergroups: "
+                      << (sqlite3_errmsg(db) ? sqlite3_errmsg(db) : "unknown") << "\n";
             return false;
         }
 
         for (const auto& tg : teacherGroups) {
             const std::string& username = tg.first;
-            const int teacherId = getUserIdByUsername(db_, username);
+            const int teacherId = getUserIdByUsername(db, username);
             if (teacherId <= 0) {
                 sqlite3_finalize(insertStmt);
-                sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-                std::cerr << "[✗] teacher_groups: не найден пользователь teacher username='"
+                sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                std::cerr << "[✗] teachergroups: не найден пользователь teacher username='"
                           << username << "'\n";
                 return false;
             }
 
             for (const auto& groupName : tg.second) {
-                const int groupId = getGroupIdByName(db_, groupName);
+                const int groupId = getGroupIdByName(db, groupName);
                 if (groupId <= 0) {
                     sqlite3_finalize(insertStmt);
-                    sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-                    std::cerr << "[✗] teacher_groups: не найдена группа name='"
+                    sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                    std::cerr << "[✗] teachergroups: не найдена группа name='"
                               << groupName << "'\n";
                     return false;
                 }
@@ -614,10 +601,10 @@ bool Database::initializeDemoData() {
                 const int stepRc = sqlite3_step(insertStmt);
                 if (stepRc != SQLITE_DONE) {
                     sqlite3_finalize(insertStmt);
-                    sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-                    std::cerr << "[✗] teacher_groups: ошибка INSERT для teacher='"
+                    sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                    std::cerr << "[✗] teachergroups: ошибка INSERT для teacher='"
                               << username << "', group='" << groupName << "': "
-                              << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+                              << (sqlite3_errmsg(db) ? sqlite3_errmsg(db) : "unknown") << "\n";
                     return false;
                 }
             }
@@ -629,17 +616,17 @@ bool Database::initializeDemoData() {
     {
         const char* verifySql =
             "SELECT u.username, u.name, GROUP_CONCAT(g.name, ', ') "
-            "FROM teacher_groups tg "
-            "JOIN users u ON u.id = tg.teacher_id "
-            "JOIN groups g ON g.id = tg.group_id "
+            "FROM teachergroups tg "
+            "JOIN users u ON u.id = tg.teacherid "
+            "JOIN groups g ON g.id = tg.groupid "
             "GROUP BY u.id "
             "ORDER BY u.username;";
 
         sqlite3_stmt* stmt = nullptr;
-        if (sqlite3_prepare_v2(db_, verifySql, -1, &stmt, nullptr) != SQLITE_OK) {
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            std::cerr << "[✗] Ошибка подготовки SELECT teacher_groups verify: "
-                      << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+        if (sqlite3_prepare_v2(db, verifySql, -1, &stmt, nullptr) != SQLITE_OK) {
+            sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            std::cerr << "[✗] Ошибка подготовки SELECT teachergroups verify: "
+                      << (sqlite3_errmsg(db) ? sqlite3_errmsg(db) : "unknown") << "\n";
             return false;
         }
 
@@ -667,21 +654,21 @@ bool Database::initializeDemoData() {
 
         if (rc != SQLITE_DONE) {
             sqlite3_finalize(stmt);
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            std::cerr << "[✗] Ошибка выполнения SELECT teacher_groups verify: "
-                      << (sqlite3_errmsg(db_) ? sqlite3_errmsg(db_) : "unknown") << "\n";
+            sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            std::cerr << "[✗] Ошибка выполнения SELECT teachergroups verify: "
+                      << (sqlite3_errmsg(db) ? sqlite3_errmsg(db) : "unknown") << "\n";
             return false;
         }
 
         sqlite3_finalize(stmt);
     }
 
-    rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
+    rc = sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         std::cerr << "[✗] Ошибка COMMIT демо-данных: "
                   << (errMsg ? errMsg : "unknown") << "\n";
         if (errMsg) sqlite3_free(errMsg);
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
 
@@ -690,17 +677,14 @@ bool Database::initializeDemoData() {
     return true;
 }
 
-
-
+// ===== Find User =====
 
 bool Database::findUser(const std::string& username,
                         const std::string& password,
                         int& outId,
                         std::string& outName,
-                        std::string& outRole)
-{
-    if (!db_) {
-        std::cerr << "[!] findUser: соединение с БД не открыто\n";
+                        std::string& outRole) {
+    if (!isConnected()) {
         return false;
     }
 
@@ -711,58 +695,42 @@ bool Database::findUser(const std::string& username,
         "LIMIT 1;";
 
     sqlite3_stmt* stmt = nullptr;
-
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[!] findUser: sqlite3_prepare_v2 error: "
-                  << sqlite3_errmsg(db_) << "\n";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return false;
     }
 
-    // Привязываем параметры
     sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, password.c_str(), -1, SQLITE_TRANSIENT);
 
-    // Выполняем запрос
-    rc = sqlite3_step(stmt);
+    const int rc = sqlite3_step(stmt);
     if (rc == SQLITE_ROW) {
-        outId   = sqlite3_column_int(stmt, 0);
+        outId = sqlite3_column_int(stmt, 0);
         const unsigned char* nameText = sqlite3_column_text(stmt, 1);
         const unsigned char* roleText = sqlite3_column_text(stmt, 2);
-
         outName = nameText ? reinterpret_cast<const char*>(nameText) : "";
         outRole = roleText ? reinterpret_cast<const char*>(roleText) : "";
-
         sqlite3_finalize(stmt);
         return true;
-    } else if (rc == SQLITE_DONE) {
-        // Пользователь не найден
-        sqlite3_finalize(stmt);
-        return false;
-    } else {
-        std::cerr << "[!] findUser: sqlite3_step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
     }
+
+    sqlite3_finalize(stmt);
+    return false;
 }
 
-bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSemesters)
-{
-    outSemesters.clear();
+// ===== Get All Resources =====
 
-    if (!db_) {
-        std::cerr << "[✗] getAllSemesters: соединение с БД не открыто\n";
+bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSemesters) {
+    outSemesters.clear();
+    if (!db) {
+        std::cerr << "[✗] getAllSemesters: DB not connected\n";
         return false;
     }
 
     const char* sql = "SELECT id, name FROM semesters ORDER BY id;";
-
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getAllSemesters: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllSemesters: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
@@ -774,8 +742,7 @@ bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSeme
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getAllSemesters: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllSemesters: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -784,66 +751,18 @@ bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSeme
     return true;
 }
 
-bool Database::getSubjectsForTeacher(int teacher_id,
-                                     std::vector<std::pair<int, std::string>>& outSubjects)
-{
-    outSubjects.clear();
-    if (!db_) {
-        std::cerr << "[✗] getSubjectsForTeacher: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql =
-        "SELECT s.id, s.name "
-        "FROM teacher_subjects ts "
-        "JOIN subjects s ON ts.subject_id = s.id "
-        "WHERE ts.teacher_id = ? "
-        "ORDER BY s.id;";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getSubjectsForTeacher: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, teacher_id);
-
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
-        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
-        outSubjects.emplace_back(id, name);
-    }
-
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getSubjectsForTeacher: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-bool Database::getAllGroups(std::vector<std::pair<int, std::string>>& outGroups)
-{
+bool Database::getAllGroups(std::vector<std::pair<int, std::string>>& outGroups) {
     outGroups.clear();
-
-    if (!db_) {
-        std::cerr << "[✗] getAllGroups: соединение с БД не открыто\n";
+    if (!db) {
+        std::cerr << "[✗] getAllGroups: DB not connected\n";
         return false;
     }
 
     const char* sql = "SELECT id, name FROM groups ORDER BY id;";
-
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getAllGroups: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllGroups: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
@@ -855,8 +774,7 @@ bool Database::getAllGroups(std::vector<std::pair<int, std::string>>& outGroups)
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getAllGroups: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllGroups: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -864,20 +782,19 @@ bool Database::getAllGroups(std::vector<std::pair<int, std::string>>& outGroups)
     sqlite3_finalize(stmt);
     return true;
 }
-bool Database::getAllSubjects(std::vector<std::pair<int, std::string>>& outSubjects)
-{
+
+bool Database::getAllSubjects(std::vector<std::pair<int, std::string>>& outSubjects) {
     outSubjects.clear();
-    if (!db_) {
-        std::cerr << "[✗] getAllSubjects: соединение с БД не открыто\n";
+    if (!db) {
+        std::cerr << "[✗] getAllSubjects: DB not connected\n";
         return false;
     }
 
     const char* sql = "SELECT id, name FROM subjects ORDER BY id;";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getAllSubjects: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllSubjects: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
@@ -889,8 +806,7 @@ bool Database::getAllSubjects(std::vector<std::pair<int, std::string>>& outSubje
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getAllSubjects: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllSubjects: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -899,24 +815,18 @@ bool Database::getAllSubjects(std::vector<std::pair<int, std::string>>& outSubje
     return true;
 }
 
-bool Database::getAllTeachers(std::vector<std::pair<int, std::string>>& outTeachers)
-{
+bool Database::getAllTeachers(std::vector<std::pair<int, std::string>>& outTeachers) {
     outTeachers.clear();
-    if (!db_) {
-        std::cerr << "[✗] getAllTeachers: соединение с БД не открыто\n";
+    if (!db) {
+        std::cerr << "[✗] getAllTeachers: DB not connected\n";
         return false;
     }
 
-    const char* sql =
-        "SELECT id, name FROM users "
-        "WHERE role = 'teacher' "
-        "ORDER BY name;";
-
+    const char* sql = "SELECT id, name FROM users WHERE role = 'teacher' ORDER BY name;";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getAllTeachers: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllTeachers: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
@@ -928,8 +838,7 @@ bool Database::getAllTeachers(std::vector<std::pair<int, std::string>>& outTeach
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getAllTeachers: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllTeachers: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -938,28 +847,20 @@ bool Database::getAllTeachers(std::vector<std::pair<int, std::string>>& outTeach
     return true;
 }
 
-bool Database::getAllUsers(
-    std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers)
-{
+bool Database::getAllUsers(std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers) {
     outUsers.clear();
-    if (!db_) {
-        std::cerr << "[✗] getAllUsers: соединение с БД не открыто\n";
+    if (!db) {
+        std::cerr << "[✗] getAllUsers: DB not connected\n";
         return false;
     }
 
     const char* sql =
-     "SELECT id, username, name, role, "
-     "COALESCE(group_id, 0), "
-     "COALESCE(sub_group, 0) "
-     "FROM users "
-     "ORDER BY id;";
-
-
+        "SELECT id, username, name, role, COALESCE(groupid, 0), COALESCE(subgroup, 0) "
+        "FROM users ORDER BY id;";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getAllUsers: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllUsers: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
@@ -968,19 +869,16 @@ bool Database::getAllUsers(
         const unsigned char* uText = sqlite3_column_text(stmt, 1);
         const unsigned char* nText = sqlite3_column_text(stmt, 2);
         const unsigned char* rText = sqlite3_column_text(stmt, 3);
-        int group_id  = sqlite3_column_int(stmt, 4);
-        int sub_group = sqlite3_column_int(stmt, 5);
-
+        int groupId = sqlite3_column_int(stmt, 4);
+        int subgroup = sqlite3_column_int(stmt, 5);
         std::string username = uText ? reinterpret_cast<const char*>(uText) : "";
-        std::string name     = nText ? reinterpret_cast<const char*>(nText) : "";
-        std::string role     = rText ? reinterpret_cast<const char*>(rText) : "";
-
-        outUsers.emplace_back(id, username, name, role, group_id, sub_group);
+        std::string name = nText ? reinterpret_cast<const char*>(nText) : "";
+        std::string role = rText ? reinterpret_cast<const char*>(rText) : "";
+        outUsers.emplace_back(id, username, name, role, groupId, subgroup);
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getAllUsers: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getAllUsers: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -989,30 +887,148 @@ bool Database::getAllUsers(
     return true;
 }
 
-
-bool Database::getStudentGradesForSemester(
-    int studentId,
-    int semesterId,
-    std::vector<std::tuple<std::string, int, std::string, std::string>>& outGrades
-) {
-    outGrades.clear();
-    if (!db_) {
-        std::cerr << "[✗] getStudentGradesForSemester: БД не подключена\n";
+bool Database::getSubjectsForTeacher(int teacherId,
+                                      std::vector<std::pair<int, std::string>>& outSubjects) {
+    outSubjects.clear();
+    if (!db) {
+        std::cerr << "[✗] getSubjectsForTeacher: DB not connected\n";
         return false;
     }
 
     const char* sql =
-        "SELECT s.name, g.value, COALESCE(g.date, ''), COALESCE(g.grade_type, '') "
-        "FROM grades g "
-        "JOIN subjects s ON g.subject_id = s.id "
-        "WHERE g.student_id = ? AND g.semester_id = ? "
-        "ORDER BY s.name, g.date";
-
+        "SELECT s.id, s.name "
+        "FROM teachersubjects ts "
+        "JOIN subjects s ON ts.subjectid = s.id "
+        "WHERE ts.teacherid = ? "
+        "ORDER BY s.id;";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getStudentGradesForSemester prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getSubjectsForTeacher: prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, teacherId);
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        outSubjects.emplace_back(id, name);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] getSubjectsForTeacher: step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+// ===== Students & Groups =====
+
+bool Database::getStudentsOfGroup(int groupId,
+                                   std::vector<std::pair<int, std::string>>& outStudents) {
+    outStudents.clear();
+    if (!db) {
+        std::cerr << "[✗] getStudentsOfGroup: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT id, name "
+        "FROM users "
+        "WHERE role = 'student' AND groupid = ? "
+        "ORDER BY name;";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] getStudentsOfGroup: prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, groupId);
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        outStudents.emplace_back(id, name);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] getStudentsOfGroup: step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::getStudentGroupAndSubgroup(int studentId,
+                                          int& outGroupId,
+                                          int& outSubgroup) {
+    outGroupId = 0;
+    outSubgroup = 0;
+    if (!db) {
+        std::cerr << "[✗] getStudentGroupAndSubgroup: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT COALESCE(groupid, 0), COALESCE(subgroup, 0) "
+        "FROM users "
+        "WHERE id = ? AND role = 'student' "
+        "LIMIT 1;";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] getStudentGroupAndSubgroup: prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outGroupId = sqlite3_column_int(stmt, 0);
+        outSubgroup = sqlite3_column_int(stmt, 1);
+        sqlite3_finalize(stmt);
+        return true;
+    } else if (rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return false;
+    } else {
+        std::cerr << "[✗] getStudentGroupAndSubgroup: step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+}
+
+// ===== Grades =====
+
+bool Database::getStudentGradesForSemester(int studentId,
+                                            int semesterId,
+                                            std::vector<std::tuple<std::string, int, std::string, std::string>>& outGrades) {
+    outGrades.clear();
+    if (!db) {
+        std::cerr << "[✗] getStudentGradesForSemester: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT s.name, g.value, COALESCE(g.date, ''), COALESCE(g.gradetype, '') "
+        "FROM grades g "
+        "JOIN subjects s ON g.subjectid = s.id "
+        "WHERE g.studentid = ? AND g.semesterid = ? "
+        "ORDER BY s.name, g.date";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] getStudentGradesForSemester: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
@@ -1024,17 +1040,14 @@ bool Database::getStudentGradesForSemester(
         int value = sqlite3_column_int(stmt, 1);
         const unsigned char* dateText = sqlite3_column_text(stmt, 2);
         const unsigned char* typeText = sqlite3_column_text(stmt, 3);
-
         std::string subject = subjText ? reinterpret_cast<const char*>(subjText) : "";
-        std::string date    = dateText ? reinterpret_cast<const char*>(dateText) : "";
-        std::string gtype   = typeText ? reinterpret_cast<const char*>(typeText) : "";
-
+        std::string date = dateText ? reinterpret_cast<const char*>(dateText) : "";
+        std::string gtype = typeText ? reinterpret_cast<const char*>(typeText) : "";
         outGrades.emplace_back(subject, value, date, gtype);
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getStudentGradesForSemester step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getStudentGradesForSemester: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -1043,96 +1056,43 @@ bool Database::getStudentGradesForSemester(
     return true;
 }
 
-bool Database::getStudentsOfGroup(int group_id,
-                                  std::vector<std::pair<int, std::string>>& outStudents)
-{
-    outStudents.clear();
-
-    if (!db_) {
-        std::cerr << "[✗] getStudentsOfGroup: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql =
-        "SELECT id, name "
-        "FROM users "
-        "WHERE role = 'student' AND group_id = ? "
-        "ORDER BY name;";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getStudentsOfGroup: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, group_id);
-
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
-        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
-        outStudents.emplace_back(id, name);
-    }
-
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getStudentsOfGroup: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-bool Database::getStudentSubjectGrades(
-    int student_id,
-    int subject_id,
-    int semester_id,
-    std::vector<std::tuple<int, std::string, std::string>>& outGrades)
-{
+bool Database::getStudentSubjectGrades(int studentId,
+                                        int subjectId,
+                                        int semesterId,
+                                        std::vector<std::tuple<int, std::string, std::string>>& outGrades) {
     outGrades.clear();
-
-    if (!db_) {
-        std::cerr << "[✗] getStudentSubjectGrades: соединение с БД не открыто\n";
+    if (!db) {
+        std::cerr << "[✗] getStudentSubjectGrades: DB not connected\n";
         return false;
     }
 
-    // В grades нет поля type, берём только value и date,
-    // а тип в третьем элементе кортежа будем возвращать пустой строкой.
     const char* sql =
-     "SELECT value, COALESCE(date, ''), COALESCE(grade_type, '') "  // ← было type
-     "FROM grades "
-     "WHERE student_id = ? AND subject_id = ? AND semester_id = ? "
-     "ORDER BY date";
-
-
+        "SELECT value, COALESCE(date, ''), COALESCE(gradetype, '') "
+        "FROM grades "
+        "WHERE studentid = ? AND subjectid = ? AND semesterid = ? "
+        "ORDER BY date";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getStudentSubjectGrades: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getStudentSubjectGrades: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, subject_id);
-    sqlite3_bind_int(stmt, 3, semester_id);
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         int value = sqlite3_column_int(stmt, 0);
         const unsigned char* dateText = sqlite3_column_text(stmt, 1);
-
+        const unsigned char* typeText = sqlite3_column_text(stmt, 2);
         std::string date = dateText ? reinterpret_cast<const char*>(dateText) : "";
-        std::string type; // пустая строка, так как в grades нет type
-
+        std::string type = typeText ? reinterpret_cast<const char*>(typeText) : "";
         outGrades.emplace_back(value, date, type);
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getStudentSubjectGrades: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getStudentSubjectGrades: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -1141,355 +1101,76 @@ bool Database::getStudentSubjectGrades(
     return true;
 }
 
-bool Database::addGrade(int student_id, int subject_id, int semester_id,
-                        int value, const std::string& date, const std::string& grade_type) {
-    if (!db_) {
-        std::cerr << "[✗] addGrade: БД не подключена\n";
+bool Database::addGrade(int studentId, int subjectId, int semesterId,
+                        int value, const std::string& date, const std::string& gradeType) {
+    if (!db) {
+        std::cerr << "[✗] addGrade: DB not connected\n";
         return false;
     }
+
     const char* sql =
-        "INSERT INTO grades (student_id, subject_id, semester_id, value, date, grade_type) "
+        "INSERT INTO grades (studentid, subjectid, semesterid, value, date, gradetype) "
         "VALUES (?, ?, ?, ?, ?, ?)";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] addGrade prepare error: " << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] addGrade prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, subject_id);
-    sqlite3_bind_int(stmt, 3, semester_id);
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
     sqlite3_bind_int(stmt, 4, value);
     sqlite3_bind_text(stmt, 5, date.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 6, grade_type.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 6, gradeType.c_str(), -1, SQLITE_TRANSIENT);
 
     rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] addGrade step error: " << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
     sqlite3_finalize(stmt);
-    return true;
+    return rc == SQLITE_DONE;
 }
 
-bool Database::insertUser(const std::string& username,
-                          const std::string& password,
-                          const std::string& role,
-                          const std::string& name,
-                          int group_id,
-                          int sub_group)
-{
-    if (!db_) {
-        std::cerr << "[✗] insertUser: соединение с БД не открыто\n";
+bool Database::deleteGrade(int gradeId) {
+    if (!db) {
+        std::cerr << "[✗] deleteGrade: DB not connected\n";
         return false;
     }
 
-    const char* sql =
-        "INSERT INTO users (username, password, role, name, group_id, sub_group) "
-        "VALUES (?, ?, ?, ?, ?, ?);";
-
+    const char* sql = "DELETE FROM grades WHERE id = ?";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] insertUser: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] deleteGrade prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
-    sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, password.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, role.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 4, name.c_str(), -1, SQLITE_TRANSIENT);
-
-    if (group_id == 0)
-        sqlite3_bind_null(stmt, 5);
-    else
-        sqlite3_bind_int(stmt, 5, group_id);
-
-    sqlite3_bind_int(stmt, 6, sub_group); // 0 для старших/админов, 1/2 для студентов
-
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] insertUser: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-
-
-bool Database::deleteUserById(int userId)
-{
-    if (!db_) {
-        std::cerr << "[✗] deleteUserById: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql = "DELETE FROM users WHERE id = ?;";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] deleteUserById: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, userId);
-
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] deleteUserById: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    int changes = sqlite3_changes(db_);
+    sqlite3_bind_int(stmt, 1, gradeId);
+    int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
 
-    if (changes == 0) {
-        std::cout << "Пользователь с таким ID не найден.\n";
-        return false;
-    }
-
-    return true;
-}
-
-bool Database::updateGrade(int grade_id, int newValue, const std::string& newDate,
-                           const std::string& newType) {
-    if (!db_) {
-        std::cerr << "[✗] updateGrade: БД не подключена\n";
-        return false;
-    }
-    const char* sql =
-        "UPDATE grades SET value = ?, date = ?, grade_type = ? WHERE id = ?";
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] updateGrade prepare error: " << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-    sqlite3_bind_int(stmt, 1, newValue);
-    sqlite3_bind_text(stmt, 2, newDate.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, newType.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 4, grade_id);
-
-    rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-
-    if (rc == SQLITE_DONE && sqlite3_changes(db_) > 0) {
+    if (rc == SQLITE_DONE && sqlite3_changes(db) > 0) {
         return true;
     }
-    std::cout << "[!] updateGrade: Оценка с ID " << grade_id << " не найдена.\n";
+
     return false;
 }
 
-bool Database::getGradesForStudentSubject(
-    int student_id,
-    int subject_id,
-    int semester_id,
-    std::vector<std::tuple<int, int, std::string, std::string>>& outGrades)
-{
-    outGrades.clear();
+// ===== Absences =====
 
-    if (!db_) {
-        std::cerr << "[✗] getGradesForStudentSubject: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql =
-    "SELECT id, value, COALESCE(date, ''), COALESCE(grade_type, '') "  // ← grade_type
-    "FROM grades "
-    "WHERE student_id = ? AND subject_id = ? AND semester_id = ? "
-    "ORDER BY date";
-
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getGradesForStudentSubject: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, subject_id);
-    sqlite3_bind_int(stmt, 3, semester_id);
-
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int grade_id = sqlite3_column_int(stmt, 0);
-        int value   = sqlite3_column_int(stmt, 1);
-        const unsigned char* dateText = sqlite3_column_text(stmt, 2);
-        const unsigned char* typeText = sqlite3_column_text(stmt, 3);
-
-        std::string date = dateText ? reinterpret_cast<const char*>(dateText) : "";
-        std::string type = typeText ? reinterpret_cast<const char*>(typeText) : "";
-
-        outGrades.emplace_back(grade_id, value, date, type);
-    }
-
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getGradesForStudentSubject: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-bool Database::addAbsence(int student_id,
-                          int subject_id,
-                          int semester_id,
-                          int hours,
-                          const std::string& date,
-                          const std::string& type)
-{
-    if (!isConnected()) {
-        std::cerr << "[✗] addAbsence: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql =
-    "INSERT INTO absences (student_id, subject_id, semester_id, hours, date, type) "
-    "VALUES (?, ?, ?, ?, ?, ?);";
-
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] addAbsence: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, subject_id);
-    sqlite3_bind_int(stmt, 3, semester_id);
-    sqlite3_bind_int(stmt, 4, hours);
-    sqlite3_bind_text(stmt, 5, date.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 6, type.c_str(), -1, SQLITE_TRANSIENT);
-
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] addAbsence: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-
-
-bool Database::getStudentAbsencesForSemester(
-    int student_id,
-    int semester_id,
-    std::vector<std::tuple<std::string, int, std::string, std::string>>& outAbsences)
-{
-    outAbsences.clear();
-    if (!isConnected()) {
-        std::cerr << "[✗] getStudentAbsencesForSemester: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql =
-     "SELECT s.name, a.hours, COALESCE(a.date, ''), COALESCE(a.type, '') "
-     "FROM absences a "
-     "JOIN subjects s ON a.subject_id = s.id "
-     "WHERE a.student_id = ? AND a.semester_id = ? "
-     "ORDER BY a.date;";
-
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getStudentAbsencesForSemester: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, semester_id);
-
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        const unsigned char* subjText = sqlite3_column_text(stmt, 0);
-        int hours                     = sqlite3_column_int(stmt, 1);
-        const unsigned char* dateText = sqlite3_column_text(stmt, 2);
-        const unsigned char* typeText = sqlite3_column_text(stmt, 3);
-
-        std::string subj = subjText ? reinterpret_cast<const char*>(subjText) : "";
-        std::string date = dateText ? reinterpret_cast<const char*>(dateText) : "";
-        std::string type = typeText ? reinterpret_cast<const char*>(typeText) : "";
-
-        outAbsences.emplace_back(subj, hours, date, type);
-    }
-
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getStudentAbsencesForSemester: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-
-
-
-bool Database::getStudentTotalAbsences(int student_id,
-                                       int semester_id,
-                                       int& outTotalHours)
-{
-    outTotalHours = 0;
-    if (!isConnected()) return false;
-
-    const char* sql =
-        "SELECT SUM(hours) FROM absences "
-        "WHERE student_id = ? AND semester_id = ?;";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return false;
-
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, semester_id);
-
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        outTotalHours = sqlite3_column_int(stmt, 0);
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-bool Database::getStudentUnexcusedAbsences(int student_id,
-                                           int semester_id,
-                                           int& outUnexcusedHours)
-{
+bool Database::getStudentUnexcusedAbsences(int studentId,
+                                            int semesterId,
+                                            int& outUnexcusedHours) {
     outUnexcusedHours = 0;
-    if (!isConnected()) return false;
+    if (!db) return false;
 
     const char* sql =
         "SELECT SUM(hours) FROM absences "
-        "WHERE student_id = ? AND semester_id = ? AND type = 'unexcused';";
-
+        "WHERE studentid = ? AND semesterid = ? AND type = 'unexcused';";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
         return false;
 
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, semester_id);
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, semesterId);
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         outUnexcusedHours = sqlite3_column_int(stmt, 0);
@@ -1499,24 +1180,22 @@ bool Database::getStudentUnexcusedAbsences(int student_id,
     return true;
 }
 
-bool Database::deleteTodayAbsence(int student_id,
-                                  int subject_id,
-                                  int semester_id,
-                                  const std::string& date)
-{
-    if (!isConnected()) return false;
+bool Database::deleteTodayAbsence(int studentId,
+                                   int subjectId,
+                                   int semesterId,
+                                   const std::string& date) {
+    if (!db) return false;
 
     const char* sql =
         "DELETE FROM absences "
-        "WHERE student_id = ? AND subject_id = ? AND semester_id = ? AND date = ?;";
-
+        "WHERE studentid = ? AND subjectid = ? AND semesterid = ? AND date = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
         return false;
 
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, subject_id);
-    sqlite3_bind_int(stmt, 3, semester_id);
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
     sqlite3_bind_text(stmt, 4, date.c_str(), -1, SQLITE_TRANSIENT);
 
     int rc = sqlite3_step(stmt);
@@ -1525,180 +1204,54 @@ bool Database::deleteTodayAbsence(int student_id,
         return false;
     }
 
-    int changes = sqlite3_changes(db_);
+    int changes = sqlite3_changes(db);
     sqlite3_finalize(stmt);
-
     return changes > 0;
 }
 
-bool Database::addTeacherGroup(int teacher_id, int group_id) {
-    if (!isConnected()) return false;
-
-    const char* sql =
-        "INSERT OR IGNORE INTO teacher_groups (teacher_id, group_id) "
-        "VALUES (?, ?);";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return false;
-
-    sqlite3_bind_int(stmt, 1, teacher_id);
-    sqlite3_bind_int(stmt, 2, group_id);
-
-    int rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-    return rc == SQLITE_DONE;
-}
-
-bool Database::getGroupsForTeacher(int teacher_id,
-                                   std::vector<std::pair<int, std::string>>& outGroups) {
-    outGroups.clear();
-    if (!isConnected()) return false;
-
-    const char* sql =
-        "SELECT g.id, g.name "
-        "FROM teacher_groups tg "
-        "JOIN groups g ON g.id = tg.group_id "
-        "WHERE tg.teacher_id = ? "
-        "ORDER BY g.id;";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return false;
-
-    sqlite3_bind_int(stmt, 1, teacher_id);
-
-    int rc;
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
-        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
-        outGroups.emplace_back(id, name);
-    }
-
-    if (rc != SQLITE_DONE) {
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-bool Database::addLesson(int group_id,
-                         int subject_id,
-                         int teacher_id,
-                         const std::string& date,
-                         int time_slot )
-{
-    if (!isConnected()) return false;
-
-    const char* sql =
-        "INSERT INTO lessons (group_id, subject_id, teacher_id, date, time_slot) "
-        "VALUES (?, ?, ?, ?, ?);";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return false;
-
-    sqlite3_bind_int(stmt, 1, group_id);
-    sqlite3_bind_int(stmt, 2, subject_id);
-    sqlite3_bind_int(stmt, 3, teacher_id);
-    sqlite3_bind_text(stmt, 4, date.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 5, time_slot );
-
-    int rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-    return rc == SQLITE_DONE;
-}
-
-bool Database::getLessonsForGroupAndDate(
-        int group_id,
-        const std::string& date,
-        std::vector<std::tuple<int,int,std::string>>& outLessons)
-{
-    outLessons.clear();
-    if (!isConnected()) return false;
-
-    const char* sql =
-        "SELECT l.time_slot, s.id, s.name "
-        "FROM lessons l "
-        "JOIN subjects s ON s.id = l.subject_id "
-        "WHERE l.group_id = ? AND l.date = ? "
-        "ORDER BY l.time_slot;";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return false;
-
-    sqlite3_bind_int(stmt, 1, group_id);
-    sqlite3_bind_text(stmt, 2, date.c_str(), -1, SQLITE_TRANSIENT);
-
-    int rc;
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int time_slot  = sqlite3_column_int(stmt, 0);
-        int subject_id = sqlite3_column_int(stmt, 1);
-        const unsigned char* nameText = sqlite3_column_text(stmt, 2);
-        std::string subjectName = nameText ? reinterpret_cast<const char*>(nameText) : "";
-        outLessons.emplace_back(time_slot , subject_id, subjectName);
-    }
-
-    if (rc != SQLITE_DONE) {
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
 bool Database::getGroupSubjectAbsencesSummary(
-    int group_id,
-    int subject_id,
-    int semester_id,
-    std::vector<std::tuple<int, std::string, int>>& outRows)
-{
+    int groupId,
+    int subjectId,
+    int semesterId,
+    std::vector<std::tuple<int, std::string, int>>& outRows) {
     outRows.clear();
-    if (!db_) {
-        std::cerr << "[✗] getGroupSubjectAbsencesSummary: соединение с БД не открыто\n";
+    if (!db) {
+        std::cerr << "[✗] getGroupSubjectAbsencesSummary: DB not connected\n";
         return false;
     }
 
     const char* sql =
-     "SELECT u.id, u.name, COALESCE(SUM(a.hours), 0) AS total_hours "
-     "FROM users u "
-     "LEFT JOIN absences a "
-     "  ON a.student_id  = u.id "
-     " AND a.subject_id  = ? "
-     " AND a.semester_id = ? "
-     "WHERE u.role = 'student' AND u.group_id = ? "
-     "GROUP BY u.id, u.name "
-     "ORDER BY u.name;";
-
+        "SELECT u.id, u.name, COALESCE(SUM(a.hours), 0) AS total_hours "
+        "FROM users u "
+        "LEFT JOIN absences a "
+        " ON a.studentid = u.id "
+        " AND a.subjectid = ? "
+        " AND a.semesterid = ? "
+        "WHERE u.role = 'student' AND u.groupid = ? "
+        "GROUP BY u.id, u.name "
+        "ORDER BY u.name;";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getGroupSubjectAbsencesSummary: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getGroupSubjectAbsencesSummary: prepare error: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, subject_id);
-    sqlite3_bind_int(stmt, 2, semester_id);
-    sqlite3_bind_int(stmt, 3, group_id);
+    sqlite3_bind_int(stmt, 1, subjectId);
+    sqlite3_bind_int(stmt, 2, semesterId);
+    sqlite3_bind_int(stmt, 3, groupId);
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int student_id = sqlite3_column_int(stmt, 0);
+        int studentId = sqlite3_column_int(stmt, 0);
         const unsigned char* nameText = sqlite3_column_text(stmt, 1);
         int totalHours = sqlite3_column_int(stmt, 2);
-
         std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
-        outRows.emplace_back(student_id, name, totalHours);
+        outRows.emplace_back(studentId, name, totalHours);
     }
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getGroupSubjectAbsencesSummary: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
+        std::cerr << "[✗] getGroupSubjectAbsencesSummary: step error: " << sqlite3_errmsg(db) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
@@ -1707,84 +1260,170 @@ bool Database::getGroupSubjectAbsencesSummary(
     return true;
 }
 
-bool Database::addScheduleEntry(int group_id, int sub_group, int weekday,
-                                int lesson_number, int week_of_cycle,
-                                int subject_id, int teacher_id,
-                                const std::string& room) {
-    const char* sql =
-        "INSERT INTO schedule (group_id, sub_group, weekday, lesson_number, week_of_cycle, subject_id, teacher_id, room) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+// ===== Schedule =====
 
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+bool Database::addScheduleEntry(int groupId, int subgroup, int weekday,
+                                 int lessonNumber, int weekOfCycle,
+                                 int subjectId, int teacherId,
+                                 const std::string& room, const std::string& lessonType) {
+    if (!db) return false;
+
+    int finalGroupId = groupId;
+    int finalSubgroup = subgroup;
+
+    // If lecture, make it general (groupid = 0)
+    if (lessonType == "ЛК") {
+        finalGroupId = 0;
+        finalSubgroup = 0;
+    }
+
+    const char* sql =
+        "INSERT INTO schedule "
+        "(groupid, subgroup, weekday, lessonnumber, weekofcycle, "
+        "subjectid, teacherid, room, lessontype) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, group_id);
-    sqlite3_bind_int(stmt, 2, sub_group);
+    sqlite3_bind_int(stmt, 1, finalGroupId);
+    sqlite3_bind_int(stmt, 2, finalSubgroup);
     sqlite3_bind_int(stmt, 3, weekday);
-    sqlite3_bind_int(stmt, 4, lesson_number);
-    sqlite3_bind_int(stmt, 5, week_of_cycle);
-    sqlite3_bind_int(stmt, 6, subject_id);
-    sqlite3_bind_int(stmt, 7, teacher_id);
+    sqlite3_bind_int(stmt, 4, lessonNumber);
+    sqlite3_bind_int(stmt, 5, weekOfCycle);
+    sqlite3_bind_int(stmt, 6, subjectId);
+    sqlite3_bind_int(stmt, 7, teacherId);
     sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 9, lessonType.c_str(), -1, SQLITE_TRANSIENT);
 
     bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
     sqlite3_finalize(stmt);
     return ok;
 }
 
-
-bool Database::getScheduleForGroup(int group_id, int weekday, int week_of_cycle,
-    std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>>& rows)
-{
-    rows.clear();
-
-    const char* sql = R"(
-    SELECT
-    sch.id,
-    sch.lesson_number,
-    sch.sub_group,
-    subj.name,
-    sch.room,
-    COALESCE(sch.lesson_type, ''),
-    u.name AS teacher_name
-FROM schedule sch
-JOIN subjects subj ON sch.subject_id = subj.id
-JOIN users    u    ON sch.teacher_id = u.id
-WHERE (sch.group_id = ? OR sch.group_id = 0)
-  AND sch.weekday = ?
-  AND sch.week_of_cycle = ?
-ORDER BY sch.lesson_number, sch.sub_group
-
-)";
-
-
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getScheduleForGroup: " << sqlite3_errmsg(db_) << "\n";
+bool Database::deleteScheduleEntry(int scheduleId) {
+    if (!db) {
+        std::cerr << "[✗] deleteScheduleEntry: DB not connected\n";
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, group_id);
+    const char* sql = "DELETE FROM schedule WHERE id = ?;";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] deleteScheduleEntry: prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, scheduleId);
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+    if (!ok) {
+        std::cerr << "[✗] deleteScheduleEntry: step error: " << sqlite3_errmsg(db) << "\n";
+    }
+
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+bool Database::updateScheduleEntry(int scheduleId, int groupId, int subgroup, int weekday,
+                                    int lessonNumber, int weekOfCycle, int subjectId,
+                                    int teacherId, const std::string& room, const std::string& lessonType) {
+    if (!db) {
+        std::cerr << "[✗] updateScheduleEntry: DB not connected\n";
+        return false;
+    }
+
+    const char* sql = R"(
+        UPDATE schedule
+        SET groupid = ?,
+            subgroup = ?,
+            weekday = ?,
+            lessonnumber = ?,
+            weekofcycle = ?,
+            subjectid = ?,
+            teacherid = ?,
+            room = ?,
+            lessontype = ?
+        WHERE id = ?
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] updateScheduleEntry prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, groupId);
+    sqlite3_bind_int(stmt, 2, subgroup);
+    sqlite3_bind_int(stmt, 3, weekday);
+    sqlite3_bind_int(stmt, 4, lessonNumber);
+    sqlite3_bind_int(stmt, 5, weekOfCycle);
+    sqlite3_bind_int(stmt, 6, subjectId);
+    sqlite3_bind_int(stmt, 7, teacherId);
+    sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 9, lessonType.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 10, scheduleId);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc == SQLITE_DONE && sqlite3_changes(db) > 0) {
+        return true;
+    }
+
+    std::cerr << "[✗] updateScheduleEntry: failed to update entry with ID " << scheduleId << "\n";
+    return false;
+}
+
+bool Database::getScheduleForGroup(int groupId, int weekday, int weekOfCycle,
+                                    std::vector<std::tuple<int, int, int, std::string, std::string, std::string, std::string>>& rows) {
+    rows.clear();
+    const char* sql = R"(
+        SELECT
+            sch.id,
+            sch.lessonnumber,
+            sch.subgroup,
+            subj.name,
+            sch.room,
+            COALESCE(sch.lessontype, ''),
+            u.name AS teachername
+        FROM schedule sch
+        JOIN subjects subj ON sch.subjectid = subj.id
+        JOIN users u ON sch.teacherid = u.id
+        WHERE (sch.groupid = ? OR sch.groupid = 0)
+          AND sch.weekday = ?
+          AND sch.weekofcycle = ?
+        ORDER BY sch.lessonnumber, sch.subgroup
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] getScheduleForGroup: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, groupId);
     sqlite3_bind_int(stmt, 2, weekday);
-    sqlite3_bind_int(stmt, 3, week_of_cycle);
+    sqlite3_bind_int(stmt, 3, weekOfCycle);
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int id        = sqlite3_column_int(stmt, 0);
-        int lesson    = sqlite3_column_int(stmt, 1);
-        int sub_group  = sqlite3_column_int(stmt, 2);
-        const char* subj = (const char*)sqlite3_column_text(stmt, 3);
-        const char* room = (const char*)sqlite3_column_text(stmt, 4);
-        const char* ltype= (const char*)sqlite3_column_text(stmt, 5);
-        const char* tname= (const char*)sqlite3_column_text(stmt, 6);
+        int id = sqlite3_column_int(stmt, 0);
+        int lesson = sqlite3_column_int(stmt, 1);
+        int subgroup = sqlite3_column_int(stmt, 2);
+        const char* subj = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        const char* room = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        const char* ltype = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        const char* tname = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
 
         rows.emplace_back(
             id,
             lesson,
-            sub_group,
+            subgroup,
             subj ? subj : "",
             room ? room : "",
             ltype ? ltype : "",
@@ -1796,403 +1435,93 @@ ORDER BY sch.lesson_number, sch.sub_group
     return true;
 }
 
-
-
-bool Database::getStudentGroupAndSubgroup(int student_id,
-                                          int& out_group_id,
-                                          int& out_sub_group)
-{
-    out_group_id = 0;
-    out_sub_group = 0;
-
-    if (!db_) {
-        std::cerr << "[✗] getStudentGroupAndSubgroup: соединение с БД не открыто\n";
-        return false;
-    }
-
-    const char* sql =
-        "SELECT COALESCE(group_id, 0), COALESCE(sub_group, 0) "
-        "FROM users "
-        "WHERE id = ? AND role = 'student' "
-        "LIMIT 1;";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getStudentGroupAndsub_group: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, student_id);
-
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_ROW) {
-        out_group_id  = sqlite3_column_int(stmt, 0);
-        out_sub_group = sqlite3_column_int(stmt, 1);
-        sqlite3_finalize(stmt);
-        return true;
-    } else if (rc == SQLITE_DONE) {
-        sqlite3_finalize(stmt);
-        return false; // не студент или нет такой записи
-    } else {
-        std::cerr << "[✗] getStudentGroupAndsub_group: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-}
 bool Database::getScheduleForTeacherGroup(
-    int teacher_id,
-    int group_id,
-    std::vector<std::tuple<int,int,int,int,int,std::string>>& rows
-) {
+    int teacherId,
+    int groupId,
+    std::vector<std::tuple<int, int, int, int, int, std::string>>& rows) {
     rows.clear();
+
     const char* sql = R"(
         SELECT
-    s.id,
-    s.subject_id,
-    s.weekday,
-    s.lesson_number,
-    s.sub_group,
-    subj.name
-FROM schedule s
-JOIN subjects subj ON s.subject_id = subj.id
-WHERE s.teacher_id = ?
-  AND s.group_id = ?
-ORDER BY s.weekday, s.lesson_number, s.sub_group
-
+            s.id,
+            s.subjectid,
+            s.weekday,
+            s.lessonnumber,
+            s.subgroup,
+            subj.name
+        FROM schedule s
+        JOIN subjects subj ON s.subjectid = subj.id
+        WHERE s.teacherid = ?
+          AND s.groupid = ?
+        ORDER BY s.weekday, s.lessonnumber, s.subgroup
     )";
 
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, teacher_id);
-    sqlite3_bind_int(stmt, 2, group_id);
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, groupId);
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         int scheduleId = sqlite3_column_int(stmt, 0);
-        int subject_id  = sqlite3_column_int(stmt, 1);
-        int dayOfWeek  = sqlite3_column_int(stmt, 2);
+        int subjectId = sqlite3_column_int(stmt, 1);
+        int dayOfWeek = sqlite3_column_int(stmt, 2);
         int pairNumber = sqlite3_column_int(stmt, 3);
-        int sub_group   = sqlite3_column_int(stmt, 4);
+        int subgroup = sqlite3_column_int(stmt, 4);
         const unsigned char* subjText = sqlite3_column_text(stmt, 5);
         std::string subjectName = subjText ? reinterpret_cast<const char*>(subjText) : "";
-        rows.emplace_back(scheduleId, subject_id, dayOfWeek, pairNumber, sub_group, subjectName);
+
+        rows.emplace_back(scheduleId, subjectId, dayOfWeek, pairNumber, subgroup, subjectName);
     }
 
     sqlite3_finalize(stmt);
     return true;
 }
-
-
-bool Database::isScheduleEmpty(bool& outEmpty) {
-    outEmpty = true;
-    if (!db_) {
-        std::cerr << "[✗] isScheduleEmpty: БД не открыта\n";
-        return false;
-    }
-
-    const char* sql = "SELECT COUNT(*) FROM schedule;";
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        // Если таблицы schedule ещё нет, считаем, что расписание пустое
-        std::cerr << "[✗] isScheduleEmpty: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        outEmpty = true;
-        return true;
-    }
-
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_ROW) {
-        int cnt = sqlite3_column_int(stmt, 0);
-        outEmpty = (cnt == 0);
-        sqlite3_finalize(stmt);
-        return true;
-    } else {
-        std::cerr << "[✗] isScheduleEmpty: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-}
-
-bool Database::loadScheduleFromFile(const std::string& filePath) {
-    std::ifstream file(filePath);
-
-    if (!file.is_open()) {
-        std::cerr << "❌ Ошибка: не найден файл " << filePath << std::endl;
-        return false;
-    }
-
-    // Читаем весь файл в строку
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string sql = buffer.str();
-    file.close();
-
-    // Выполняем SQL
-    if (execute(sql)) {
-        std::cout << "✓ Расписание загружено из файла: " << filePath << std::endl;
-        return true;
-    } else {
-        std::cerr << "❌ Ошибка при выполнении SQL" << std::endl;
-        return false;
-    }
-}
-
-bool Database::loadGroupSchedule(int group_id, const std::string& filePath) {
-    std::cout << "📚 Загрузка расписания для группы 420" << (600 + group_id) << "..." << std::endl;
-
-    if (loadScheduleFromFile(filePath)) {
-        // Проверяем количество пар в расписании
-        std::string query = "SELECT COUNT(*) FROM schedule WHERE group_id = " + std::to_string(group_id);
-        sqlite3_stmt* stmt;
-
-        if (sqlite3_prepare_v2(db_, query.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
-            if (sqlite3_step(stmt) == SQLITE_ROW) {
-                int count = sqlite3_column_int(stmt, 0);
-                std::cout << "✓ Всего пар загружено: " << count << std::endl;
-            }
-            sqlite3_finalize(stmt);
-        }
-
-        return true;
-    }
-    return false;
-}
-
-// Вспомогательная функция: переводит строку "YYYY-MM-DD" в std::tm
-static bool parseDateISO(const std::string& s, std::tm& out) {
-    if (s.size() != 10) return false;
-    memset(&out, 0, sizeof(out));
-    out.tm_year = std::stoi(s.substr(0, 4)) - 1900;
-    out.tm_mon  = std::stoi(s.substr(5, 2)) - 1;   // 0–11
-    out.tm_mday = std::stoi(s.substr(8, 2));       // 1–31
-    out.tm_hour = 0;
-    out.tm_min  = 0;
-    out.tm_sec  = 0;
-    std::mktime(&out); // нормализуем
-    return true;
-}
-
-int Database::getweekofcycleForDate(const std::string& dateISO) {
-    // старт семестра: 2025-09-01
-    std::tm tmStart{};
-    parseDateISO("2025-09-01", tmStart);
-    std::time_t tStart = std::mktime(&tmStart);
-
-    std::tm tmDate{};
-    if (!parseDateISO(dateISO, tmDate)) {
-        return 1; // дефолт, если дата кривая
-    }
-    std::time_t tDate = std::mktime(&tmDate);
-
-    if (tDate < tStart) return 1;
-
-    // разница в днях
-    long diffDays = static_cast<long>((tDate - tStart) / (60 * 60 * 24));
-
-    // номер недели от начала семестра (0=первая неделя)
-    long weekIndex = diffDays / 7;
-
-    // цикл 1–4
-    int week_of_cycle = static_cast<int>((weekIndex % 4) + 1);
-    return week_of_cycle;
-}
-
-bool Database::getCycleWeeks(
-    std::vector<std::tuple<int,int,std::string,std::string>>& out) {
-    out.clear();
-    if (!db_) return false;
-
-    const char* sql =
-     "SELECT id, week_of_cycle, start_date, end_date "
-     "FROM cycle_weeks ORDER BY id;";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) return false;
-
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int id          = sqlite3_column_int(stmt, 0);
-        int wcycle      = sqlite3_column_int(stmt, 1);
-        const unsigned char* s = sqlite3_column_text(stmt, 2);
-        const unsigned char* e = sqlite3_column_text(stmt, 3);
-        std::string start = s ? reinterpret_cast<const char*>(s) : "";
-        std::string end   = e ? reinterpret_cast<const char*>(e) : "";
-        out.emplace_back(id, wcycle, start, end);
-    }
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-bool Database::getDateForWeekday(int week_of_cycle, int weekday, std::string& outDateISO) {
-    if (!db_) return false;
-    const char* sql = R"(
-SELECT start_date
-FROM cycle_weeks
-WHERE week_of_cycle = ?
-ORDER BY start_date
-LIMIT 1
-)";
-
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, week_of_cycle);
-
-    std::string start;
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_ROW) {
-        const char* s = (const char*)sqlite3_column_text(stmt, 0);
-        if (s) start = s;
-    }
-    sqlite3_finalize(stmt);
-
-    if (start.empty()) return false;
-
-    int y, m, d;
-    if (sscanf(start.c_str(), "%d-%d-%d", &y, &m, &d) != 3) return false;
-
-    d += weekday; // 0..5, предположим внутри одной недели
-
-    std::ostringstream oss;
-    oss << y << '-'
-        << std::setw(2) << std::setfill('0') << m << '-'
-        << std::setw(2) << std::setfill('0') << d;
-
-    outDateISO = oss.str();
-    return true;
-}
-
-bool Database::isScheduleSlotBusy(int group_id, int sub_group,
-                                  int weekday, int lesson_number, int week_of_cycle) {
-    if (!db_) return false;
-
-    const char* sql = R"(
-        SELECT COUNT(*)
-        FROM schedule
-        WHERE group_id = ?
-  AND weekday = ?
-  AND lesson_number = ?
-  AND week_of_cycle = ?
-  AND (sub_group = ? OR sub_group = 0)
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) return false;
-
-    sqlite3_bind_int(stmt, 1, group_id);
-    sqlite3_bind_int(stmt, 2, weekday);
-    sqlite3_bind_int(stmt, 3, lesson_number);
-    sqlite3_bind_int(stmt, 4, week_of_cycle);
-    sqlite3_bind_int(stmt, 5, sub_group);
-    sqlite3_bind_int(stmt, 6, sub_group);
-
-    int count = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        count = sqlite3_column_int(stmt, 0);
-    }
-    sqlite3_finalize(stmt);
-    return count > 0;
-}
-
-// bool Database::addScheduleEntry(int group_id, int sub_group, int weekday, int lesson_number,
-//                                 int week_of_cycle, int subject_id, int teacher_id,
-//                                 const std::string& room, const std::string& lesson_type ) {
-//     if (!db_) return false;
-//
-//     int realgroup_id = group_id;
-//     int realsub_group = sub_group;
-//     if (lesson_type == "ЛК") {
-//         realgroup_id = 0;
-//         realsub_group = 0;
-//     }
-//
-//
-//     const char* sql = R"(
-//         INSERT INTO schedule
-//             (group_id, sub_group, weekday, lesson_number,
-//              week_of_cycle, subject_id, teacher_id, room, lesson_type)
-//         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-//     )";
-//
-//     sqlite3_stmt* stmt = nullptr;
-//     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-//     if (rc != SQLITE_OK) {
-//         std::cerr << "[✗] addScheduleEntry: " << sqlite3_errmsg(db_) << "\n";
-//         return false;
-//     }
-//
-//     sqlite3_bind_int(stmt, 1, realgroup_id);
-//     sqlite3_bind_int(stmt, 2, realsub_group);
-//     sqlite3_bind_int(stmt, 3, weekday);
-//     sqlite3_bind_int(stmt, 4, lesson_number);
-//     sqlite3_bind_int(stmt, 5, week_of_cycle);
-//     sqlite3_bind_int(stmt, 6, subject_id);
-//     sqlite3_bind_int(stmt, 7, teacher_id);
-//     sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_TRANSIENT);
-//     sqlite3_bind_text(stmt, 9, lesson_type .c_str(), -1, SQLITE_TRANSIENT);
-//
-//     rc = sqlite3_step(stmt);
-//     bool ok = (rc == SQLITE_DONE);
-//     sqlite3_finalize(stmt);
-//     return ok;
-// }
 
 bool Database::getScheduleForTeacherGroupWeek(
-    int teacher_Id,
-    int group_Id,
-    int week_Of_Cycle,
-    int studentSub_group,
-    std::vector<std::tuple<int,int,int,int,int,std::string,std::string>>& outRows
-) {
+    int teacherId,
+    int groupId,
+    int weekOfCycle,
+    int studentSubgroup,
+    std::vector<std::tuple<int, int, int, int, int, std::string, std::string>>& outRows) {
     outRows.clear();
     if (!isConnected()) return false;
 
     const char* sql = R"SQL(
         SELECT sch.id,
-               sch.subject_id,
+               sch.subjectid,
                sch.weekday,
-               sch.lesson_number,
-               sch.sub_group,
+               sch.lessonnumber,
+               sch.subgroup,
                subj.name,
-               COALESCE(sch.lesson_type, '')
+               COALESCE(sch.lessontype, '')
         FROM schedule sch
-        JOIN subjects subj ON sch.subject_id = subj.id
-        WHERE sch.teacher_id = ?
-          AND sch.group_id   = ?
-          AND sch.week_of_cycle = ?
-          AND (sch.sub_group = 0 OR sch.sub_group = ?)
-        ORDER BY sch.weekday, sch.lesson_number, sch.sub_group
+        JOIN subjects subj ON sch.subjectid = subj.id
+        WHERE sch.teacherid = ?
+          AND sch.groupid = ?
+          AND sch.weekofcycle = ?
+          AND (sch.subgroup = 0 OR sch.subgroup = ?)
+        ORDER BY sch.weekday, sch.lessonnumber, sch.subgroup
     )SQL";
 
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
-    sqlite3_bind_int(stmt, 1, teacher_Id);
-    sqlite3_bind_int(stmt, 2, group_Id);
-    sqlite3_bind_int(stmt, 3, week_Of_Cycle);
-    sqlite3_bind_int(stmt, 4, studentSub_group);
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, groupId);
+    sqlite3_bind_int(stmt, 3, weekOfCycle);
+    sqlite3_bind_int(stmt, 4, studentSubgroup);
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int scheduleId   = sqlite3_column_int(stmt, 0);
-        int subjectId    = sqlite3_column_int(stmt, 1);
-        int weekday      = sqlite3_column_int(stmt, 2);
+        int scheduleId = sqlite3_column_int(stmt, 0);
+        int subjectId = sqlite3_column_int(stmt, 1);
+        int weekday = sqlite3_column_int(stmt, 2);
         int lessonNumber = sqlite3_column_int(stmt, 3);
-        int subgroup     = sqlite3_column_int(stmt, 4);
-
+        int subgroup = sqlite3_column_int(stmt, 4);
         const char* subjName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
-        const char* ltype    = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        const char* ltype = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
 
         outRows.emplace_back(
             scheduleId,
@@ -2209,98 +1538,29 @@ bool Database::getScheduleForTeacherGroupWeek(
     return true;
 }
 
-bool Database::addLectureForAllGroups(int basegroup_id, int sub_group,
-                                      int weekday, int lesson_number, int week_of_cycle,
-                                      int subject_id, int teacher_id,
-                                      const std::string& room, const std::string& lesson_type ) {
-    if (!db_) return false;
-    if (lesson_type != "ЛК" || sub_group != 0) {
-        return true; // не лекция или не общая — ничего не делаем
-    }
-
-    // получаем все группы
-    std::vector<std::pair<int,std::string>> groups;
-    if (!getAllGroups(groups) || groups.empty()) {
-        return false;
-    }
-
-    bool okAll = true;
-    for (const auto& g : groups) {
-        int gid = g.first;
-        if (gid == basegroup_id) continue;
-
-        // не затираем, если там уже что-то стоит
-        if (isScheduleSlotBusy(gid, sub_group, weekday, lesson_number, week_of_cycle)) {
-            continue;
-        }
-
-        if (!addScheduleEntry(gid, sub_group, weekday, lesson_number,
-                              week_of_cycle, subject_id, teacher_id,
-                              room, lesson_type )) {
-            okAll = false;
-                              }
-    }
-    return okAll;
-}
-
-bool Database::deleteScheduleEntry(int scheduleId) {
-    if (!db_) {
-        std::cerr << "[✗] deleteScheduleEntry: БД не открыта\n";
-        return false;
-    }
-
-    const char* sql = "DELETE FROM schedule WHERE id = ?;";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] deleteScheduleEntry: prepare error: "
-                  << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, scheduleId);
-
-    rc = sqlite3_step(stmt);
-    bool ok = (rc == SQLITE_DONE);
-    if (!ok) {
-        std::cerr << "[✗] deleteScheduleEntry: step error: "
-                  << sqlite3_errmsg(db_) << "\n";
-    }
-
-    sqlite3_finalize(stmt);
-    return ok;
-}
-
-// ===== ПРОВЕРКА ЗАНЯТОСТИ ПРЕПОДАВАТЕЛЯ =====
-bool Database::isTeacherBusy(int teacher_id, int weekday,
-                              int lesson_number, int week_of_cycle) {
-    if (!db_) return false;
+bool Database::isScheduleSlotBusy(int groupId, int subgroup,
+                                   int weekday, int lessonNumber, int weekOfCycle) {
+    if (!db) return false;
 
     const char* sql = R"(
         SELECT COUNT(*)
         FROM schedule
-        WHERE teacher_id = ?
-<<<<<<< HEAD
-  AND weekday = ?
-  AND lesson_number = ?
-  AND week_of_cycle = ?
-  AND (id <> ? OR ? = 0)  // Более понятный порядок условий
-=======
+        WHERE groupid = ?
           AND weekday = ?
-          AND lesson_number = ?
-          AND week_of_cycle = ?
->>>>>>> parent of b351274 (закрыл блок А)
+          AND lessonnumber = ?
+          AND weekofcycle = ?
+          AND (subgroup = ? OR subgroup = 0)
     )";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) return false;
 
-    sqlite3_bind_int(stmt, 1, teacher_id);
+    sqlite3_bind_int(stmt, 1, groupId);
     sqlite3_bind_int(stmt, 2, weekday);
-    sqlite3_bind_int(stmt, 3, lesson_number);
-    sqlite3_bind_int(stmt, 4, week_of_cycle);
+    sqlite3_bind_int(stmt, 3, lessonNumber);
+    sqlite3_bind_int(stmt, 4, weekOfCycle);
+    sqlite3_bind_int(stmt, 5, subgroup);
 
     int count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -2311,37 +1571,91 @@ bool Database::isTeacherBusy(int teacher_id, int weekday,
     return count > 0;
 }
 
-// ===== ПРОВЕРКА ЗАНЯТОСТИ АУДИТОРИИ =====
+bool Database::isScheduleEmpty(bool& outEmpty) {
+    outEmpty = true;
+    if (!db) {
+        std::cerr << "[✗] isScheduleEmpty: DB not open\n";
+        return false;
+    }
+
+    const char* sql = "SELECT COUNT(*) FROM schedule;";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] isScheduleEmpty: prepare error: " << sqlite3_errmsg(db) << "\n";
+        outEmpty = true;
+        return true;
+    }
+
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        int cnt = sqlite3_column_int(stmt, 0);
+        outEmpty = (cnt == 0);
+        sqlite3_finalize(stmt);
+        return true;
+    } else {
+        std::cerr << "[✗] isScheduleEmpty: step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+}
+
+// ===== Teacher Availability Checks =====
+
+bool Database::isTeacherBusy(int teacherId, int weekday,
+                              int lessonNumber, int weekOfCycle) {
+    if (!db) return false;
+
+    const char* sql = R"(
+        SELECT COUNT(*)
+        FROM schedule
+        WHERE teacherid = ?
+          AND weekday = ?
+          AND lessonnumber = ?
+          AND weekofcycle = ?
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, teacherId);
+    sqlite3_bind_int(stmt, 2, weekday);
+    sqlite3_bind_int(stmt, 3, lessonNumber);
+    sqlite3_bind_int(stmt, 4, weekOfCycle);
+
+    int count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return count > 0;
+}
+
 bool Database::isRoomBusy(const std::string& room, int weekday,
-                          int lesson_number, int week_of_cycle) {
-    if (!db_) return false;
+                          int lessonNumber, int weekOfCycle) {
+    if (!db) return false;
 
     const char* sql = R"(
         SELECT COUNT(*)
         FROM schedule
         WHERE room = ?
-<<<<<<< HEAD
-  AND weekday = ?
-  AND lesson_number = ?
-  AND week_of_cycle = ?
-  AND room IS NOT NULL
-  AND room <> ''
-  AND (id <> ? OR ? = 0)  // Более понятный порядок условий
-=======
           AND weekday = ?
-          AND lesson_number = ?
-          AND week_of_cycle = ?
->>>>>>> parent of b351274 (закрыл блок А)
+          AND lessonnumber = ?
+          AND weekofcycle = ?
+          AND room IS NOT NULL
+          AND room <> ''
     )";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_text(stmt, 1, room.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_int(stmt, 2, weekday);
-    sqlite3_bind_int(stmt, 3, lesson_number);
-    sqlite3_bind_int(stmt, 4, week_of_cycle);
+    sqlite3_bind_int(stmt, 3, lessonNumber);
+    sqlite3_bind_int(stmt, 4, weekOfCycle);
 
     int count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -2352,213 +1666,215 @@ bool Database::isRoomBusy(const std::string& room, int weekday,
     return count > 0;
 }
 
-// ===== ПОЛУЧИТЬ ПРЕПОДАВАТЕЛЕЙ С ПРЕДМЕТАМИ =====
-bool Database::getTeachersWithSubjects(
-    std::vector<std::tuple<int, std::string, std::string>>& outTeachers) {
+// ===== Lessons (Simple Schedule Entries) =====
 
-    outTeachers.clear();
-    if (!db_) return false;
+bool Database::addLesson(int groupId,
+                         int subjectId,
+                         int teacherId,
+                         const std::string& date,
+                         int timeSlot) {
+    if (!db) return false;
 
-    const char* sql = R"(
-        SELECT
-            u.id,
-            u.name,
-            GROUP_CONCAT(s.name, ', ') AS subjects
-        FROM users u
-        LEFT JOIN teacher_subjects ts ON u.id = ts.teacher_id
-        LEFT JOIN subjects s ON ts.subject_id = s.id
-        WHERE u.role = 'teacher'
-        GROUP BY u.id, u.name
-        ORDER BY u.name
-    )";
-
+    const char* sql =
+        "INSERT INTO lessons (groupid, subjectid, teacherid, date, timeslot) "
+        "VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) return false;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        return false;
 
+    sqlite3_bind_int(stmt, 1, groupId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, teacherId);
+    sqlite3_bind_text(stmt, 4, date.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 5, timeSlot);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
+bool Database::getLessonsForGroupAndDate(
+    int groupId,
+    const std::string& date,
+    std::vector<std::tuple<int, int, std::string>>& outLessons) {
+    outLessons.clear();
+    if (!db) return false;
+
+    const char* sql =
+        "SELECT l.timeslot, s.id, s.name "
+        "FROM lessons l "
+        "JOIN subjects s ON s.id = l.subjectid "
+        "WHERE l.groupid = ? AND l.date = ? "
+        "ORDER BY l.timeslot;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        return false;
+
+    sqlite3_bind_int(stmt, 1, groupId);
+    sqlite3_bind_text(stmt, 2, date.c_str(), -1, SQLITE_TRANSIENT);
+
+    int rc;
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
-        const unsigned char* subjText = sqlite3_column_text(stmt, 2);
+        int timeSlot = sqlite3_column_int(stmt, 0);
+        int subjectId = sqlite3_column_int(stmt, 1);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 2);
+        std::string subjectName = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        outLessons.emplace_back(timeSlot, subjectId, subjectName);
+    }
 
-        std::string name = nameText ?
-            reinterpret_cast<const char*>(nameText) : "";
-        std::string subjects = subjText ?
-            reinterpret_cast<const char*>(subjText) : "Нет предметов";
-
-        outTeachers.emplace_back(id, name, subjects);
+    if (rc != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return false;
     }
 
     sqlite3_finalize(stmt);
     return true;
 }
 
-bool Database::addScheduleEntry(int group_id, int sub_group, int weekday, int lesson_number,
-                                int week_of_cycle, int subject_id, int teacher_id,
-                                const std::string& room, const std::string& lesson_type ) {
-    if (!db_) return false;
+// ===== Cycle Weeks Utilities =====
 
-    // Если лекция — записываем её как общую (group_id = 0, sub_group = 0)
-    int finalgroup_id = group_id;
-    int finalsub_group = sub_group;
-    if (lesson_type == "ЛК") {
-        finalgroup_id = 0;
-        finalsub_group = 0;
-    }
+bool Database::getCycleWeeks(
+    std::vector<std::tuple<int, int, std::string, std::string>>& out) {
+    out.clear();
+    if (!db) return false;
 
-    const char* sql = R"(
-        INSERT INTO schedule
-        (group_id, sub_group, weekday, lesson_number, week_of_cycle,
-         subject_id, teacher_id, room, lesson_type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-    )";
-
+    const char* sql =
+        "SELECT id, weekofcycle, startdate, enddate "
+        "FROM cycleweeks ORDER BY id;";
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) return false;
 
-    sqlite3_bind_int(stmt, 1, finalgroup_id);
-    sqlite3_bind_int(stmt, 2, finalsub_group);
-    sqlite3_bind_int(stmt, 3, weekday);
-    sqlite3_bind_int(stmt, 4, lesson_number);
-    sqlite3_bind_int(stmt, 5, week_of_cycle);
-    sqlite3_bind_int(stmt, 6, subject_id);
-    sqlite3_bind_int(stmt, 7, teacher_id);
-    sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 9, lesson_type .c_str(), -1, SQLITE_TRANSIENT);
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        int weekNumber = sqlite3_column_int(stmt, 1);
+        const unsigned char* s = sqlite3_column_text(stmt, 2);
+        const unsigned char* e = sqlite3_column_text(stmt, 3);
+        std::string start = s ? reinterpret_cast<const char*>(s) : "";
+        std::string end = e ? reinterpret_cast<const char*>(e) : "";
+        out.emplace_back(id, weekNumber, start, end);
+    }
 
-    rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    return rc == SQLITE_DONE;
+    return true;
 }
 
-bool Database::deleteGrade(int grade_id) {
-    if (!db_) {
-        std::cerr << "[✗] deleteGrade: БД не подключена\n";
-        return false;
-    }
-    const char* sql = "DELETE FROM grades WHERE id = ?";
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "[✗] deleteGrade prepare error: " << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
-    sqlite3_bind_int(stmt, 1, grade_id);
-    int rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+int Database::getWeekOfCycleForDate(const std::string& dateISO) {
+    std::tm tmStart{};
+    parseDateISO("2025-09-01", tmStart);
+    std::time_t tStart = std::mktime(&tmStart);
 
-    if (rc == SQLITE_DONE && sqlite3_changes(db_) > 0) {
-        return true;
-    }
-    return false;
-}
-bool Database::updateScheduleEntry(int schedule_id, int group_id, int sub_group, int weekday,
-                                   int lesson_number, int week_of_cycle, int subject_id,
-                                   int teacher_id, const std::string& room, const std::string& lesson_type) {
-    if (!db_) {
-        std::cerr << "[✗] updateScheduleEntry: БД не подключена\n";
-        return false;
+    std::tm tmDate{};
+    if (!parseDateISO(dateISO, tmDate)) {
+        return 1;  // Default if date parsing fails
     }
 
-    const char* sql = R"(
-        UPDATE schedule
-SET group_id = ?,
-    sub_group = ?,
-    weekday = ?,
-    lesson_number = ?,
-    week_of_cycle = ?,
-    subject_id = ?,
-    teacher_id = ?,
-    room = ?,
-    lesson_type = ?
-WHERE id = ?
-  AND NOT EXISTS (
-    SELECT 1 FROM schedule
-    WHERE group_id = ?
-      AND sub_group = ?
-      AND weekday = ?
-      AND lesson_number = ?
-      AND week_of_cycle = ?
-      AND id <> ?  // Исключаем текущую запись
-  )
-    )";
+    std::time_t tDate = std::mktime(&tmDate);
 
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] updateScheduleEntry prepare error: " << sqlite3_errmsg(db_) << "\n";
-        return false;
-    }
+    if (tDate < tStart) return 1;
 
-    sqlite3_bind_int(stmt, 1, group_id);
-    sqlite3_bind_int(stmt, 2, sub_group);
-    sqlite3_bind_int(stmt, 3, weekday);
-    sqlite3_bind_int(stmt, 4, lesson_number);
-    sqlite3_bind_int(stmt, 5, week_of_cycle);
-    sqlite3_bind_int(stmt, 6, subject_id);
-    sqlite3_bind_int(stmt, 7, teacher_id);
-    sqlite3_bind_text(stmt, 8, room.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 9, lesson_type.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 10, schedule_id);
+    long diffDays = static_cast<long>((tDate - tStart) / (60 * 60 * 24));
+    long weekIndex = diffDays / 7;
+    int weekOfCycle = static_cast<int>((weekIndex % 4) + 1);
 
-    rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-
-    if (rc == SQLITE_DONE && sqlite3_changes(db_) > 0) {
-        return true;
-    }
-
-    std::cerr << "[✗] updateScheduleEntry: не удалось обновить запись с ID " << schedule_id << "\n";
-    return false;
+    return weekOfCycle;
 }
 
-int Database::getWeekIdByDate(const std::string& dateISO)
-{
-    if (!db_) return 0;
+int Database::getWeekIdByDate(const std::string& dateISO) {
+    if (!db) return 0;
 
     const char* sql = R"(
         SELECT id
         FROM cycleweeks
-        WHERE start_date <= ? AND end_date >= ?
-        ORDER BY start_date
+        WHERE startdate <= ? AND enddate >= ?
+        ORDER BY startdate
         LIMIT 1
     )";
 
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return 0;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0;
 
     sqlite3_bind_text(stmt, 1, dateISO.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, dateISO.c_str(), -1, SQLITE_TRANSIENT);
 
     int id = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW)
-        id = sqlite3_column_int(stmt, 0);
+    if (sqlite3_step(stmt) == SQLITE_ROW) id = sqlite3_column_int(stmt, 0);
 
     sqlite3_finalize(stmt);
     return id;
 }
+
 int Database::getWeekOfCycleByWeekId(int weekId) {
-    if (!db_) return 0;
-    const char* sql = "SELECT week_of_cycle FROM cycleweeks WHERE id = ? LIMIT 1";
+    if (!db) return 0;
+
+    const char* sql =
+        "SELECT weekofcycle FROM cycleweeks WHERE id = ? LIMIT 1";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0;
 
     sqlite3_bind_int(stmt, 1, weekId);
 
-    int w = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW) w = sqlite3_column_int(stmt, 0);
+    int weekNumber = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        weekNumber = sqlite3_column_int(stmt, 0);
+    }
+
     sqlite3_finalize(stmt);
-    return w;
+    return weekNumber > 0 ? weekNumber : 0;
+}
+
+bool Database::getDateForWeekday(int weekOfCycle, int weekday, std::string& outDateISO) {
+    if (!db) return false;
+
+    const char* sql = R"(
+        SELECT startdate
+        FROM cycleweeks
+        WHERE weekofcycle = ?
+        ORDER BY id
+        LIMIT 1
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, weekOfCycle);
+
+    std::string start;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* s = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        if (s) start = s;
+    }
+
+    sqlite3_finalize(stmt);
+    if (start.empty()) return false;
+
+    int y, m, d;
+    if (sscanf(start.c_str(), "%d-%d-%d", &y, &m, &d) != 3) return false;
+
+    d += weekday;
+
+    std::ostringstream oss;
+    oss << y << '-'
+        << std::setw(2) << std::setfill('0') << m << '-'
+        << std::setw(2) << std::setfill('0') << d;
+
+    outDateISO = oss.str();
+    return true;
 }
 
 bool Database::getDateForWeekdayByWeekId(int weekId, int weekday, std::string& outDateISO) {
     outDateISO.clear();
-    if (!db_) return false;
+    if (!db) return false;
 
-    const char* sql = "SELECT start_date FROM cycleweeks WHERE id = ? LIMIT 1";
+    if (weekday < 0 || weekday > 6) return false;
+
+    const char* sql =
+        "SELECT startdate FROM cycleweeks WHERE id = ? LIMIT 1";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, weekId);
 
@@ -2567,20 +1883,539 @@ bool Database::getDateForWeekdayByWeekId(int weekId, int weekday, std::string& o
         const char* s = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
         if (s) start = s;
     }
+
     sqlite3_finalize(stmt);
+    if (start.size() != 10) return false;  // YYYY-MM-DD
 
-    if (start.empty()) return false;
+    std::tm tmStart{};
+    tmStart.tm_year = std::stoi(start.substr(0, 4)) - 1900;
+    tmStart.tm_mon = std::stoi(start.substr(5, 2)) - 1;
+    tmStart.tm_mday = std::stoi(start.substr(8, 2));
+    tmStart.tm_hour = 0;
+    tmStart.tm_min = 0;
+    tmStart.tm_sec = 0;
 
-    int y, m, d;
-    if (sscanf(start.c_str(), "%d-%d-%d", &y, &m, &d) != 3) return false;
+    std::time_t t = std::mktime(&tmStart);
+    if (t == (std::time_t)-1) return false;
 
-    d += weekday; // weekday 0..5
+    t += static_cast<long>(weekday) * 24 * 60 * 60;
+
+    std::tm* tmRes = std::localtime(&t);
+    if (!tmRes) return false;
+
     std::ostringstream oss;
-    oss << y << "-" << std::setw(2) << std::setfill('0') << m
-        << "-" << std::setw(2) << std::setfill('0') << d;
+    oss << (tmRes->tm_year + 1900) << "-"
+        << std::setw(2) << std::setfill('0') << (tmRes->tm_mon + 1) << "-"
+        << std::setw(2) << std::setfill('0') << tmRes->tm_mday;
+
     outDateISO = oss.str();
     return true;
 }
 
+// ===== File I/O for Schedule =====
 
+bool Database::loadScheduleFromFile(const std::string& filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        std::cerr << "❌ Error: file not found " << filePath << std::endl;
+        return false;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string sql = buffer.str();
+
+    if (execute(sql)) {
+        std::cout << "✓ Schedule loaded from file: " << filePath << std::endl;
+        return true;
+    }
+
+    std::cerr << "❌ Error executing SQL" << std::endl;
+    return false;
+}
+
+
+bool Database::loadGroupSchedule(int groupId, const std::string& filePath) {
+    std::cout << "📚 Loading schedule for group 420" << (600 + groupId) << "..." << std::endl;
+    if (loadScheduleFromFile(filePath)) {
+        std::string query = "SELECT COUNT(*) FROM schedule WHERE groupid = " + std::to_string(groupId);
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                int count = sqlite3_column_int(stmt, 0);
+                std::cout << "✓ Total lessons loaded: " << count << std::endl;
+            }
+            sqlite3_finalize(stmt);
+        }
+        return true;
+    }
+    return false;
+}
+
+// ===== DB Statistics & Debug =====
+
+void Database::dumpDbStats() {
+    std::cerr << "[DB] file: " << fileName << "\n";
+    if (!db) {
+        std::cerr << "[DB] not connected\n";
+        return;
+    }
+
+    struct TableInfo {
+        const char* name;
+    };
+
+    const TableInfo tables[] = {
+        {"users"},
+        {"groups"},
+        {"cycleweeks"},
+        {"subjects"},
+        {"schedule"}
+    };
+
+    for (const auto& t : tables) {
+        std::string sql = "SELECT COUNT(*) FROM ";
+        sql += t.name;
+        sql += ";";
+        sqlite3_stmt* stmt = nullptr;
+        int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            std::cerr << "[DB] " << t.name << ": error\n";
+            sqlite3_finalize(stmt);
+            continue;
+        }
+        rc = sqlite3_step(stmt);
+        if (rc == SQLITE_ROW) {
+            const int cnt = sqlite3_column_int(stmt, 0);
+            std::cerr << "[DB] " << t.name << ": " << cnt << "\n";
+        } else {
+            std::cerr << "[DB] " << t.name << ": error\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+void Database::dumpSchemaAndCounts() {
+    std::cerr << "[DB schema] file: " << fileName << "\n";
+    if (!db) {
+        std::cerr << "[DB schema] not connected\n";
+        return;
+    }
+
+    std::cerr << "[DB schema] tables:";
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql =
+        "SELECT name FROM sqlite_master "
+        "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
+        "ORDER BY name;";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        bool any = false;
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            if (!name) continue;
+            std::cerr << (any ? ", " : " ") << name;
+            any = true;
+        }
+        if (!any) std::cerr << " ";
+    } else {
+        std::cerr << " ";
+    }
+
+    std::cerr << "\n";
+    sqlite3_finalize(stmt);
+
+    const char* tables[] = {
+        "users",
+        "groups",
+        "semesters",
+        "subjects",
+        "teachersubjects",
+        "teachergroups",
+        "cycleweeks",
+        "schedule",
+        "grades",
+        "gradechanges",
+        "absences"
+    };
+
+    for (const char* t : tables) {
+        std::string sql = "SELECT COUNT(*) FROM ";
+        sql += t;
+        sql += ";";
+        sqlite3_stmt* stmt = nullptr;
+
+        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                std::cerr << "[DB schema] " << t << ": " << sqlite3_column_int(stmt, 0) << " rows\n";
+            } else {
+                std::cerr << "[DB schema] " << t << ": error\n";
+            }
+        } else {
+            std::cerr << "[DB schema] " << t << ": error\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+// ===== Teachers with Subjects =====
+
+bool Database::getTeachersWithSubjects(
+    std::vector<std::tuple<int, std::string, std::string>>& outTeachers) {
+    outTeachers.clear();
+    if (!db) return false;
+
+    const char* sql = R"(
+        SELECT
+            u.id,
+            u.name,
+            GROUP_CONCAT(s.name, ', ') AS subjects
+        FROM users u
+        LEFT JOIN teachersubjects ts ON u.id = ts.teacherid
+        LEFT JOIN subjects s ON ts.subjectid = s.id
+        WHERE u.role = 'teacher'
+        GROUP BY u.id, u.name
+        ORDER BY u.name
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) return false;
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        const unsigned char* subjText = sqlite3_column_text(stmt, 2);
+        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        std::string subjects = subjText ? reinterpret_cast<const char*>(subjText) : "No subjects";
+        outTeachers.emplace_back(id, name, subjects);
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+bool Database::insertUser(const std::string& username,
+                          const std::string& password,
+                          const std::string& role,
+                          const std::string& name,
+                          int groupId,
+                          int subgroup)
+{
+    if (!isConnected()) {
+        std::cerr << "[✗] insertUser: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "INSERT INTO users (username, password, role, name, groupid, subgroup) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] insertUser prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, password.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, role.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, name.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (groupId <= 0) sqlite3_bind_null(stmt, 5);
+    else sqlite3_bind_int(stmt, 5, groupId);
+
+    sqlite3_bind_int(stmt, 6, subgroup);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] insertUser step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::deleteUserById(int userId)
+{
+    if (!isConnected()) {
+        std::cerr << "[✗] deleteUserById: DB not connected\n";
+        return false;
+    }
+
+    const char* sql = "DELETE FROM users WHERE id = ?;";
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] deleteUserById prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, userId);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] deleteUserById step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    const int changes = sqlite3_changes(db);
+    sqlite3_finalize(stmt);
+
+    return changes > 0;
+}
+
+bool Database::getGroupsForTeacher(int teacherId,
+                                  std::vector<std::pair<int, std::string>>& outGroups)
+{
+    outGroups.clear();
+
+    if (!isConnected()) {
+        std::cerr << "[✗] getGroupsForTeacher: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT g.id, g.name "
+        "FROM teachergroups tg "
+        "JOIN groups g ON g.id = tg.groupid "
+        "WHERE tg.teacherid = ? "
+        "ORDER BY g.id;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] getGroupsForTeacher prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, teacherId);
+
+    int rc = SQLITE_OK;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        const std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        outGroups.emplace_back(id, name);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] getGroupsForTeacher step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::addAbsence(int studentId,
+                          int subjectId,
+                          int semesterId,
+                          int hours,
+                          const std::string& date,
+                          const std::string& type)
+{
+    if (!isConnected()) {
+        std::cerr << "[✗] addAbsence: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "INSERT INTO absences (studentid, subjectid, semesterid, hours, date, type) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] addAbsence prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
+    sqlite3_bind_int(stmt, 4, hours);
+    sqlite3_bind_text(stmt, 5, date.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 6, type.c_str(), -1, SQLITE_TRANSIENT);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] addAbsence step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::getStudentAbsencesForSemester(
+    int studentId,
+    int semesterId,
+    std::vector<std::tuple<std::string, int, std::string, std::string>>& outAbsences)
+{
+    outAbsences.clear();
+
+    if (!isConnected()) {
+        std::cerr << "[✗] getStudentAbsencesForSemester: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT s.name, a.hours, COALESCE(a.date, ''), COALESCE(a.type, '') "
+        "FROM absences a "
+        "JOIN subjects s ON a.subjectid = s.id "
+        "WHERE a.studentid = ? AND a.semesterid = ? "
+        "ORDER BY a.date;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] getStudentAbsencesForSemester prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, semesterId);
+
+    int rc = SQLITE_OK;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const unsigned char* subjText = sqlite3_column_text(stmt, 0);
+        const int hours = sqlite3_column_int(stmt, 1);
+        const unsigned char* dateText = sqlite3_column_text(stmt, 2);
+        const unsigned char* typeText = sqlite3_column_text(stmt, 3);
+
+        const std::string subject = subjText ? reinterpret_cast<const char*>(subjText) : "";
+        const std::string date = dateText ? reinterpret_cast<const char*>(dateText) : "";
+        const std::string type = typeText ? reinterpret_cast<const char*>(typeText) : "";
+
+        outAbsences.emplace_back(subject, hours, date, type);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] getStudentAbsencesForSemester step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::getStudentTotalAbsences(int studentId, int semesterId, int& outTotalHours)
+{
+    outTotalHours = 0;
+
+    if (!isConnected()) {
+        return false;
+    }
+
+    const char* sql =
+        "SELECT COALESCE(SUM(hours), 0) "
+        "FROM absences "
+        "WHERE studentid = ? AND semesterid = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, semesterId);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        outTotalHours = sqlite3_column_int(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool Database::updateGrade(int gradeId,
+                           int newValue,
+                           const std::string& newDate,
+                           const std::string& newType)
+{
+    if (!isConnected()) {
+        std::cerr << "[✗] updateGrade: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "UPDATE grades "
+        "SET value = ?, date = ?, gradetype = ? "
+        "WHERE id = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] updateGrade prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, newValue);
+    sqlite3_bind_text(stmt, 2, newDate.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, newType.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 4, gradeId);
+
+    const int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc == SQLITE_DONE && sqlite3_changes(db) > 0) {
+        return true;
+    }
+
+    return false;
+}
+
+bool Database::getGradesForStudentSubject(
+    int studentId,
+    int subjectId,
+    int semesterId,
+    std::vector<std::tuple<int, int, std::string, std::string>>& outGrades)
+{
+    outGrades.clear();
+
+    if (!isConnected()) {
+        std::cerr << "[✗] getGradesForStudentSubject: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT id, value, COALESCE(date, ''), COALESCE(gradetype, '') "
+        "FROM grades "
+        "WHERE studentid = ? AND subjectid = ? AND semesterid = ? "
+        "ORDER BY date;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] getGradesForStudentSubject prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, studentId);
+    sqlite3_bind_int(stmt, 2, subjectId);
+    sqlite3_bind_int(stmt, 3, semesterId);
+
+    int rc = SQLITE_OK;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const int gradeId = sqlite3_column_int(stmt, 0);
+        const int value = sqlite3_column_int(stmt, 1);
+        const unsigned char* dateText = sqlite3_column_text(stmt, 2);
+        const unsigned char* typeText = sqlite3_column_text(stmt, 3);
+
+        const std::string date = dateText ? reinterpret_cast<const char*>(dateText) : "";
+        const std::string type = typeText ? reinterpret_cast<const char*>(typeText) : "";
+
+        outGrades.emplace_back(gradeId, value, date, type);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] getGradesForStudentSubject step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
 
