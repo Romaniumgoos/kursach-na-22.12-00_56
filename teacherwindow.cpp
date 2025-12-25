@@ -37,7 +37,7 @@
 
 void TeacherWindow::onStatsStudentSelected()
 {
-    if (!statsGradesTable || !statsAbsencesTable) return;
+    if (!statsGradesTable) return;
 
     int studentId = 0;
     QString studentLabel;
@@ -45,12 +45,6 @@ void TeacherWindow::onStatsStudentSelected()
     if (statsGradesTable->selectionModel() && !statsGradesTable->selectionModel()->selectedRows().isEmpty()) {
         const int row = statsGradesTable->selectionModel()->selectedRows().front().row();
         if (auto* it = statsGradesTable->item(row, 0)) {
-            studentId = it->data(Qt::UserRole).toInt();
-            studentLabel = it->text();
-        }
-    } else if (statsAbsencesTable->selectionModel() && !statsAbsencesTable->selectionModel()->selectedRows().isEmpty()) {
-        const int row = statsAbsencesTable->selectionModel()->selectedRows().front().row();
-        if (auto* it = statsAbsencesTable->item(row, 0)) {
             studentId = it->data(Qt::UserRole).toInt();
             studentLabel = it->text();
         }
@@ -399,48 +393,30 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     leftLayout->setContentsMargins(0, 0, 0, 0);
     leftLayout->setSpacing(12);
 
-    auto* gradesBox = new QGroupBox("Оценки", leftPane);
-    auto* gradesLayout = new QVBoxLayout(gradesBox);
-    gradesLayout->setContentsMargins(10, 8, 10, 8);
-    gradesLayout->setSpacing(8);
+    auto* studentsBox = new QGroupBox("Студенты", leftPane);
+    auto* studentsLayout = new QVBoxLayout(studentsBox);
+    studentsLayout->setContentsMargins(10, 8, 10, 8);
+    studentsLayout->setSpacing(8);
 
-    statsGradesTable = new QTableWidget(gradesBox);
+    statsGradesTable = new QTableWidget(studentsBox);
     UiStyle::applyStandardTableStyle(statsGradesTable);
-    statsGradesTable->setColumnCount(3);
-    statsGradesTable->setHorizontalHeaderLabels({"Студент", "Средний", "Кол-во"});
-    statsGradesTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    statsGradesTable->horizontalHeader()->setStretchLastSection(true);
+    statsGradesTable->setColumnCount(1);
+    statsGradesTable->setHorizontalHeaderLabels({"ФИО"});
+    statsGradesTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     statsGradesTable->setSortingEnabled(true);
     statsGradesTable->setSelectionMode(QAbstractItemView::SingleSelection);
     statsGradesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    gradesLayout->addWidget(statsGradesTable);
+    studentsLayout->addWidget(statsGradesTable);
 
-    statsGradesSummaryLabel = new QLabel(gradesBox);
+    statsGradesSummaryLabel = new QLabel(studentsBox);
     UiStyle::makeInfoLabel(statsGradesSummaryLabel);
-    gradesLayout->addWidget(statsGradesSummaryLabel);
+    studentsLayout->addWidget(statsGradesSummaryLabel);
 
-    auto* absBox = new QGroupBox("Пропуски", leftPane);
-    auto* absLayout = new QVBoxLayout(absBox);
-    absLayout->setContentsMargins(10, 8, 10, 8);
-    absLayout->setSpacing(8);
+    // no second left table anymore
+    statsAbsencesTable = nullptr;
+    statsAbsencesSummaryLabel = nullptr;
 
-    statsAbsencesTable = new QTableWidget(absBox);
-    UiStyle::applyStandardTableStyle(statsAbsencesTable);
-    statsAbsencesTable->setColumnCount(3);
-    statsAbsencesTable->setHorizontalHeaderLabels({"Студент", "Всего (ч)", "Неуваж. (ч)"});
-    statsAbsencesTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    statsAbsencesTable->horizontalHeader()->setStretchLastSection(true);
-    statsAbsencesTable->setSortingEnabled(true);
-    statsAbsencesTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    statsAbsencesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    absLayout->addWidget(statsAbsencesTable);
-
-    statsAbsencesSummaryLabel = new QLabel(absBox);
-    UiStyle::makeInfoLabel(statsAbsencesSummaryLabel);
-    absLayout->addWidget(statsAbsencesSummaryLabel);
-
-    leftLayout->addWidget(gradesBox, 1);
-    leftLayout->addWidget(absBox, 1);
+    leftLayout->addWidget(studentsBox, 1);
 
     splitter->addWidget(leftPane);
 
@@ -538,11 +514,8 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
     connect(statsGradesTable, &QTableWidget::itemSelectionChanged,
             this, &TeacherWindow::onStatsStudentSelected);
-    connect(statsAbsencesTable, &QTableWidget::itemSelectionChanged,
-            this, &TeacherWindow::onStatsStudentSelected);
 
-    statsGradesSummaryLabel->setText("Оценки: —");
-    statsAbsencesSummaryLabel->setText("Пропуски: —");
+    statsGradesSummaryLabel->setText("Студенты: —");
     statsDetailGradesSummaryLabel->setText("Оценки: —");
     statsDetailAbsencesSummaryLabel->setText("Пропуски: —");
     return root;
@@ -752,110 +725,23 @@ QWidget* TeacherWindow::buildJournalTab()
     auto* byLessonLayout = new QVBoxLayout(byLesson);
     byLessonLayout->setContentsMargins(0, 0, 0, 0);
 
-    journalLessonCardFrame = new QFrame(byLesson);
-    journalLessonCardFrame->setObjectName("lessonCardFrame");
-    journalLessonCardFrame->setFrameShape(QFrame::StyledPanel);
-    journalLessonCardFrame->setStyleSheet("#lessonCardFrame{border:1px solid rgba(127,127,127,0.25); border-radius:12px; padding:12px;}");
+    auto* journalRoot = new QSplitter(Qt::Horizontal, byLesson);
+    journalRoot->setChildrenCollapsible(false);
+    byLessonLayout->addWidget(journalRoot, 1);
 
-    auto* cardLayout = new QVBoxLayout(journalLessonCardFrame);
-    cardLayout->setContentsMargins(12, 10, 12, 12);
-    cardLayout->setSpacing(8);
+    // Left panel (CRUD)
+    auto* journalLeftPanel = new QWidget(journalRoot);
+    journalLeftPanel->setMinimumWidth(280);
+    journalLeftPanel->setMaximumWidth(340);
+    auto* leftLayout = new QVBoxLayout(journalLeftPanel);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
+    leftLayout->setSpacing(12);
 
-    journalLessonCardTitle = new QLabel("Выбранная пара", journalLessonCardFrame);
-    journalLessonCardTitle->setStyleSheet("font-weight: 700; font-size: 14px; color: palette(WindowText);");
-    cardLayout->addWidget(journalLessonCardTitle);
-
-    auto* grid = new QGridLayout();
-    grid->setContentsMargins(0, 0, 0, 0);
-    grid->setHorizontalSpacing(14);
-    grid->setVerticalSpacing(6);
-
-    auto mkKey = [this](const QString& text) {
-        auto* l = new QLabel(text, journalLessonCardFrame);
-        l->setStyleSheet("color: palette(mid); font-size: 12px;");
-        return l;
-    };
-    auto mkVal = [this]() {
-        auto* l = new QLabel("—", journalLessonCardFrame);
-        l->setStyleSheet("color: palette(WindowText); font-size: 13px;");
-        l->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        return l;
-    };
-
-    auto mkBadgeVal = [this]() {
-        auto* l = new QLabel("—", journalLessonCardFrame);
-        l->setAlignment(Qt::AlignCenter);
-        l->setMinimumHeight(22);
-        l->setStyleSheet(neutralBadgeStyle());
-        l->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        return l;
-    };
-
-    journalLessonCardDate = mkVal();
-    journalLessonCardWeekday = mkVal();
-    journalLessonCardTime = mkVal();
-    journalLessonCardNumber = mkVal();
-    journalLessonCardSubject = mkVal();
-    journalLessonCardType = mkBadgeVal();
-    journalLessonCardRoom = mkBadgeVal();
-    journalLessonCardGroup = mkBadgeVal();
-
-    int r = 0;
-    grid->addWidget(mkKey("Дата"), r, 0); grid->addWidget(journalLessonCardDate, r, 1);
-    grid->addWidget(mkKey("День"), r, 2); grid->addWidget(journalLessonCardWeekday, r, 3);
-    ++r;
-    grid->addWidget(mkKey("Время"), r, 0); grid->addWidget(journalLessonCardTime, r, 1);
-    grid->addWidget(mkKey("№ пары"), r, 2); grid->addWidget(journalLessonCardNumber, r, 3);
-    ++r;
-    grid->addWidget(mkKey("Предмет"), r, 0); grid->addWidget(journalLessonCardSubject, r, 1, 1, 3);
-    ++r;
-    grid->addWidget(mkKey("Тип"), r, 0); grid->addWidget(journalLessonCardType, r, 1);
-    grid->addWidget(mkKey("Аудитория"), r, 2); grid->addWidget(journalLessonCardRoom, r, 3);
-    ++r;
-    grid->addWidget(mkKey("Группа"), r, 0); grid->addWidget(journalLessonCardGroup, r, 1, 1, 3);
-
-    cardLayout->addLayout(grid);
-    byLessonLayout->addWidget(journalLessonCardFrame);
-
-    auto* tablesRow = new QHBoxLayout();
-    tablesRow->setContentsMargins(0, 0, 0, 0);
-
-    journalLessonsScroll = new QScrollArea(byLesson);
-    journalLessonsScroll->setWidgetResizable(true);
-    journalLessonsScroll->setFrameShape(QFrame::NoFrame);
-
-    journalLessonsContainer = new QWidget(journalLessonsScroll);
-    journalLessonsLayout = new QVBoxLayout(journalLessonsContainer);
-    journalLessonsLayout->setContentsMargins(10, 10, 10, 10);
-    journalLessonsLayout->setSpacing(10);
-    journalLessonsLayout->addStretch();
-    journalLessonsScroll->setWidget(journalLessonsContainer);
-
-    tablesRow->addWidget(journalLessonsScroll, 2);
-
-    journalStudentsTable = new QTableWidget(byLesson);
-    UiStyle::applyStandardTableStyle(journalStudentsTable);
-    journalStudentsTable->setColumnCount(2);
-    journalStudentsTable->setHorizontalHeaderLabels({"ID", "Студент"});
-    journalStudentsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    journalStudentsTable->horizontalHeader()->setStretchLastSection(true);
-    journalStudentsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    journalStudentsTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    tablesRow->addWidget(journalStudentsTable, 1);
-
-    byLessonLayout->addLayout(tablesRow);
-
-    auto* actionsRow = new QHBoxLayout();
-    actionsRow->setContentsMargins(0, 0, 0, 0);
-    actionsRow->setSpacing(12);
-
-    auto* gradeBox = new QGroupBox("Оценка", byLesson);
-    gradeBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    auto* gradeLayout = new QHBoxLayout(gradeBox);
+    auto* gradeBox = new QGroupBox("Оценка", journalLeftPanel);
+    auto* gradeLayout = new QVBoxLayout(gradeBox);
     gradeLayout->setContentsMargins(10, 8, 10, 10);
     gradeLayout->setSpacing(8);
 
-    gradeLayout->addWidget(new QLabel("Значение (0..10):", gradeBox));
     gradeSpin = new QSpinBox(gradeBox);
     gradeSpin->setRange(0, 10);
     gradeSpin->setValue(5);
@@ -865,21 +751,20 @@ QWidget* TeacherWindow::buildJournalTab()
     UiStyle::makeInfoLabel(currentGradeLabel);
     gradeLayout->addWidget(currentGradeLabel);
 
-    gradeLayout->addStretch();
-
+    auto* gradeButtons = new QHBoxLayout();
+    gradeButtons->setContentsMargins(0, 0, 0, 0);
+    gradeButtons->setSpacing(8);
     saveGradeButton = new QPushButton("Сохранить", gradeBox);
-    gradeLayout->addWidget(saveGradeButton);
-
     deleteGradeButton = new QPushButton("Удалить", gradeBox);
-    gradeLayout->addWidget(deleteGradeButton);
+    gradeButtons->addWidget(saveGradeButton);
+    gradeButtons->addWidget(deleteGradeButton);
+    gradeLayout->addLayout(gradeButtons);
 
-    auto* absenceBox = new QGroupBox("Пропуск", byLesson);
-    absenceBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    auto* absenceLayout = new QHBoxLayout(absenceBox);
+    auto* absenceBox = new QGroupBox("Пропуск", journalLeftPanel);
+    auto* absenceLayout = new QVBoxLayout(absenceBox);
     absenceLayout->setContentsMargins(10, 8, 10, 10);
     absenceLayout->setSpacing(8);
 
-    absenceLayout->addWidget(new QLabel("Часы:", absenceBox));
     absenceHoursSpin = new QSpinBox(absenceBox);
     absenceHoursSpin->setRange(1, 8);
     absenceHoursSpin->setValue(1);
@@ -894,17 +779,123 @@ QWidget* TeacherWindow::buildJournalTab()
     UiStyle::makeInfoLabel(currentAbsenceLabel);
     absenceLayout->addWidget(currentAbsenceLabel);
 
-    absenceLayout->addStretch();
-
+    auto* absenceButtons = new QHBoxLayout();
+    absenceButtons->setContentsMargins(0, 0, 0, 0);
+    absenceButtons->setSpacing(8);
     saveAbsenceButton = new QPushButton("Сохранить", absenceBox);
-    absenceLayout->addWidget(saveAbsenceButton);
-
     deleteAbsenceButton = new QPushButton("Удалить", absenceBox);
-    absenceLayout->addWidget(deleteAbsenceButton);
+    absenceButtons->addWidget(saveAbsenceButton);
+    absenceButtons->addWidget(deleteAbsenceButton);
+    absenceLayout->addLayout(absenceButtons);
 
-    actionsRow->addWidget(gradeBox, 1);
-    actionsRow->addWidget(absenceBox, 1);
-    byLessonLayout->addLayout(actionsRow);
+    leftLayout->addWidget(gradeBox);
+    leftLayout->addWidget(absenceBox);
+    leftLayout->addStretch();
+
+    journalRoot->addWidget(journalLeftPanel);
+
+    // Right panel
+    auto* journalRightPanel = new QWidget(journalRoot);
+    auto* rightLayout = new QVBoxLayout(journalRightPanel);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setSpacing(12);
+
+    // Selected lesson card
+    journalLessonCardFrame = new QFrame(journalRightPanel);
+    journalLessonCardFrame->setObjectName("selectedLessonCard");
+    journalLessonCardFrame->setFrameShape(QFrame::StyledPanel);
+    journalLessonCardFrame->setStyleSheet("#selectedLessonCard{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
+                                          "#selectedLessonCard QLabel{background: transparent;}");
+    journalLessonCardFrame->setMinimumHeight(150);
+    journalLessonCardFrame->setMaximumHeight(190);
+
+    auto* cardGrid = new QGridLayout(journalLessonCardFrame);
+    cardGrid->setContentsMargins(14, 12, 14, 12);
+    cardGrid->setHorizontalSpacing(10);
+    cardGrid->setVerticalSpacing(6);
+
+    journalLessonCardTitle = new QLabel("—", journalLessonCardFrame);
+    journalLessonCardTitle->setStyleSheet("font-weight: 900; font-size: 18px; color: palette(WindowText);");
+    cardGrid->addWidget(journalLessonCardTitle, 0, 0, 1, 2);
+
+    journalLessonCardSubTitle = new QLabel("—", journalLessonCardFrame);
+    journalLessonCardSubTitle->setStyleSheet("color: palette(mid); font-weight: 650;");
+    cardGrid->addWidget(journalLessonCardSubTitle, 1, 0, 1, 2);
+
+    // Right badges
+    auto* badgesRight = new QWidget(journalLessonCardFrame);
+    auto* br = new QVBoxLayout(badgesRight);
+    br->setContentsMargins(0, 0, 0, 0);
+    br->setSpacing(6);
+
+    journalLessonCardNumber = new QLabel("—", badgesRight);
+    journalLessonCardNumber->setMinimumHeight(22);
+    journalLessonCardNumber->setAlignment(Qt::AlignCenter);
+    journalLessonCardNumber->setStyleSheet(UiStyle::badgeNeutralStyle());
+    br->addWidget(journalLessonCardNumber);
+
+    journalLessonCardRoom = new QLabel("—", badgesRight);
+    journalLessonCardRoom->setMinimumHeight(22);
+    journalLessonCardRoom->setAlignment(Qt::AlignCenter);
+    journalLessonCardRoom->setStyleSheet(UiStyle::badgeNeutralStyle());
+    br->addWidget(journalLessonCardRoom);
+
+    journalLessonCardType = new QLabel("—", badgesRight);
+    journalLessonCardType->setMinimumHeight(22);
+    journalLessonCardType->setAlignment(Qt::AlignCenter);
+    journalLessonCardType->setStyleSheet(UiStyle::badgeNeutralStyle());
+    br->addWidget(journalLessonCardType);
+
+    br->addStretch();
+    cardGrid->addWidget(badgesRight, 0, 2, 2, 1, Qt::AlignTop);
+
+    // Group/subgroup badges row
+    journalLessonCardGroup = new QLabel("—", journalLessonCardFrame);
+    journalLessonCardGroup->setMinimumHeight(22);
+    journalLessonCardGroup->setAlignment(Qt::AlignCenter);
+    journalLessonCardGroup->setStyleSheet(UiStyle::badgeNeutralStyle());
+
+    journalLessonCardSubgroup = new QLabel("—", journalLessonCardFrame);
+    journalLessonCardSubgroup->setMinimumHeight(22);
+    journalLessonCardSubgroup->setAlignment(Qt::AlignCenter);
+    journalLessonCardSubgroup->setStyleSheet(UiStyle::badgeNeutralStyle());
+
+    cardGrid->addWidget(journalLessonCardGroup, 2, 0, 1, 1, Qt::AlignLeft);
+    cardGrid->addWidget(journalLessonCardSubgroup, 2, 1, 1, 1, Qt::AlignLeft);
+
+    rightLayout->addWidget(journalLessonCardFrame, 0);
+
+    // Tables splitter
+    auto* journalTables = new QSplitter(Qt::Horizontal, journalRightPanel);
+    journalTables->setChildrenCollapsible(false);
+    journalTables->setStretchFactor(0, 3);
+    journalTables->setStretchFactor(1, 2);
+
+    journalLessonsTable = new QTableWidget(journalTables);
+    UiStyle::applyStandardTableStyle(journalLessonsTable);
+    journalLessonsTable->setColumnCount(6);
+    journalLessonsTable->setHorizontalHeaderLabels({"Дата", "День", "Время", "№", "Предмет", "Тип"});
+    journalLessonsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    journalLessonsTable->horizontalHeader()->setStretchLastSection(true);
+    journalLessonsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    journalLessonsTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    journalTables->addWidget(journalLessonsTable);
+
+    journalStudentsTable = new QTableWidget(journalTables);
+    UiStyle::applyStandardTableStyle(journalStudentsTable);
+    journalStudentsTable->setColumnCount(2);
+    journalStudentsTable->setHorizontalHeaderLabels({"ID", "Студент"});
+    journalStudentsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    journalStudentsTable->horizontalHeader()->setStretchLastSection(true);
+    journalStudentsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    journalStudentsTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    journalTables->addWidget(journalStudentsTable);
+
+    rightLayout->addWidget(journalTables, 1);
+
+    journalRoot->addWidget(journalRightPanel);
+    journalRoot->setStretchFactor(0, 0);
+    journalRoot->setStretchFactor(1, 1);
 
     journalModeStack->addWidget(byLesson);
 
@@ -978,6 +969,9 @@ QWidget* TeacherWindow::buildJournalTab()
             this, [this](int) {
         reloadJournalLessonsForSelectedStudent();
     });
+
+    connect(journalLessonsTable->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &TeacherWindow::onJournalLessonSelectionChanged);
 
     connect(journalStudentsTable->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &TeacherWindow::onJournalStudentSelectionChanged);
@@ -1390,137 +1384,42 @@ void TeacherWindow::reloadGroupStatsSubjects()
 void TeacherWindow::reloadGroupStats()
 {
     if (!db || !statsGroupCombo || !statsSemesterCombo || !statsSubjectCombo) return;
-    if (!statsGradesTable || !statsAbsencesTable || !statsGradesSummaryLabel || !statsAbsencesSummaryLabel) return;
+    if (!statsGradesTable || !statsGradesSummaryLabel) return;
 
     const int groupId = statsGroupCombo->currentData().toInt();
     const int semesterId = statsSemesterCombo->currentData().toInt();
-    const int subjectId = statsSubjectCombo->currentData().toInt();
-    const QString subjectName = statsSubjectCombo->currentText();
 
     statsGradesTable->setRowCount(0);
-    statsAbsencesTable->setRowCount(0);
 
     if (groupId <= 0 || semesterId <= 0) {
-        statsGradesSummaryLabel->setText("Оценки: выберите группу и семестр");
-        statsAbsencesSummaryLabel->setText("Пропуски: выберите группу и семестр");
+        statsGradesSummaryLabel->setText("Студенты: выберите группу и семестр");
+        if (statsDetailTitleLabel) statsDetailTitleLabel->setText("Выберите студента слева");
+        if (statsDetailGradesTable) statsDetailGradesTable->setRowCount(0);
+        if (statsDetailAbsencesTable) statsDetailAbsencesTable->setRowCount(0);
+        if (statsDetailGradesSummaryLabel) statsDetailGradesSummaryLabel->setText("Оценки: —");
+        if (statsDetailAbsencesSummaryLabel) statsDetailAbsencesSummaryLabel->setText("Пропуски: —");
         return;
     }
 
     std::vector<std::pair<int, std::string>> students;
     if (!db->getStudentsOfGroup(groupId, students)) {
-        statsGradesSummaryLabel->setText("Оценки: не удалось загрузить студентов");
-        statsAbsencesSummaryLabel->setText("Пропуски: не удалось загрузить студентов");
+        statsGradesSummaryLabel->setText("Студенты: не удалось загрузить");
         return;
     }
-
-    double groupSum = 0.0;
-    int groupCount = 0;
-    int groupAbsTotal = 0;
-    int groupAbsUnexc = 0;
 
     for (const auto& st : students) {
         const int studentId = st.first;
         const QString studentName = QString::fromStdString(st.second);
 
-        // ===== grades =====
-        double sum = 0.0;
-        int cnt = 0;
-        if (subjectId > 0) {
-            std::vector<std::tuple<int, std::string, std::string>> grades;
-            if (db->getStudentSubjectGrades(studentId, subjectId, semesterId, grades)) {
-                for (const auto& g : grades) {
-                    sum += std::get<0>(g);
-                    ++cnt;
-                }
-            }
-        } else {
-            std::vector<std::tuple<std::string, int, std::string, std::string>> grades;
-            if (db->getStudentGradesForSemester(studentId, semesterId, grades)) {
-                for (const auto& g : grades) {
-                    sum += std::get<1>(g);
-                    ++cnt;
-                }
-            }
-        }
-
-        const double avg = (cnt > 0) ? (sum / cnt) : 0.0;
-        groupSum += sum;
-        groupCount += cnt;
-
-        const int gRow = statsGradesTable->rowCount();
-        statsGradesTable->insertRow(gRow);
+        const int row = statsGradesTable->rowCount();
+        statsGradesTable->insertRow(row);
         auto* nameItem = new QTableWidgetItem(studentName.isEmpty() ? QString("ID %1").arg(studentId) : studentName);
         nameItem->setData(Qt::UserRole, studentId);
-        statsGradesTable->setItem(gRow, 0, nameItem);
-
-        if (cnt > 0) {
-            auto* badge = new QLabel(QString::number(avg, 'f', 2), statsGradesTable);
-            badge->setAlignment(Qt::AlignCenter);
-            badge->setMinimumHeight(22);
-            badge->setStyleSheet(UiStyle::badgeGradeStyle(qRound(avg)));
-            statsGradesTable->setCellWidget(gRow, 1, badge);
-        } else {
-            auto* none = new QTableWidgetItem("—");
-            none->setTextAlignment(Qt::AlignCenter);
-            statsGradesTable->setItem(gRow, 1, none);
-        }
-
-        auto* cntItem = new QTableWidgetItem(cnt > 0 ? QString::number(cnt) : "0");
-        cntItem->setTextAlignment(Qt::AlignCenter);
-        statsGradesTable->setItem(gRow, 2, cntItem);
-
-        // ===== absences =====
-        int totalH = 0;
-        int unexcH = 0;
-        std::vector<std::tuple<std::string, int, std::string, std::string>> abs;
-        if (db->getStudentAbsencesForSemester(studentId, semesterId, abs)) {
-            for (const auto& a : abs) {
-                const QString subj = QString::fromStdString(std::get<0>(a));
-                const int hours = std::get<1>(a);
-                const QString type = QString::fromStdString(std::get<3>(a));
-
-                if (subjectId > 0 && subj != subjectName) continue;
-                totalH += hours;
-                if (type == "unexcused") unexcH += hours;
-            }
-        }
-        groupAbsTotal += totalH;
-        groupAbsUnexc += unexcH;
-
-        const int aRow = statsAbsencesTable->rowCount();
-        statsAbsencesTable->insertRow(aRow);
-        auto* aNameItem = new QTableWidgetItem(studentName.isEmpty() ? QString("ID %1").arg(studentId) : studentName);
-        aNameItem->setData(Qt::UserRole, studentId);
-        statsAbsencesTable->setItem(aRow, 0, aNameItem);
-
-        auto* tItem = new QTableWidgetItem(QString::number(totalH));
-        tItem->setTextAlignment(Qt::AlignCenter);
-        statsAbsencesTable->setItem(aRow, 1, tItem);
-
-        if (unexcH > 0) {
-            auto* badge = new QLabel(QString::number(unexcH), statsAbsencesTable);
-            badge->setAlignment(Qt::AlignCenter);
-            badge->setMinimumHeight(22);
-            badge->setStyleSheet(UiStyle::badgeAbsenceStyle(false));
-            statsAbsencesTable->setCellWidget(aRow, 2, badge);
-        } else {
-            auto* uItem = new QTableWidgetItem("0");
-            uItem->setTextAlignment(Qt::AlignCenter);
-            statsAbsencesTable->setItem(aRow, 2, uItem);
-        }
+        statsGradesTable->setItem(row, 0, nameItem);
     }
 
-    const double groupAvg = (groupCount > 0) ? (groupSum / groupCount) : 0.0;
-    statsGradesSummaryLabel->setText(QString("Оценки: средний по группе %1 (записей: %2)")
-                                     .arg(groupCount > 0 ? QString::number(groupAvg, 'f', 2) : "—")
-                                     .arg(groupCount));
-
-    statsAbsencesSummaryLabel->setText(QString("Пропуски: всего %1 ч, неуважительных %2 ч")
-                                       .arg(groupAbsTotal)
-                                       .arg(groupAbsUnexc));
-
+    statsGradesSummaryLabel->setText(QString("Студенты: %1").arg(statsGradesTable->rowCount()));
     statsGradesTable->sortItems(0, Qt::AscendingOrder);
-    statsAbsencesTable->sortItems(1, Qt::DescendingOrder);
 }
 
 void TeacherWindow::onStatsGroupChanged(int)
@@ -1673,17 +1572,21 @@ void TeacherWindow::reloadJournalStudents()
 
 void TeacherWindow::reloadJournalLessonsForSelectedStudent()
 {
-    if (!journalLessonsLayout || !journalLessonsContainer || !journalPeriodSelector || !journalGroupCombo) return;
+    if (!journalLessonsTable || !journalPeriodSelector || !journalGroupCombo || !journalStudentsTable) return;
 
-    while (journalLessonsLayout->count() > 0) {
-        QLayoutItem* it = journalLessonsLayout->takeAt(0);
-        if (it->widget()) it->widget()->deleteLater();
-        delete it;
-    }
-    journalLessonsLayout->addStretch();
+    journalLessonsTable->setRowCount(0);
 
     journalLessonRows.clear();
     selectedLesson = {};
+    if (journalLessonCardTitle) journalLessonCardTitle->setText("—");
+    if (journalLessonCardSubTitle) journalLessonCardSubTitle->setText("—");
+    if (journalLessonCardNumber) journalLessonCardNumber->setText("—");
+    if (journalLessonCardRoom) journalLessonCardRoom->setText("—");
+    if (journalLessonCardType) journalLessonCardType->setText("—");
+    if (journalLessonCardGroup) journalLessonCardGroup->setText("—");
+    if (journalLessonCardSubgroup) journalLessonCardSubgroup->setText("—");
+    if (saveGradeButton) saveGradeButton->setEnabled(false);
+    refreshJournalCurrentValues();
 
     const int groupId = journalGroupCombo->currentData().toInt();
     if (groupId <= 0 || !db) return;
@@ -1695,18 +1598,8 @@ void TeacherWindow::reloadJournalLessonsForSelectedStudent()
         return;
     }
 
-    // if student is selected - use subgroup filter from student profile, else show all
-    int subgroupFilter = 0;
-    const auto sel = journalStudentsTable->selectionModel() ? journalStudentsTable->selectionModel()->selectedRows() : QModelIndexList{};
-    if (!sel.isEmpty()) {
-        const int row = sel.front().row();
-        const int studentId = journalStudentsTable->item(row, 0)->text().toInt();
-        int sgGroup = 0;
-        int sg = 0;
-        if (db->getStudentGroupAndSubgroup(studentId, sgGroup, sg) && sgGroup == groupId) {
-            subgroupFilter = sg;
-        }
-    }
+    // Strict layout: lessons list should not depend on currently selected student
+    const int subgroupFilter = 0;
 
     std::vector<std::tuple<int,int,int,int,int,std::string,std::string,std::string>> rows;
     if (!db->getScheduleForTeacherGroupWeekWithRoom(teacherId, groupId, weekOfCycle, subgroupFilter, rows) || rows.empty()) {
@@ -1756,31 +1649,43 @@ void TeacherWindow::reloadJournalLessonsForSelectedStudent()
         return a.lesson.lessonNumber < b.lesson.lessonNumber;
     });
 
-    QString lastDate;
+    journalLessonsTable->setRowCount(static_cast<int>(journalLessonRows.size()));
     for (int i = 0; i < static_cast<int>(journalLessonRows.size()); ++i) {
         const auto& rr = journalLessonRows[i];
-        if (rr.lesson.dateISO != lastDate) {
-            const QString header = QString("%1  •  %2")
-                .arg(rr.weekdayName.isEmpty() ? QString("—") : rr.weekdayName)
-                .arg(rr.lesson.dateISO.isEmpty() ? QString("—") : formatDdMm(rr.lesson.dateISO));
-            journalLessonsLayout->insertWidget(journalLessonsLayout->count() - 1, buildJournalDayHeader(journalLessonsContainer, header));
-            lastDate = rr.lesson.dateISO;
-        }
-        journalLessonsLayout->insertWidget(journalLessonsLayout->count() - 1, buildJournalLessonCard(journalLessonsContainer, rr, i, this));
+        const QString dateText = rr.lesson.dateISO.isEmpty() ? QString("—") : formatDdMm(rr.lesson.dateISO);
+        const QString dayText = rr.weekdayName.isEmpty() ? QString("—") : rr.weekdayName;
+        const QString timeText = rr.timeText.isEmpty() ? QString("—") : rr.timeText;
+        const QString numText = rr.lesson.lessonNumber > 0 ? QString::number(rr.lesson.lessonNumber) : QString("—");
+        const QString subjText = rr.lesson.subjectName.isEmpty() ? QString("—") : rr.lesson.subjectName;
+        const QString typeText = rr.lesson.lessonType.isEmpty() ? QString("—") : rr.lesson.lessonType;
+
+        journalLessonsTable->setItem(i, 0, new QTableWidgetItem(dateText));
+        journalLessonsTable->setItem(i, 1, new QTableWidgetItem(dayText));
+        journalLessonsTable->setItem(i, 2, new QTableWidgetItem(timeText));
+        journalLessonsTable->setItem(i, 3, new QTableWidgetItem(numText));
+        journalLessonsTable->setItem(i, 4, new QTableWidgetItem(subjText));
+        journalLessonsTable->setItem(i, 5, new QTableWidgetItem(typeText));
     }
+}
+
+void TeacherWindow::onJournalLessonSelectionChanged()
+{
+    if (!journalLessonsTable || !journalLessonsTable->selectionModel()) return;
+    const auto sel = journalLessonsTable->selectionModel()->selectedRows();
+    if (sel.isEmpty()) {
+        selectedLesson = {};
+        refreshJournalCurrentValues();
+        return;
+    }
+    const int row = sel.front().row();
+    if (row < 0 || row >= static_cast<int>(journalLessonRows.size())) return;
+    onJournalLessonCardClicked(row);
 }
 
 bool TeacherWindow::eventFilter(QObject* watched, QEvent* event)
 {
-    if (event && event->type() == QEvent::MouseButtonRelease) {
-        if (auto* w = qobject_cast<QWidget*>(watched)) {
-            if (w->property("journalLessonIndex").isValid()) {
-                const int idx = w->property("journalLessonIndex").toInt();
-                onJournalLessonCardClicked(idx);
-                return true;
-            }
-        }
-    }
+    Q_UNUSED(watched);
+    Q_UNUSED(event);
     return QMainWindow::eventFilter(watched, event);
 }
 
@@ -1799,28 +1704,37 @@ void TeacherWindow::onJournalLessonCardClicked(int index)
     const QString weekdayText = (selectedLesson.weekday >= 0 && selectedLesson.weekday < dayNames.size()) ? dayNames[selectedLesson.weekday] : "—";
     const QString timeText = (selectedLesson.lessonNumber >= 1 && selectedLesson.lessonNumber <= 6) ? pairTimes[selectedLesson.lessonNumber - 1] : "—";
 
-    QString groupText = journalGroupCombo ? journalGroupCombo->currentText() : QString();
-    if (selectedLesson.subgroup == 1) groupText += " / ПГ1";
-    else if (selectedLesson.subgroup == 2) groupText += " / ПГ2";
-    if (groupText.isEmpty()) groupText = "—";
+    const QString title = selectedLesson.subjectName.isEmpty() ? QString("—") : selectedLesson.subjectName;
+    const QString subtitle = QString("%1 - %2 - %3").arg(dateText).arg(weekdayText).arg(timeText);
 
-    if (journalLessonCardDate) journalLessonCardDate->setText(dateText);
-    if (journalLessonCardWeekday) journalLessonCardWeekday->setText(weekdayText);
-    if (journalLessonCardTime) journalLessonCardTime->setText(timeText);
-    if (journalLessonCardNumber) journalLessonCardNumber->setText(selectedLesson.lessonNumber > 0 ? QString::number(selectedLesson.lessonNumber) : "—");
-    if (journalLessonCardSubject) journalLessonCardSubject->setText(selectedLesson.subjectName.isEmpty() ? "—" : selectedLesson.subjectName);
-    if (journalLessonCardType) {
-        const QString t = selectedLesson.lessonType.isEmpty() ? "—" : selectedLesson.lessonType;
-        journalLessonCardType->setText(t);
-        journalLessonCardType->setStyleSheet(selectedLesson.lessonType.isEmpty() ? neutralBadgeStyle() : lessonTypeBadgeStyle(selectedLesson.lessonType));
+    if (journalLessonCardTitle) journalLessonCardTitle->setText(title);
+    if (journalLessonCardSubTitle) journalLessonCardSubTitle->setText(subtitle);
+
+    if (journalLessonCardNumber) {
+        journalLessonCardNumber->setText(selectedLesson.lessonNumber > 0 ? QString("№%1").arg(selectedLesson.lessonNumber) : QString("—"));
+        journalLessonCardNumber->setStyleSheet(UiStyle::badgeNeutralStyle());
     }
     if (journalLessonCardRoom) {
         journalLessonCardRoom->setText(selectedLesson.room.isEmpty() ? "—" : selectedLesson.room);
-        journalLessonCardRoom->setStyleSheet(neutralBadgeStyle());
+        journalLessonCardRoom->setStyleSheet(UiStyle::badgeNeutralStyle());
     }
+    if (journalLessonCardType) {
+        const QString t = selectedLesson.lessonType.isEmpty() ? "—" : selectedLesson.lessonType;
+        journalLessonCardType->setText(t);
+        journalLessonCardType->setStyleSheet(selectedLesson.lessonType.isEmpty() ? UiStyle::badgeNeutralStyle() : UiStyle::badgeLessonTypeStyle(selectedLesson.lessonType));
+    }
+
+    const QString groupText = journalGroupCombo ? journalGroupCombo->currentText() : QString();
     if (journalLessonCardGroup) {
-        journalLessonCardGroup->setText(groupText);
-        journalLessonCardGroup->setStyleSheet(neutralBadgeStyle());
+        journalLessonCardGroup->setText(groupText.isEmpty() ? "—" : groupText);
+        journalLessonCardGroup->setStyleSheet(UiStyle::badgeNeutralStyle());
+    }
+    if (journalLessonCardSubgroup) {
+        QString sgText = "—";
+        if (selectedLesson.subgroup == 1) sgText = "ПГ1";
+        else if (selectedLesson.subgroup == 2) sgText = "ПГ2";
+        journalLessonCardSubgroup->setText(sgText);
+        journalLessonCardSubgroup->setStyleSheet(UiStyle::badgeNeutralStyle());
     }
 
     if (saveGradeButton) {
@@ -1832,7 +1746,6 @@ void TeacherWindow::onJournalLessonCardClicked(int index)
 
 void TeacherWindow::onJournalStudentSelectionChanged()
 {
-    reloadJournalLessonsForSelectedStudent();
     refreshJournalCurrentValues();
 }
 

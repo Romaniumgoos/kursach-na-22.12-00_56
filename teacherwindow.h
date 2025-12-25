@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include "database.h"
 
+ #include <vector>
+
 class QLabel;
 class QTabWidget;
 class QComboBox;
@@ -74,6 +76,7 @@ private:
     QStackedWidget* journalModeStack = nullptr;
     QFrame* journalLessonCardFrame = nullptr;
     QLabel* journalLessonCardTitle = nullptr;
+    QLabel* journalLessonCardSubTitle = nullptr;
     QLabel* journalLessonCardDate = nullptr;
     QLabel* journalLessonCardWeekday = nullptr;
     QLabel* journalLessonCardTime = nullptr;
@@ -82,12 +85,11 @@ private:
     QLabel* journalLessonCardType = nullptr;
     QLabel* journalLessonCardRoom = nullptr;
     QLabel* journalLessonCardGroup = nullptr;
+    QLabel* journalLessonCardSubgroup = nullptr;
+
+    QTableWidget* journalLessonsTable = nullptr;
 
     QTableWidget* journalStudentsTable = nullptr;
-
-    QScrollArea* journalLessonsScroll = nullptr;
-    QWidget* journalLessonsContainer = nullptr;
-    QVBoxLayout* journalLessonsLayout = nullptr;
     std::vector<JournalLessonRow> journalLessonRows;
     QSpinBox* gradeSpin = nullptr;
     QPushButton* saveGradeButton = nullptr;
@@ -151,6 +153,7 @@ private slots:
     void onJournalGroupChanged(int);
     void onJournalStudentSelectionChanged();
     void onJournalLessonCardClicked(int index);
+    void onJournalLessonSelectionChanged();
     void onSaveGrade();
     void onDeleteGrade();
     void onSaveAbsence();
