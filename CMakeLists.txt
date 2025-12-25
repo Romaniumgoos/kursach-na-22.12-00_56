@@ -100,6 +100,11 @@ target_link_libraries(app_gui PRIVATE
         Qt6::Widgets
 )
 
+if (MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+    set_property(TARGET app_gui PROPERTY AUTOMOC_COMPILER_PREDEFINES OFF)
+    target_compile_options(app_gui PRIVATE -fdiagnostics-color=never)
+endif()
+
 # ===== Console executable =====
 add_executable(app_console
         main_console.cpp
@@ -111,3 +116,8 @@ target_include_directories(app_console PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
 )
+
+if (MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+    set_property(TARGET app_console PROPERTY AUTOMOC_COMPILER_PREDEFINES OFF)
+    target_compile_options(app_console PRIVATE -fdiagnostics-color=never)
+endif()

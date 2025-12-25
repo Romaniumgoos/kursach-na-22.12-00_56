@@ -1,0 +1,6 @@
+set(__QT_DEPLOY_TARGET_app_gui_FILE C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui.exe)
+set(__QT_DEPLOY_TARGET_app_gui_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_app_gui_RUNTIME_DLLS D:/QTshechka/6.10.1/mingw_64/bin/Qt6Widgets.dll;D:/QTshechka/6.10.1/mingw_64/bin/Qt6Gui.dll;D:/QTshechka/6.10.1/mingw_64/bin/Qt6Core.dll)
+set(__QT_DEPLOY_TARGET_app_console_FILE C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_console.exe)
+set(__QT_DEPLOY_TARGET_app_console_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_app_console_RUNTIME_DLLS )

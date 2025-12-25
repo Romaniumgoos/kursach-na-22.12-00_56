@@ -92,10 +92,13 @@ void TeacherWindow::reloadStatsStudentDetails(int studentId)
             return std::make_tuple(outTime, outType, outRoom);
         }
 
-        const int weekday = d.dayOfWeek() - 1;
+        const int weekday = d.dayOfWeek();
+        if (weekday < 1 || weekday > 6) {
+            return std::make_tuple(outTime, outType, outRoom);
+        }
         const int weekId = db->getWeekIdByDate(dateISO.toStdString());
         const int weekOfCycle = (weekId > 0) ? db->getWeekOfCycleByWeekId(weekId) : 0;
-        if (weekday < 0 || weekOfCycle <= 0) {
+        if (weekOfCycle <= 0) {
             return std::make_tuple(outTime, outType, outRoom);
         }
 
@@ -1386,6 +1389,12 @@ void TeacherWindow::reloadGroupStats()
     if (!db || !statsGroupCombo || !statsSemesterCombo || !statsSubjectCombo) return;
     if (!statsGradesTable || !statsGradesSummaryLabel) return;
 
+    if (statsDetailTitleLabel) statsDetailTitleLabel->setText("Выберите студента слева");
+    if (statsDetailGradesTable) statsDetailGradesTable->setRowCount(0);
+    if (statsDetailAbsencesTable) statsDetailAbsencesTable->setRowCount(0);
+    if (statsDetailGradesSummaryLabel) statsDetailGradesSummaryLabel->setText("Оценки: —");
+    if (statsDetailAbsencesSummaryLabel) statsDetailAbsencesSummaryLabel->setText("Пропуски: —");
+
     const int groupId = statsGroupCombo->currentData().toInt();
     const int semesterId = statsSemesterCombo->currentData().toInt();
 
@@ -1393,11 +1402,6 @@ void TeacherWindow::reloadGroupStats()
 
     if (groupId <= 0 || semesterId <= 0) {
         statsGradesSummaryLabel->setText("Студенты: выберите группу и семестр");
-        if (statsDetailTitleLabel) statsDetailTitleLabel->setText("Выберите студента слева");
-        if (statsDetailGradesTable) statsDetailGradesTable->setRowCount(0);
-        if (statsDetailAbsencesTable) statsDetailAbsencesTable->setRowCount(0);
-        if (statsDetailGradesSummaryLabel) statsDetailGradesSummaryLabel->setText("Оценки: —");
-        if (statsDetailAbsencesSummaryLabel) statsDetailAbsencesSummaryLabel->setText("Пропуски: —");
         return;
     }
 
