@@ -147,8 +147,15 @@ bool Student::viewMySchedule(Database& db) {
         }
     }
 
-    const int week = chooseWeekOfCycleOrDate(db);
-    if (week == 0) return false;
+    const int sel = chooseWeekOfCycleOrDate(db);
+    if (sel == 0) return false;
+
+    const WeekSelection ws = decodeWeekSelection(db, sel);
+    if (ws.weekOfCycle <= 0) {
+        std::cout << "Некорректная неделя.\n";
+        return false;
+    }
+    const int weekOfCycle = ws.weekOfCycle;
 
     const auto& dayNames  = getDayNames();
     const auto& pairTimes = getPairTimes();
@@ -156,26 +163,35 @@ bool Student::viewMySchedule(Database& db) {
     std::cout << "\n╔════════════════════════════════════════════════════╗\n";
     std::cout << "║ МОЁ РАСПИСАНИЕ | Группа " << groupId
               << ", подгр. " << subgroup
-              << " | неделя " << week << "\n";
+              << " | неделя " << weekOfCycle << "\n";
     std::cout << "╚════════════════════════════════════════════════════╝\n";
 
     bool hasAnyLessons = false;
 
     for (int weekday = 0; weekday <= 5; ++weekday) {
-        const auto rowsRes = svc.getScheduleForGroup(groupId, weekday, week);
-        if (!rowsRes.ok || rowsRes.value.empty()) {
-            continue;
+        const auto rowsRes = svc.getScheduleForGroup(groupId, weekday, weekOfCycle);
+
+        if (rowsRes.ok) {
+            std::cerr << "[StudentSchedule self-test] weekOfCycle=" << weekOfCycle
+                      << " weekday=" << weekday
+                      << " rows=" << rowsRes.value.size() << "\n";
         }
 
         std::string dateLabel;
-        const auto dateRes = svc.getDateISO(week, weekday);
+        const auto dateRes = svc.getDateISO(weekOfCycle, weekday);
         if (dateRes.ok) {
             dateLabel = formatDateLabel(dateRes.value);
         }
 
-        std::cout << "\n[" << dayNames[weekday] << "]";
-        if (!dateLabel.empty()) std::cout << " (" << dateLabel << ")";
+        std::cout << "\n" << dayNames[weekday];
+        if (!dateLabel.empty()) std::cout << " " << dateLabel;
         std::cout << "\n";
+
+        bool hasDayLessons = false;
+        if (!rowsRes.ok || rowsRes.value.empty()) {
+            std::cout << "  Занятий нет.\n";
+            continue;
+        }
 
         for (const auto& row : rowsRes.value) {
             auto [id, lessonNumber, rowSubgroup, subject, room, lessonType, teacher] = row;
@@ -186,6 +202,7 @@ bool Student::viewMySchedule(Database& db) {
             }
 
             hasAnyLessons = true;
+            hasDayLessons = true;
 
             std::string subjectText = subject;
             if (rowSubgroup == 1)      subjectText += " (подгр. 1)";
@@ -194,14 +211,23 @@ bool Student::viewMySchedule(Database& db) {
             std::string typeLabel;
             if (!lessonType.empty()) typeLabel = " [" + lessonType + "]";
 
-            std::cout << "  Пара " << lessonNumber;
-            if (lessonNumber >= 1 && lessonNumber <= 6) {
-                std::cout << " (" << pairTimes[lessonNumber - 1] << ")";
-            }
+            const std::string time = (lessonNumber >= 1 && lessonNumber <= 6) ? pairTimes[lessonNumber - 1] : "";
 
-            std::cout << " | " << subjectText << typeLabel
-                      << " | преп. " << teacher
-                      << " | ауд. " << room << "\n";
+            std::cout << "  - " << subjectText << typeLabel << "\n";
+            if (!time.empty() || !room.empty()) {
+                std::cout << "    ";
+                if (!time.empty()) std::cout << time;
+                if (!time.empty() && !room.empty()) std::cout << " | ";
+                if (!room.empty()) std::cout << "ауд. " << room;
+                std::cout << "\n";
+            }
+            if (!teacher.empty()) {
+                std::cout << "    " << teacher << "\n";
+            }
+        }
+
+        if (!hasDayLessons) {
+            std::cout << "  Занятий нет.\n";
         }
     }
 

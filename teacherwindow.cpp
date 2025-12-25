@@ -2,12 +2,30 @@
 #include <QVBoxLayout>
 #include <QFont>
 #include "ui/widgets/ThemeToggleWidget.h"
+ #include <QToolBar>
+ #include <QAction>
+ #include "loginwindow.h"
 
 TeacherWindow::TeacherWindow(Database* db, int teacherId, const QString& teacherName,
                              QWidget *parent)
     : QMainWindow(parent), db(db), teacherId(teacherId), teacherName(teacherName) {
 
     setupUI();
+
+    auto* tb = new QToolBar("Toolbar", this);
+    tb->setMovable(false);
+    addToolBar(Qt::TopToolBarArea, tb);
+
+    auto* logoutAction = new QAction("Выйти в авторизацию", this);
+    tb->addAction(logoutAction);
+    connect(logoutAction, &QAction::triggered, this, [this]() {
+        this->hide();
+        auto* login = new LoginWindow(this->db);
+        login->setAttribute(Qt::WA_DeleteOnClose);
+        login->show();
+        this->close();
+    });
+
     setWindowTitle(QString("Преподаватель: %1").arg(teacherName));
     resize(1000, 700);
 }

@@ -2,12 +2,30 @@
 #include <QVBoxLayout>
 #include <QFont>
 #include "ui/widgets/ThemeToggleWidget.h"
+ #include <QToolBar>
+ #include <QAction>
+ #include "loginwindow.h"
 
 AdminWindow::AdminWindow(Database* db, int adminId, const QString& adminName,
                          QWidget *parent)
     : QMainWindow(parent), db(db), adminId(adminId), adminName(adminName) {
 
     setupUI();
+
+    auto* tb = new QToolBar("Toolbar", this);
+    tb->setMovable(false);
+    addToolBar(Qt::TopToolBarArea, tb);
+
+    auto* logoutAction = new QAction("Выйти в авторизацию", this);
+    tb->addAction(logoutAction);
+    connect(logoutAction, &QAction::triggered, this, [this]() {
+        this->hide();
+        auto* login = new LoginWindow(this->db);
+        login->setAttribute(Qt::WA_DeleteOnClose);
+        login->show();
+        this->close();
+    });
+
     setWindowTitle(QString("Администратор: %1").arg(adminName));
     resize(1100, 750);
 }

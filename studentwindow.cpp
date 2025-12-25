@@ -3,10 +3,12 @@
 #include <QHBoxLayout>
 #include "ui/widgets/ThemeToggleWidget.h"
 #include <QToolBar>
+#include <QAction>
 #include "ui/widgets/PeriodSelectorWidget.h"
 #include "ui/pages/StudentSchedulePage.h"
 #include "ui/pages/StudentGradesPage.h"
 #include "ui/pages/StudentAbsencesPage.h"
+ #include "loginwindow.h"
 
 StudentWindow::StudentWindow(Database* db, int studentId, const QString& studentName,
                              QWidget *parent)
@@ -20,6 +22,16 @@ StudentWindow::StudentWindow(Database* db, int studentId, const QString& student
 
     themeToggle = new ThemeToggleWidget(this);
     tb->addWidget(themeToggle);
+
+    auto* logoutAction = new QAction("Выйти в авторизацию", this);
+    tb->addAction(logoutAction);
+    connect(logoutAction, &QAction::triggered, this, [this]() {
+        this->hide();
+        auto* login = new LoginWindow(this->db);
+        login->setAttribute(Qt::WA_DeleteOnClose);
+        login->show();
+        this->close();
+    });
 
 
     setWindowTitle(QString("Студент: %1").arg(studentName));

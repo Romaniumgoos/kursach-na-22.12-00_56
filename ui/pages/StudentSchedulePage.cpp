@@ -14,11 +14,15 @@ static void addDayHeaderRow(QTableWidget* table, const QString& dayTitle)
     const int row = table->rowCount();
     table->insertRow(row);
 
+    table->setSpan(row, 0, 1, table->columnCount());
+    table->setRowHeight(row, 44);
+
     // Колонка 0: текст дня, остальные пустые
     auto* item0 = new QTableWidgetItem(dayTitle);
     item0->setFlags(Qt::ItemIsEnabled); // не редактируется
     item0->setBackground(QColor(230, 235, 245));
     item0->setForeground(QColor(30, 30, 30));
+    item0->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     QFont f = item0->font();
     f.setBold(true);
     item0->setFont(f);
@@ -39,9 +43,9 @@ static void addDayHeaderRow(QTableWidget* table, const QString& dayTitle)
 
 static QColor colorForLessonType(const QString& lessonType)
 {
-    if (lessonType.contains("ЛК")) return QColor(200, 230, 255);
-    if (lessonType.contains("ЛР")) return QColor(210, 255, 210);
-    if (lessonType.contains("ПЗ")) return QColor(255, 240, 200);
+    if (lessonType.contains("ЛР")) return QColor(255, 220, 220);
+    if (lessonType.contains("ЛК")) return QColor(220, 255, 220);
+    if (lessonType.contains("ПЗ")) return QColor(255, 250, 210);
     if (lessonType.contains("ЭКЗ") || lessonType.contains("экз", Qt::CaseInsensitive)) return QColor(255, 210, 210);
     return QColor(225, 225, 225);
 }
@@ -61,7 +65,11 @@ static void addLessonRow(QTableWidget* table,
     const int tableRow = table->rowCount();
     table->insertRow(tableRow);
 
-    table->setItem(tableRow, 0, new QTableWidgetItem(""));
+    // Узкая цветная полоса слева — тип пары
+    auto* stripeItem = new QTableWidgetItem("");
+    stripeItem->setFlags(Qt::ItemIsEnabled);
+    stripeItem->setBackground(colorForLessonType(lessonType));
+    table->setItem(tableRow, 0, stripeItem);
 
     auto* pairItem = new QTableWidgetItem(QString::number(lessonNum));
     pairItem->setTextAlignment(Qt::AlignCenter);
@@ -133,11 +141,11 @@ void StudentSchedulePage::setupTable()
     UiStyle::applyStandardTableStyle(table);
 
     table->setColumnCount(6);
-    table->setHorizontalHeaderLabels({"День", "Пара", "Предмет", "Тип", "Аудитория", "Преподаватель"});
+    table->setHorizontalHeaderLabels({"", "Пара", "Предмет", "Тип", "Аудитория", "Преподаватель"});
     auto* h = table->horizontalHeader();
     h->setSectionResizeMode(QHeaderView::Fixed);
 
-    table->setColumnWidth(0, 130); // День (или заголовок дня)
+    table->setColumnWidth(0, 12);  // Цветная полоса типа
     table->setColumnWidth(1, 55);  // Пара
     table->setColumnWidth(2, 220); // Предмет
     table->setColumnWidth(3, 70);  // Тип
@@ -216,16 +224,41 @@ void StudentSchedulePage::loadSchedule()
         // 1) Пытаемся найти конкретную календарную неделю (cycleweeks.id) по дате
         resolvedWeekId = db->getWeekIdByDate(currentSelection.selectedDate.toStdString());
 
-        // 2) Если нашли weekId — получаем weekOfCycle из этой недели
-        if (resolvedWeekId > 0) {
-            weekOfCycle = db->getWeekOfCycleByWeekId(resolvedWeekId);
-            if (weekOfCycle <= 0) weekOfCycle = 1;
+        // ВАЖНО: если дата не покрывается таблицей cycleweeks — не показываем расписание по "левому" циклу.
+        if (resolvedWeekId <= 0) {
+            std::string minISO;
+            std::string maxISO;
+            {
+                sqlite3_stmt* stmt = nullptr;
+                const char* sql = "SELECT MIN(startdate), MAX(enddate) FROM cycleweeks;";
+                if (sqlite3_prepare_v2(db->getHandle(), sql, -1, &stmt, nullptr) == SQLITE_OK) {
+                    if (sqlite3_step(stmt) == SQLITE_ROW) {
+                        const char* s1 = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+                        const char* s2 = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+                        if (s1) minISO = s1;
+                        if (s2) maxISO = s2;
+                    }
+                }
+                sqlite3_finalize(stmt);
+            }
+
+            table->setRowCount(0);
+            table->setVisible(false);
+
+            QString msg = "Для выбранной даты нет данных о цикле недель (cycleweeks).";
+            if (!minISO.empty() && !maxISO.empty()) {
+                msg += QString("\nВыберите дату в диапазоне %1 — %2")
+                           .arg(QString::fromStdString(minISO))
+                           .arg(QString::fromStdString(maxISO));
+            }
+            emptyStateLabel->setText(msg);
+            emptyStateLabel->setVisible(true);
+            return;
         }
-        // 3) Fallback: если по каким-то причинам weekId не нашли (например, date вне cycleweeks)
-        else {
-            weekOfCycle = db->getWeekOfCycleForDate(currentSelection.selectedDate.toStdString());
-            if (weekOfCycle <= 0) weekOfCycle = 1;
-        }
+
+        // Если нашли weekId — получаем weekOfCycle из этой недели
+        weekOfCycle = db->getWeekOfCycleByWeekId(resolvedWeekId);
+        if (weekOfCycle <= 0) weekOfCycle = 1;
     }
 
 
@@ -329,9 +362,10 @@ void StudentSchedulePage::loadSchedule()
                 if (!dateISO.empty()) {
                     const QString q = QString::fromStdString(dateISO);
                     if (q.size() >= 10) {
-                        headerText += " — " + q.mid(8, 2) + "." + q.mid(5, 2);
+                        const QString ddmm = q.mid(8, 2) + "." + q.mid(5, 2);
+                        headerText = headerText + "\n" + ddmm;
                     } else {
-                        headerText += " — " + q;
+                        headerText = headerText + "\n" + q;
                     }
                 }
 

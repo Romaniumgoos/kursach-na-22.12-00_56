@@ -30,6 +30,10 @@ bool Admin::viewScheduleForGroup(int groupId, int subgroup, int weekOfCycle) {
         return false;
     }
 
+    std::cerr << "[AdminSchedule self-test] groupId=" << groupId
+              << " subgroup=" << subgroup
+              << " weekOfCycle=" << weekOfCycle << "\n";
+
     sqlite3* raw_db = db->getHandle();
     const char* sql = R"(
         SELECT
@@ -68,65 +72,96 @@ bool Admin::viewScheduleForGroup(int groupId, int subgroup, int weekOfCycle) {
               << " ║\n"
               << "╚════════════════════════════════════════╝\n";
 
-    bool found = false;
-    int currentDay = -1;
+    struct Row {
+        int id = 0;
+        int weekday = 0;
+        int lessonNumber = 0;
+        int rowSubGroup = 0;
+        std::string subject;
+        std::string teacher;
+        std::string room;
+        std::string lessonType;
+    };
 
+    std::vector<Row> all;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int scheduleId   = sqlite3_column_int(stmt, 0);
-        int weekday      = sqlite3_column_int(stmt, 1);
-        int lessonNumber = sqlite3_column_int(stmt, 2);
+        Row r;
+        r.id          = sqlite3_column_int(stmt, 0);
+        r.weekday     = sqlite3_column_int(stmt, 1);
+        r.lessonNumber= sqlite3_column_int(stmt, 2);
         const char* subj = (const char*)sqlite3_column_text(stmt, 3);
         const char* teach= (const char*)sqlite3_column_text(stmt, 4);
         const char* room = (const char*)sqlite3_column_text(stmt, 5);
-        int rowSubGroup  = sqlite3_column_int(stmt, 6);
+        r.rowSubGroup = sqlite3_column_int(stmt, 6);
         const char* ltype= (const char*)sqlite3_column_text(stmt, 7);
+        r.subject     = subj ? subj : "";
+        r.teacher     = teach ? teach : "";
+        r.room        = room ? room : "";
+        r.lessonType  = ltype ? ltype : "";
 
-        if (weekday < 0 || weekday > 5) continue;
+        if (r.weekday < 0 || r.weekday > 5) continue;
 
         // фильтр подгруппы: 0 -> все, иначе показываем 0 и выбранную
-        if (subgroup != 0 && rowSubGroup != 0 && rowSubGroup != subgroup) continue;
+        if (subgroup != 0 && r.rowSubGroup != 0 && r.rowSubGroup != subgroup) continue;
 
-        found = true;
-
-        if (weekday != currentDay) {
-            currentDay = weekday;
-
-            std::string dateISO;
-            std::string dateLabel;
-            if (db->getDateForWeekday(weekOfCycle, weekday, dateISO)) {
-                dateLabel = formatDateLabel(dateISO);
-            }
-
-            if (!dateLabel.empty())
-                std::cout << "\n[" << dayNames[weekday] << "] (" << dateLabel << ")\n";
-            else
-                std::cout << "\n[" << dayNames[weekday] << "]\n";
-        }
-
-        std::string subjectText = subj ? subj : "";
-        if (rowSubGroup == 1) subjectText += " (подгр. 1)";
-        else if (rowSubGroup == 2) subjectText += " (подгр. 2)";
-
-        std::string typeLabel;
-        if (ltype && *ltype) typeLabel = " [" + std::string(ltype) + "]";
-
-        std::cout << " ID " << scheduleId << " | Пара " << lessonNumber;
-        if (lessonNumber >= 1 && lessonNumber <= 6) {
-            std::cout << " (" << pairTimes[lessonNumber - 1] << ")";
-        }
-
-        std::cout << " | " << subjectText << typeLabel
-                  << " | " << (teach ? teach : "")
-                  << " | ауд. " << (room ? room : "") << "\n";
+        all.push_back(std::move(r));
     }
 
-    if (!found) {
-        std::cout << "║ (нет записей в расписании)\n";
+    sqlite3_finalize(stmt);
+
+    bool any = false;
+    for (int weekday = 0; weekday <= 5; ++weekday) {
+        std::string dateISO;
+        std::string dateLabel;
+        if (db->getDateForWeekday(weekOfCycle, weekday, dateISO)) {
+            dateLabel = formatDateLabel(dateISO);
+        }
+
+        std::cout << "\n" << dayNames[weekday];
+        if (!dateLabel.empty()) std::cout << " " << dateLabel;
+        std::cout << "\n";
+
+        bool hasDay = false;
+        for (const auto& r : all) {
+            if (r.weekday != weekday) continue;
+
+            hasDay = true;
+            any = true;
+
+            std::string subjectText = r.subject;
+            if (r.rowSubGroup == 1) subjectText += " (подгр. 1)";
+            else if (r.rowSubGroup == 2) subjectText += " (подгр. 2)";
+
+            std::string typeLabel;
+            if (!r.lessonType.empty()) typeLabel = " [" + r.lessonType + "]";
+
+            const std::string time = (r.lessonNumber >= 1 && r.lessonNumber <= 6)
+                                     ? pairTimes[r.lessonNumber - 1]
+                                     : std::string();
+
+            std::cout << "  - " << subjectText << typeLabel << "\n";
+            if (!time.empty() || !r.room.empty()) {
+                std::cout << "    ";
+                if (!time.empty()) std::cout << time;
+                if (!time.empty() && !r.room.empty()) std::cout << " | ";
+                if (!r.room.empty()) std::cout << "ауд. " << r.room;
+                std::cout << "\n";
+            }
+            if (!r.teacher.empty()) {
+                std::cout << "    " << r.teacher << "\n";
+            }
+        }
+
+        if (!hasDay) {
+            std::cout << "  Занятий нет.\n";
+        }
+    }
+
+    if (!any) {
+        std::cout << "\n(нет записей в расписании)\n";
     }
 
     std::cout << "╚════════════════════════════════════════╝\n";
-
-    sqlite3_finalize(stmt);
     return true;
 }
 
@@ -444,9 +479,11 @@ void Admin::displayMenu(Database& db) {
                 std::cout << "2. Изменить пару\n";
                 std::cout << "3. Удалить пару\n";
                 std::cout << "0. Вернуться в меню\n";
+                std::cout << "4. Выйти в авторизацию\n";
 
-                int action = readChoiceFromList("Действие", 0, 3, false, 0);
+                int action = readChoiceFromList("Действие", 0, 4, false, 0);
                 if (action == 0) break;
+                if (action == 4) return;
 
                 // ===== ДОБАВИТЬ ПАРУ =====
                 if (action == 1) {
@@ -748,10 +785,16 @@ void Admin::displayMenu(Database& db) {
             int subgroup = readIntInRange("Подгруппа (0 – вся группа, 1 или 2)", 0, 2, 0, true, 0);
             if (subgroup == 0 && false) {} // просто чтобы не ругалось на стиль; не трогай
 
-            int week = chooseWeekOfCycleOrDate(db);
-            if (week == 0) break;
+            int sel = chooseWeekOfCycleOrDate(db);
+            if (sel == 0) break;
 
-            viewScheduleForGroup(groupId, subgroup, week);
+            const WeekSelection ws = decodeWeekSelection(db, sel);
+            if (ws.weekOfCycle <= 0) {
+                std::cout << "Некорректная неделя.\n";
+                break;
+            }
+
+            viewScheduleForGroup(groupId, subgroup, ws.weekOfCycle);
             break;
         }
 
