@@ -1,0 +1,4 @@
+mingw32-make: Entering directory 'C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-mingw'
+[  7%] Building CXX object CMakeFiles/app_gui.dir/teacherwindow.cpp.obj
+"D:\CLion 2025.1.1\bin\mingw\bin\g++.exe" -DMINGW_HAS_SECURE_API=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NEEDS_QMAIN -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 @CMakeFiles/app_gui.dir/includes_CXX.rsp -std=gnu++20 -fdiagnostics-color=always -MD -MT CMakeFiles/app_gui.dir/teacherwindow.cpp.obj -MF CMakeFiles\app_gui.dir\teacherwindow.cpp.obj.d -o CMakeFiles\app_gui.dir\teacherwindow.cpp.obj -c "C:\Users\leshk\CLionProjects\prodolzhenie ot 24.12 15_32\teacherwindow.cpp"
+mingw32-make: Leaving directory 'C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-mingw'

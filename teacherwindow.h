@@ -29,6 +29,25 @@ public:
                           QWidget *parent = nullptr);
     ~TeacherWindow();
 
+    struct SelectedLesson {
+        bool valid = false;
+        int scheduleId = 0;
+        int subjectId = 0;
+        int weekday = 0;
+        int lessonNumber = 0;
+        int subgroup = 0;
+        QString subjectName;
+        QString room;
+        QString lessonType;
+        QString dateISO;
+    };
+
+    struct JournalLessonRow {
+        SelectedLesson lesson;
+        QString weekdayName;
+        QString timeText;
+    };
+
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
@@ -69,12 +88,6 @@ private:
     QScrollArea* journalLessonsScroll = nullptr;
     QWidget* journalLessonsContainer = nullptr;
     QVBoxLayout* journalLessonsLayout = nullptr;
-
-    struct JournalLessonRow {
-        SelectedLesson lesson;
-        QString weekdayName;
-        QString timeText;
-    };
     std::vector<JournalLessonRow> journalLessonRows;
     QSpinBox* gradeSpin = nullptr;
     QPushButton* saveGradeButton = nullptr;
@@ -111,18 +124,6 @@ private:
     QLabel* statsDetailGradesSummaryLabel = nullptr;
     QLabel* statsDetailAbsencesSummaryLabel = nullptr;
 
-    struct SelectedLesson {
-        bool valid = false;
-        int scheduleId = 0;
-        int subjectId = 0;
-        int weekday = 0;
-        int lessonNumber = 0;
-        int subgroup = 0;
-        QString subjectName;
-        QString room;
-        QString lessonType;
-        QString dateISO;
-    };
     SelectedLesson selectedLesson;
 
     void setupUI();

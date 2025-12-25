@@ -344,35 +344,54 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     auto* root = new QWidget(this);
     auto* layout = new QVBoxLayout(root);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(12);
 
-    auto* topRow = new QHBoxLayout();
-    topRow->setContentsMargins(0, 0, 0, 0);
+    auto* filtersCard = new QFrame(root);
+    filtersCard->setFrameShape(QFrame::StyledPanel);
+    filtersCard->setStyleSheet("QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
+                               "QLabel{color: palette(Text); background: transparent;}");
+    auto* topRow = new QHBoxLayout(filtersCard);
+    topRow->setContentsMargins(14, 10, 14, 10);
+    topRow->setSpacing(10);
 
-    topRow->addWidget(new QLabel("Группа:", root));
-    statsGroupCombo = new QComboBox(root);
+    auto* groupLabel = new QLabel("Группа", filtersCard);
+    groupLabel->setStyleSheet(UiStyle::badgeNeutralStyle());
+    groupLabel->setMinimumHeight(22);
+    groupLabel->setAlignment(Qt::AlignCenter);
+    topRow->addWidget(groupLabel);
+    statsGroupCombo = new QComboBox(filtersCard);
     statsGroupCombo->setMinimumWidth(180);
     topRow->addWidget(statsGroupCombo);
 
     topRow->addSpacing(12);
-    topRow->addWidget(new QLabel("Семестр:", root));
-    statsSemesterCombo = new QComboBox(root);
+    auto* semesterLabel = new QLabel("Семестр", filtersCard);
+    semesterLabel->setStyleSheet(UiStyle::badgeNeutralStyle());
+    semesterLabel->setMinimumHeight(22);
+    semesterLabel->setAlignment(Qt::AlignCenter);
+    topRow->addWidget(semesterLabel);
+    statsSemesterCombo = new QComboBox(filtersCard);
     statsSemesterCombo->setMinimumWidth(160);
     topRow->addWidget(statsSemesterCombo);
 
     topRow->addSpacing(12);
-    topRow->addWidget(new QLabel("Предмет:", root));
-    statsSubjectCombo = new QComboBox(root);
+    auto* subjectLabel = new QLabel("Предмет", filtersCard);
+    subjectLabel->setStyleSheet(UiStyle::badgeNeutralStyle());
+    subjectLabel->setMinimumHeight(22);
+    subjectLabel->setAlignment(Qt::AlignCenter);
+    topRow->addWidget(subjectLabel);
+    statsSubjectCombo = new QComboBox(filtersCard);
     statsSubjectCombo->setMinimumWidth(240);
     topRow->addWidget(statsSubjectCombo);
 
     topRow->addStretch();
-    auto* refresh = new QPushButton("Обновить", root);
+    auto* refresh = new QPushButton("Обновить", filtersCard);
     topRow->addWidget(refresh);
 
-    layout->addLayout(topRow);
+    layout->addWidget(filtersCard);
 
     auto* splitter = new QSplitter(Qt::Horizontal, root);
     splitter->setChildrenCollapsible(false);
+    splitter->setHandleWidth(8);
     layout->addWidget(splitter, 1);
 
     auto* leftPane = new QWidget(splitter);
@@ -382,7 +401,7 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
     auto* gradesBox = new QGroupBox("Оценки", leftPane);
     auto* gradesLayout = new QVBoxLayout(gradesBox);
-    gradesLayout->setContentsMargins(10, 8, 10, 10);
+    gradesLayout->setContentsMargins(10, 8, 10, 8);
     gradesLayout->setSpacing(8);
 
     statsGradesTable = new QTableWidget(gradesBox);
@@ -402,7 +421,7 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
     auto* absBox = new QGroupBox("Пропуски", leftPane);
     auto* absLayout = new QVBoxLayout(absBox);
-    absLayout->setContentsMargins(10, 8, 10, 10);
+    absLayout->setContentsMargins(10, 8, 10, 8);
     absLayout->setSpacing(8);
 
     statsAbsencesTable = new QTableWidget(absBox);
@@ -430,13 +449,29 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     detailLayout->setContentsMargins(0, 0, 0, 0);
     detailLayout->setSpacing(12);
 
-    statsDetailTitleLabel = new QLabel("Выберите студента слева", statsDetailWidget);
-    statsDetailTitleLabel->setStyleSheet("font-weight: 800; font-size: 14px; color: palette(WindowText);");
-    detailLayout->addWidget(statsDetailTitleLabel);
+    auto* detailHeader = new QFrame(statsDetailWidget);
+    detailHeader->setFrameShape(QFrame::StyledPanel);
+    detailHeader->setStyleSheet("QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
+                                "QLabel{color: palette(Text); background: transparent;}");
+    auto* dh = new QHBoxLayout(detailHeader);
+    dh->setContentsMargins(14, 10, 14, 10);
+    dh->setSpacing(10);
+
+    statsDetailTitleLabel = new QLabel("Выберите студента слева", detailHeader);
+    statsDetailTitleLabel->setStyleSheet("font-weight: 900; font-size: 14px; color: palette(WindowText);");
+    dh->addWidget(statsDetailTitleLabel, 1);
+
+    auto* hint = new QLabel("детали", detailHeader);
+    hint->setStyleSheet(UiStyle::badgeNeutralStyle());
+    hint->setMinimumHeight(22);
+    hint->setAlignment(Qt::AlignCenter);
+    dh->addWidget(hint, 0, Qt::AlignRight);
+
+    detailLayout->addWidget(detailHeader);
 
     auto* detailGradesBox = new QGroupBox("Все оценки студента", statsDetailWidget);
     auto* dgLayout = new QVBoxLayout(detailGradesBox);
-    dgLayout->setContentsMargins(10, 8, 10, 10);
+    dgLayout->setContentsMargins(10, 8, 10, 8);
     dgLayout->setSpacing(8);
 
     statsDetailGradesTable = new QTableWidget(detailGradesBox);
@@ -454,7 +489,7 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
     auto* detailAbsBox = new QGroupBox("Все пропуски студента", statsDetailWidget);
     auto* daLayout = new QVBoxLayout(detailAbsBox);
-    daLayout->setContentsMargins(10, 8, 10, 10);
+    daLayout->setContentsMargins(10, 8, 10, 8);
     daLayout->setSpacing(8);
 
     statsDetailAbsencesTable = new QTableWidget(detailAbsBox);
@@ -577,9 +612,16 @@ static QWidget* buildJournalLessonCard(QWidget* parent,
     title->setStyleSheet("font-weight: 800; font-size: 14px; color: palette(WindowText);");
     grid->addWidget(title, 0, 0, 1, 2);
 
+    auto toDdMm = [](const QString& dateISO) {
+        if (dateISO.size() >= 10) {
+            return dateISO.mid(8, 2) + "." + dateISO.mid(5, 2);
+        }
+        return dateISO;
+    };
+
     const QString dateText = row.lesson.dateISO.isEmpty() ? QString("—") : row.lesson.dateISO;
     const QString metaText = QString("%1  •  %2  •  %3")
-        .arg(wnd->formatDdMm(dateText))
+        .arg(toDdMm(dateText))
         .arg(row.weekdayName.isEmpty() ? QString("—") : row.weekdayName)
         .arg(row.timeText.isEmpty() ? QString("—") : row.timeText);
     auto* meta = new QLabel(metaText, card);

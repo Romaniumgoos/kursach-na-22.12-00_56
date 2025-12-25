@@ -1,0 +1,1 @@
+mingw32-make: *** [CMakeFiles\app_gui.dir\build.make:139: CMakeFiles/app_gui.dir/teacherwindow.cpp.obj] Error 1
