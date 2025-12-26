@@ -53,6 +53,8 @@ set(GUI_SOURCES
         teacherwindow.cpp
         adminwindow.cpp
 
+        ui/util/AppEvents.cpp
+
         ui/style/ThemeManager.cpp
         ui/widgets/ThemeToggleWidget.cpp
         ui/widgets/PeriodSelectorWidget.cpp
@@ -80,6 +82,7 @@ set(GUI_HEADERS
         ui/models/WeekSelection.h
         ui/util/TableWidgetStyle.h
         ui/util/UiStyle.h
+        ui/util/AppEvents.h
 )
 
 add_executable(app_gui WIN32

@@ -114,14 +114,14 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
     grid->addWidget(corner, 0, 0);
 
     // day headers (row 0, cols 1..6)
-    for (int weekday = 0; weekday <= 5; ++weekday) {
+    for (int weekday = 1; weekday <= 6; ++weekday) {
         const QString iso = dateISOForDay(db, weekOfCycle, resolvedWeekId, weekday);
-        auto* header = new QLabel(dayHeaderText(dayNames[weekday], iso), contentWidget);
+        auto* header = new QLabel(dayHeaderText(dayNames[weekday - 1], iso), contentWidget);
         header->setAlignment(Qt::AlignCenter);
         header->setFixedHeight(52);
         header->setObjectName("WeekGridDayHeader");
         header->setWordWrap(true);
-        grid->addWidget(header, 0, 1 + weekday);
+        grid->addWidget(header, 0, weekday);
     }
 
     // time column + cells
@@ -133,7 +133,7 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
         timeLabel->setMinimumHeight(90);
         grid->addWidget(timeLabel, 1 + lessonIndex, 0);
 
-        for (int weekday = 0; weekday <= 5; ++weekday) {
+        for (int weekday = 1; weekday <= 6; ++weekday) {
             auto* cell = new QWidget(contentWidget);
             cell->setObjectName("WeekGridCell");
 
@@ -153,6 +153,7 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
 
             if (ok) {
                 for (const auto& r : rows) {
+                    const int scheduleId = std::get<0>(r);
                     const int rowLessonNum = std::get<1>(r);
                     if (rowLessonNum != lessonNum) continue;
 
@@ -164,7 +165,9 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
                     const QString lessonType = QString::fromStdString(std::get<5>(r));
                     const QString teacher = QString::fromStdString(std::get<6>(r));
 
-                    v->addWidget(new LessonCardWidget(subject, room, lessonType, teacher, rowSubgroup, cell));
+                    auto* card = new LessonCardWidget(scheduleId, subject, room, lessonType, teacher, rowSubgroup, cell);
+                    connect(card, &LessonCardWidget::clicked, this, &WeekGridScheduleWidget::lessonClicked);
+                    v->addWidget(card);
                     ++cardCount;
                 }
             }
@@ -179,7 +182,7 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
             v->addStretch(1);
 
             cell->setMinimumHeight(90);
-            grid->addWidget(cell, 1 + lessonIndex, 1 + weekday);
+            grid->addWidget(cell, 1 + lessonIndex, weekday);
         }
     }
 

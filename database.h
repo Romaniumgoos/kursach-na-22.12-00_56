@@ -68,6 +68,8 @@ public:
     bool getAllUsers(
         std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers
     );
+
+    bool getUserIdByUsername(const std::string& username, int& outUserId);
     bool getStudentGradesForSemester(int studentId, int semesterId,
     std::vector<std::tuple<std::string, int, std::string, std::string>>& outGrades);
     // (subjectName, value, date, grade_type)
@@ -87,6 +89,13 @@ public:
                 const std::string& name,
                 int groupId,
                 int subgroup);
+    bool updateUser(int userId,
+                    const std::string& username,
+                    const std::string& name,
+                    const std::string& role,
+                    int groupId,
+                    int subgroup,
+                    const std::string& passwordOrEmpty);
     // для admin/teacher можно передавать 0
     bool deleteUserById(int userId);
     // Правильное объявление (строка ~87, оставь это):
@@ -190,6 +199,11 @@ public:
     bool getAllSubjects(std::vector<std::pair<int, std::string>>& outSubjects);
     bool getAllTeachers(std::vector<std::pair<int, std::string>>& outTeachers);
     bool getStudentGroupAndSubgroup(int studentId, int& outGroupId, int& outSubgroup);
+
+    bool getTeacherSubjectIds(int teacherId, std::vector<int>& outSubjectIds);
+    bool setTeacherSubjects(int teacherId, const std::vector<int>& subjectIds);
+    bool getTeacherGroupIds(int teacherId, std::vector<int>& outGroupIds);
+    bool setTeacherGroups(int teacherId, const std::vector<int>& groupIds);
     bool getScheduleForTeacherGroup(
     int teacherId,
     int groupId,

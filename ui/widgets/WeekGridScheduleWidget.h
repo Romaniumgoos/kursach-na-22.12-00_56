@@ -32,6 +32,9 @@ public:
                                     int resolvedWeekId,
                                     int currentSubgroup);
 
+signals:
+    void lessonClicked(int scheduleId);
+
 private:
     QScrollArea* scrollArea = nullptr;
     QWidget* contentWidget = nullptr;

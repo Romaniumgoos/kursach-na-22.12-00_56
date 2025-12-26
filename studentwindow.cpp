@@ -10,6 +10,8 @@
 #include "ui/pages/StudentAbsencesPage.h"
  #include "loginwindow.h"
 
+ #include "ui/util/AppEvents.h"
+
 StudentWindow::StudentWindow(Database* db, int studentId, const QString& studentName,
                              QWidget *parent)
     : QMainWindow(parent), db(db), studentId(studentId),
@@ -36,6 +38,12 @@ StudentWindow::StudentWindow(Database* db, int studentId, const QString& student
 
     setWindowTitle(QString("Студент: %1").arg(studentName));
     resize(900, 600);
+
+    connect(&AppEvents::instance(), &AppEvents::scheduleChanged, this, [this]() {
+        if (schedulePage && schedulePeriodSelector) {
+            schedulePage->onPeriodChanged(schedulePeriodSelector->currentSelection());
+        }
+    });
 }
 
 StudentWindow::~StudentWindow() {
@@ -72,17 +80,17 @@ void StudentWindow::setupScheduleTab() {
     auto* scheduleWidget = new QWidget();
     auto* scheduleLayout = new QVBoxLayout(scheduleWidget);
 
-    auto* periodSelector = new PeriodSelectorWidget(db, scheduleWidget);
-    auto* schedulePage = new StudentSchedulePage(db, studentId, scheduleWidget);
+    schedulePeriodSelector = new PeriodSelectorWidget(db, scheduleWidget);
+    schedulePage = new StudentSchedulePage(db, studentId, scheduleWidget);
 
-    scheduleLayout->addWidget(periodSelector);
+    scheduleLayout->addWidget(schedulePeriodSelector);
     scheduleLayout->addWidget(schedulePage);
 
-    connect(periodSelector, &PeriodSelectorWidget::selectionChanged,
+    connect(schedulePeriodSelector, &PeriodSelectorWidget::selectionChanged,
             schedulePage, &StudentSchedulePage::onPeriodChanged);
 
     // Инициализируем с текущим выбором
-    schedulePage->onPeriodChanged(periodSelector->currentSelection());
+    schedulePage->onPeriodChanged(schedulePeriodSelector->currentSelection());
 
     tabWidget->addTab(scheduleWidget, "📅 Расписание");
 }

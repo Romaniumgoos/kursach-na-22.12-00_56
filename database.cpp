@@ -54,6 +54,166 @@ bool parseDateISO(const std::string& s, std::tm& out) {
 
 } // namespace
 
+bool Database::getUserIdByUsername(const std::string& username, int& outUserId)
+{
+    outUserId = 0;
+    if (!db) return false;
+    const char* sql = "SELECT id FROM users WHERE username = ? LIMIT 1;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_TRANSIENT);
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outUserId = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_ROW || rc == SQLITE_DONE;
+}
+
+bool Database::getTeacherSubjectIds(int teacherId, std::vector<int>& outSubjectIds)
+{
+    outSubjectIds.clear();
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    const char* sql = "SELECT subjectid FROM teachersubjects WHERE teacherid = ? ORDER BY subjectid;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_int(stmt, 1, teacherId);
+
+    int rc = 0;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        outSubjectIds.push_back(sqlite3_column_int(stmt, 0));
+    }
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
+bool Database::setTeacherSubjects(int teacherId, const std::vector<int>& subjectIds)
+{
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    char* err = nullptr;
+    if (sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &err) != SQLITE_OK) {
+        if (err) sqlite3_free(err);
+        return false;
+    }
+
+    sqlite3_stmt* delStmt = nullptr;
+    if (sqlite3_prepare_v2(db, "DELETE FROM teachersubjects WHERE teacherid = ?;", -1, &delStmt, nullptr) != SQLITE_OK) {
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    sqlite3_bind_int(delStmt, 1, teacherId);
+    if (sqlite3_step(delStmt) != SQLITE_DONE) {
+        sqlite3_finalize(delStmt);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    sqlite3_finalize(delStmt);
+
+    sqlite3_stmt* insStmt = nullptr;
+    if (sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO teachersubjects(teacherid, subjectid) VALUES (?, ?);", -1, &insStmt, nullptr) != SQLITE_OK) {
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    for (int sid : subjectIds) {
+        if (sid <= 0) continue;
+        sqlite3_reset(insStmt);
+        sqlite3_clear_bindings(insStmt);
+        sqlite3_bind_int(insStmt, 1, teacherId);
+        sqlite3_bind_int(insStmt, 2, sid);
+        if (sqlite3_step(insStmt) != SQLITE_DONE) {
+            sqlite3_finalize(insStmt);
+            sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+    }
+    sqlite3_finalize(insStmt);
+
+    if (sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &err) != SQLITE_OK) {
+        if (err) sqlite3_free(err);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    if (err) sqlite3_free(err);
+    return true;
+}
+
+bool Database::getTeacherGroupIds(int teacherId, std::vector<int>& outGroupIds)
+{
+    outGroupIds.clear();
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    const char* sql = "SELECT groupid FROM teachergroups WHERE teacherid = ? ORDER BY groupid;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_int(stmt, 1, teacherId);
+
+    int rc = 0;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        outGroupIds.push_back(sqlite3_column_int(stmt, 0));
+    }
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
+bool Database::setTeacherGroups(int teacherId, const std::vector<int>& groupIds)
+{
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    char* err = nullptr;
+    if (sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &err) != SQLITE_OK) {
+        if (err) sqlite3_free(err);
+        return false;
+    }
+
+    sqlite3_stmt* delStmt = nullptr;
+    if (sqlite3_prepare_v2(db, "DELETE FROM teachergroups WHERE teacherid = ?;", -1, &delStmt, nullptr) != SQLITE_OK) {
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    sqlite3_bind_int(delStmt, 1, teacherId);
+    if (sqlite3_step(delStmt) != SQLITE_DONE) {
+        sqlite3_finalize(delStmt);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    sqlite3_finalize(delStmt);
+
+    sqlite3_stmt* insStmt = nullptr;
+    if (sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO teachergroups(teacherid, groupid) VALUES (?, ?);", -1, &insStmt, nullptr) != SQLITE_OK) {
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    for (int gid : groupIds) {
+        if (gid < 0) continue;
+        sqlite3_reset(insStmt);
+        sqlite3_clear_bindings(insStmt);
+        sqlite3_bind_int(insStmt, 1, teacherId);
+        sqlite3_bind_int(insStmt, 2, gid);
+        if (sqlite3_step(insStmt) != SQLITE_DONE) {
+            sqlite3_finalize(insStmt);
+            sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+    }
+    sqlite3_finalize(insStmt);
+
+    if (sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &err) != SQLITE_OK) {
+        if (err) sqlite3_free(err);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    if (err) sqlite3_free(err);
+    return true;
+}
+
 // ===== Constructor & Destructor =====
 
 Database::Database(const std::string& file)
@@ -573,8 +733,8 @@ bool Database::initializeDemoData()
 
         for (const auto& tg : teacherGroups) {
             const std::string& username = tg.first;
-            const int teacherId = getUserIdByUsername(db, username);
-            if (teacherId <= 0) {
+            int teacherId = 0;
+            if (!getUserIdByUsername(username, teacherId) || teacherId <= 0) {
                 sqlite3_finalize(insertStmt);
                 sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
                 std::cerr << "[✗] teachergroups: не найден пользователь teacher username='"
@@ -750,6 +910,54 @@ bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSeme
     return true;
 }
 
+bool Database::updateUser(int userId,
+                          const std::string& username,
+                          const std::string& name,
+                          const std::string& role,
+                          int groupId,
+                          int subgroup,
+                          const std::string& passwordOrEmpty)
+{
+    if (!isConnected()) {
+        std::cerr << "[✗] updateUser: DB not connected\n";
+        return false;
+    }
+    if (userId <= 0) return false;
+
+    bool withPassword = false;
+    for (char ch : passwordOrEmpty) {
+        if (!std::isspace(static_cast<unsigned char>(ch))) {
+            withPassword = true;
+            break;
+        }
+    }
+    const char* sqlNoPass = "UPDATE users SET username=?, name=?, role=?, groupid=?, subgroup=? WHERE id=?;";
+    const char* sqlWithPass = "UPDATE users SET username=?, password=?, name=?, role=?, groupid=?, subgroup=? WHERE id=?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, withPassword ? sqlWithPass : sqlNoPass, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[✗] updateUser prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    int idx = 1;
+    sqlite3_bind_text(stmt, idx++, username.c_str(), -1, SQLITE_TRANSIENT);
+    if (withPassword) {
+        sqlite3_bind_text(stmt, idx++, passwordOrEmpty.c_str(), -1, SQLITE_TRANSIENT);
+    }
+    sqlite3_bind_text(stmt, idx++, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, idx++, role.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (groupId <= 0) sqlite3_bind_null(stmt, idx++);
+    else sqlite3_bind_int(stmt, idx++, groupId);
+    sqlite3_bind_int(stmt, idx++, subgroup);
+    sqlite3_bind_int(stmt, idx++, userId);
+
+    const int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
 bool Database::getSubjectsForTeacherInGroupSchedule(int teacherId, int groupId,
                                                     std::vector<std::pair<int, std::string>>& outSubjects)
 {
@@ -913,6 +1121,52 @@ bool Database::getScheduleForTeacherGroupWeekWithRoom(
     return true;
 }
 
+bool Database::getAllUsers(
+    std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers
+)
+{
+    outUsers.clear();
+    if (!db) {
+        std::cerr << "[✗] getAllUsers: DB not connected\n";
+        return false;
+    }
+
+    const char* sql =
+        "SELECT id, username, name, role, COALESCE(groupid, 0), COALESCE(subgroup, 0) "
+        "FROM users ORDER BY id;";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[✗] getAllUsers: prepare error: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* uText = sqlite3_column_text(stmt, 1);
+        const unsigned char* nText = sqlite3_column_text(stmt, 2);
+        const unsigned char* rText = sqlite3_column_text(stmt, 3);
+        const int groupId = sqlite3_column_int(stmt, 4);
+        const int subgroup = sqlite3_column_int(stmt, 5);
+
+        const std::string username = uText ? reinterpret_cast<const char*>(uText) : "";
+        const std::string name = nText ? reinterpret_cast<const char*>(nText) : "";
+        const std::string role = rText ? reinterpret_cast<const char*>(rText) : "";
+
+        outUsers.emplace_back(id, username, name, role, groupId, subgroup);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "[✗] getAllUsers: step error: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
 bool Database::getAllGroups(std::vector<std::pair<int, std::string>>& outGroups) {
     outGroups.clear();
     if (!db) {
@@ -1004,47 +1258,6 @@ bool Database::getAllTeachers(std::vector<std::pair<int, std::string>>& outTeach
         sqlite3_finalize(stmt);
         return false;
     }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-bool Database::getAllUsers(std::vector<std::tuple<int, std::string, std::string, std::string, int, int>>& outUsers) {
-    outUsers.clear();
-    if (!db) {
-        std::cerr << "[✗] getAllUsers: DB not connected\n";
-        return false;
-    }
-
-    const char* sql =
-        "SELECT id, username, name, role, COALESCE(groupid, 0), COALESCE(subgroup, 0) "
-        "FROM users ORDER BY id;";
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "[✗] getAllUsers: prepare error: " << sqlite3_errmsg(db) << "\n";
-        return false;
-    }
-
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        const unsigned char* uText = sqlite3_column_text(stmt, 1);
-        const unsigned char* nText = sqlite3_column_text(stmt, 2);
-        const unsigned char* rText = sqlite3_column_text(stmt, 3);
-        int groupId = sqlite3_column_int(stmt, 4);
-        int subgroup = sqlite3_column_int(stmt, 5);
-        std::string username = uText ? reinterpret_cast<const char*>(uText) : "";
-        std::string name = nText ? reinterpret_cast<const char*>(nText) : "";
-        std::string role = rText ? reinterpret_cast<const char*>(rText) : "";
-        outUsers.emplace_back(id, username, name, role, groupId, subgroup);
-    }
-
-    if (rc != SQLITE_DONE) {
-        std::cerr << "[✗] getAllUsers: step error: " << sqlite3_errmsg(db) << "\n";
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
     sqlite3_finalize(stmt);
     return true;
 }
@@ -2187,7 +2400,10 @@ bool Database::getDateForWeekday(int weekOfCycle, int weekday, std::string& outD
     int y, m, d;
     if (sscanf(start.c_str(), "%d-%d-%d", &y, &m, &d) != 3) return false;
 
-    d += weekday;
+    // DB weekday convention: 1..6 (Mon..Sat). startdate in cycleweeks is Monday.
+    // Offset in days: (weekday - 1)
+    if (weekday < 1 || weekday > 6) return false;
+    d += (weekday - 1);
 
     std::ostringstream oss;
     oss << y << '-'
@@ -2202,7 +2418,8 @@ bool Database::getDateForWeekdayByWeekId(int weekId, int weekday, std::string& o
     outDateISO.clear();
     if (!db) return false;
 
-    if (weekday < 0 || weekday > 6) return false;
+    // DB weekday convention: 1..6 (Mon..Sat). startdate in cycleweeks is Monday.
+    if (weekday < 1 || weekday > 6) return false;
 
     const char* sql =
         "SELECT startdate FROM cycleweeks WHERE id = ? LIMIT 1";
@@ -2231,7 +2448,8 @@ bool Database::getDateForWeekdayByWeekId(int weekId, int weekday, std::string& o
     std::time_t t = std::mktime(&tmStart);
     if (t == (std::time_t)-1) return false;
 
-    t += static_cast<long>(weekday) * 24 * 60 * 60;
+    // Offset in days: (weekday - 1)
+    t += static_cast<long>(weekday - 1) * 24 * 60 * 60;
 
     std::tm* tmRes = std::localtime(&t);
     if (!tmRes) return false;

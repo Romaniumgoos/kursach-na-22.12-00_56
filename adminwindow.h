@@ -11,6 +11,7 @@ class QPushButton;
 class QComboBox;
 class QLineEdit;
 class QWidget;
+class WeekGridScheduleWidget;
 
 class AdminWindow : public QMainWindow {
     Q_OBJECT
@@ -40,7 +41,8 @@ private:
     QComboBox* schedGroupCombo = nullptr;
     QComboBox* schedSubgroupCombo = nullptr;
     QComboBox* schedWeekCombo = nullptr;
-    QTableWidget* scheduleTable = nullptr;
+    WeekGridScheduleWidget* scheduleGrid = nullptr;
+    int selectedScheduleId = 0;
     QPushButton* addScheduleButton = nullptr;
     QPushButton* editScheduleButton = nullptr;
     QPushButton* deleteScheduleButton = nullptr;

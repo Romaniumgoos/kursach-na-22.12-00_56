@@ -3,6 +3,7 @@
  #include "ui/widgets/ThemeToggleWidget.h"
  #include "ui/widgets/WeekGridScheduleWidget.h"
  #include "ui/util/UiStyle.h"
+ #include "ui/util/AppEvents.h"
  #include "loginwindow.h"
 
  #include <QVBoxLayout>
@@ -284,9 +285,13 @@ void TeacherWindow::reloadStatsStudentDetails(int studentId)
 
 TeacherWindow::TeacherWindow(Database* db, int teacherId, const QString& teacherName,
                              QWidget *parent)
-    : QMainWindow(parent), db(db), teacherId(teacherId), teacherName(teacherName) {
+   : QMainWindow(parent), db(db), teacherId(teacherId), teacherName(teacherName) {
 
     setupUI();
+
+    connect(&AppEvents::instance(), &AppEvents::scheduleChanged, this, [this]() {
+        reloadSchedule();
+    });
 
     auto* tb = new QToolBar("Toolbar", this);
     tb->setMovable(false);

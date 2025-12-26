@@ -337,7 +337,7 @@ void StudentSchedulePage::loadSchedule()
 
     int totalRows = 0;
 
-    for (int weekday = 0; weekday <= 5; ++weekday) {
+    for (int weekday = 1; weekday <= 6; ++weekday) {
         bool dayHeaderAdded = false;
 
         std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>> rows;
@@ -364,7 +364,8 @@ void StudentSchedulePage::loadSchedule()
             if (!dayHeaderAdded) {
                 dayHeaderAdded = true;
 
-                QString headerText = dayNames[weekday];
+                const int dayIndex = weekday - 1;
+                QString headerText = (dayIndex >= 0 && dayIndex < dayNames.size()) ? dayNames[dayIndex] : QString::number(weekday);
                 std::string dateISO;
 
                 if (resolvedWeekId > 0) {

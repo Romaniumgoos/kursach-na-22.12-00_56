@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
 
 QString LessonCardWidget::stripeColorCss(const QString& lessonType)
 {
@@ -22,6 +23,7 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
                                  QWidget* parent)
     : QWidget(parent)
 {
+    scheduleId = 0;
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     setObjectName("LessonCard");
 
@@ -88,4 +90,24 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
     }
 
     v->addLayout(bottomRow);
+}
+
+LessonCardWidget::LessonCardWidget(int scheduleId,
+                                   const QString& subject,
+                                   const QString& room,
+                                   const QString& lessonType,
+                                   const QString& teacher,
+                                   int subgroup,
+                                   QWidget* parent)
+    : LessonCardWidget(subject, room, lessonType, teacher, subgroup, parent)
+{
+    this->scheduleId = scheduleId;
+}
+
+void LessonCardWidget::mousePressEvent(QMouseEvent* event)
+{
+    QWidget::mousePressEvent(event);
+    if (event && event->button() == Qt::LeftButton && scheduleId > 0) {
+        emit clicked(scheduleId);
+    }
 }

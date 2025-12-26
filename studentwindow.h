@@ -6,6 +6,8 @@
 #include <QLabel>
 #include "database.h"
 class ThemeToggleWidget;
+class PeriodSelectorWidget;
+class StudentSchedulePage;
 class StudentWindow : public QMainWindow {
     Q_OBJECT
 
@@ -23,6 +25,9 @@ private:
     QTabWidget* tabWidget;
 
     ThemeToggleWidget* themeToggle = nullptr;
+
+    PeriodSelectorWidget* schedulePeriodSelector = nullptr;
+    StudentSchedulePage* schedulePage = nullptr;
 
 
     void setupUI();
