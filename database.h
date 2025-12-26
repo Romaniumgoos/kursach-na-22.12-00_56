@@ -8,6 +8,14 @@
 #include <tuple>
 
 
+struct LessonOccurrence {
+    std::string lessonDateISO;
+    int scheduleId = 0;
+    int teacherId = 0;
+    int pairNumber = 0;
+};
+
+
 // ============================================================
 // КЛАСС ДЛЯ РАБОТЫ С БАЗОЙ ДАННЫХ (SQLite)
 // ============================================================
@@ -208,6 +216,13 @@ public:
      int weekOfCycle,
      std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>>& rows
  );
+
+    bool getLessonOccurrencesForStudent(
+        int studentId,
+        int subjectId,
+        const std::string& lessonType,
+        int semesterId,
+        std::vector<LessonOccurrence>& out);
 
     // Resolve teacher for a specific schedule entry (by scheduleId)
     bool getTeacherForScheduleId(int scheduleId, int& outTeacherId, std::string& outTeacherName);

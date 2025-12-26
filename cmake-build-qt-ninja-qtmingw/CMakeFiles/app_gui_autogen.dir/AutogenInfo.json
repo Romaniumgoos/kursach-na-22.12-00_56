@@ -333,6 +333,12 @@
 			null
 		],
 		[
+			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/d1_randomizer.h",
+			"MU",
+			"3BYFHCGL5U/moc_d1_randomizer.cpp",
+			null
+		],
+		[
 			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/student_service.h",
 			"MU",
 			"3BYFHCGL5U/moc_student_service.cpp",
@@ -562,6 +568,11 @@
 		],
 		[
 			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/scholarship.cpp",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/d1_randomizer.cpp",
 			"MU",
 			null
 		],

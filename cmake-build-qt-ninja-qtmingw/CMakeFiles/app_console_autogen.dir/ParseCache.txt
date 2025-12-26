@@ -15,6 +15,7 @@ C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/student.h
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/teacher.h
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/AdminService.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/database.cpp
+C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/d1_randomizer.h
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/menu.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/main_console.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/scholarship.cpp
@@ -24,3 +25,4 @@ C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/statistics.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/student.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/teacher.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/third_party/sqlite/sqlite3.c
+C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/d1_randomizer.cpp

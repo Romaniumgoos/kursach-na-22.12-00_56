@@ -13,6 +13,7 @@ class QLineEdit;
 class QWidget;
 class WeekGridScheduleWidget;
 class PeriodSelectorWidget;
+class QCheckBox;
 
 class AdminWindow : public QMainWindow {
     Q_OBJECT
@@ -51,10 +52,18 @@ private:
     QPushButton* deleteScheduleButton = nullptr;
     QPushButton* refreshScheduleButton = nullptr;
 
+    QComboBox* d1GroupCombo = nullptr;
+    QComboBox* d1SemesterCombo = nullptr;
+    QCheckBox* d1OverwriteCheck = nullptr;
+    QPushButton* d1GenerateButton = nullptr;
+    QTableWidget* d1StatsTable = nullptr;
+    QLabel* d1TotalsLabel = nullptr;
+
     void setupUI();
 
     QWidget* buildUsersTab();
     QWidget* buildScheduleTab();
+    QWidget* buildD1RandomizerTab();
 
     void reloadUsers();
     void reloadGroupsInto(QComboBox* combo, bool withAllOption, bool hideGroupIdZero);
@@ -69,6 +78,8 @@ private slots:
     void onAddSchedule();
     void onEditSchedule();
     void onDeleteSchedule();
+
+    void onGenerateD1();
 };
 
 #endif // ADMINWINDOW_H

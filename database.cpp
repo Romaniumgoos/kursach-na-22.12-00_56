@@ -6,8 +6,11 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
+#include <unordered_map>
 #include <ctime>
 #include <cstring>
+#include <cctype>
 
 namespace {
 
@@ -2328,6 +2331,148 @@ bool Database::getScheduleForGroup(
 
     sqlite3_finalize(stmt);
     return stepRc == SQLITE_DONE;
+}
+
+bool Database::getLessonOccurrencesForStudent(
+    int studentId,
+    int subjectId,
+    const std::string& lessonType,
+    int semesterId,
+    std::vector<LessonOccurrence>& out)
+{
+    out.clear();
+    if (!db) return false;
+    if (studentId <= 0 || subjectId <= 0 || semesterId <= 0) return false;
+
+    int groupId = 0;
+    int studentSubgroup = 0;
+    {
+        const char* sql = "SELECT COALESCE(groupid, 0), COALESCE(subgroup, 0) FROM users WHERE id = ? LIMIT 1;";
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+        sqlite3_bind_int(stmt, 1, studentId);
+        const int rc = sqlite3_step(stmt);
+        if (rc == SQLITE_ROW) {
+            groupId = sqlite3_column_int(stmt, 0);
+            studentSubgroup = sqlite3_column_int(stmt, 1);
+        }
+        sqlite3_finalize(stmt);
+        if (rc != SQLITE_ROW) return false;
+    }
+    if (groupId <= 0) return false;
+
+    std::string semStart;
+    std::string semEnd;
+    {
+        const char* sql = "SELECT COALESCE(startdate, ''), COALESCE(enddate, '') FROM semesters WHERE id = ? LIMIT 1;";
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+        sqlite3_bind_int(stmt, 1, semesterId);
+        const int rc = sqlite3_step(stmt);
+        if (rc == SQLITE_ROW) {
+            const unsigned char* s = sqlite3_column_text(stmt, 0);
+            const unsigned char* e = sqlite3_column_text(stmt, 1);
+            semStart = s ? reinterpret_cast<const char*>(s) : "";
+            semEnd = e ? reinterpret_cast<const char*>(e) : "";
+        }
+        sqlite3_finalize(stmt);
+        if (rc != SQLITE_ROW) return false;
+    }
+
+    const bool filterBySemesterDates = (!semStart.empty() && !semEnd.empty());
+
+    auto trimCopyLocal = [](std::string s) {
+        auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
+        while (!s.empty() && isSpace(static_cast<unsigned char>(s.front()))) s.erase(s.begin());
+        while (!s.empty() && isSpace(static_cast<unsigned char>(s.back()))) s.pop_back();
+        return s;
+    };
+
+    const std::string normalizedLessonType = trimCopyLocal(lessonType);
+    if (normalizedLessonType.empty()) return false;
+
+    std::vector<std::tuple<int, int, std::string, std::string>> weeks;
+    if (!getCycleWeeks(weeks)) return false;
+
+    std::vector<LessonOccurrence> occurrences;
+    std::unordered_map<int, std::pair<int, int>> scheduleMetaCache;
+    for (const auto& w : weeks) {
+        const int weekId = std::get<0>(w);
+        const int weekOfCycle = std::get<1>(w);
+        const std::string& weekStart = std::get<2>(w);
+        const std::string& weekEnd = std::get<3>(w);
+
+        if (filterBySemesterDates) {
+            if (!weekEnd.empty() && weekEnd < semStart) continue;
+            if (!weekStart.empty() && weekStart > semEnd) continue;
+        }
+
+        for (int weekday = 1; weekday <= 6; ++weekday) {
+            std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>> sched;
+            if (!getScheduleForGroup(groupId, weekday, weekOfCycle, sched)) return false;
+
+            for (const auto& row : sched) {
+                const int scheduleId = std::get<0>(row);
+                const int pairNumber = std::get<1>(row);
+                const int subgroup = std::get<2>(row);
+                const std::string type = trimCopyLocal(std::get<5>(row));
+
+                if (type != normalizedLessonType) continue;
+
+                int rowSubjectId = 0;
+                int teacherId = 0;
+                const auto it = scheduleMetaCache.find(scheduleId);
+                if (it != scheduleMetaCache.end()) {
+                    rowSubjectId = it->second.first;
+                    teacherId = it->second.second;
+                } else {
+                    const char* sql = "SELECT subjectid, teacherid FROM schedule WHERE id = ? LIMIT 1;";
+                    sqlite3_stmt* stmt = nullptr;
+                    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+                    sqlite3_bind_int(stmt, 1, scheduleId);
+                    const int rc = sqlite3_step(stmt);
+                    if (rc == SQLITE_ROW) {
+                        rowSubjectId = sqlite3_column_int(stmt, 0);
+                        teacherId = sqlite3_column_int(stmt, 1);
+                    }
+                    sqlite3_finalize(stmt);
+                    scheduleMetaCache.emplace(scheduleId, std::make_pair(rowSubjectId, teacherId));
+                }
+
+                if (rowSubjectId != subjectId) continue;
+                if (!((subgroup == 0) || (studentSubgroup == 0) || (subgroup == studentSubgroup))) continue;
+
+                std::string dateISO;
+                if (!getDateForWeekdayByWeekId(weekId, weekday, dateISO)) return false;
+                if (dateISO.empty()) continue;
+                if (filterBySemesterDates) {
+                    if (dateISO < semStart || dateISO > semEnd) continue;
+                }
+
+                LessonOccurrence occ;
+                occ.lessonDateISO = std::move(dateISO);
+                occ.scheduleId = scheduleId;
+                occ.teacherId = teacherId;
+                occ.pairNumber = pairNumber;
+                occurrences.push_back(std::move(occ));
+            }
+        }
+    }
+
+    std::sort(occurrences.begin(), occurrences.end(), [](const LessonOccurrence& a, const LessonOccurrence& b) {
+        if (a.lessonDateISO != b.lessonDateISO) return a.lessonDateISO < b.lessonDateISO;
+        if (a.pairNumber != b.pairNumber) return a.pairNumber < b.pairNumber;
+        return a.scheduleId < b.scheduleId;
+    });
+
+    occurrences.erase(
+        std::unique(occurrences.begin(), occurrences.end(), [](const LessonOccurrence& a, const LessonOccurrence& b) {
+            return a.lessonDateISO == b.lessonDateISO;
+        }),
+        occurrences.end());
+
+    out = std::move(occurrences);
+    return true;
 }
 
 bool Database::getScheduleForTeacherGroup(

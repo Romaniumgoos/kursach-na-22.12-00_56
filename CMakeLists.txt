@@ -24,6 +24,7 @@ set(BACKEND_SOURCES
 
         AdminService.cpp
         services/student_service.cpp
+        services/d1_randomizer.cpp
 
         third_party/sqlite/sqlite3.c
 )
@@ -41,6 +42,7 @@ set(BACKEND_HEADERS
         AdminService.h
         core/result.h
         services/student_service.h
+        services/d1_randomizer.h
 
         config.h
 )

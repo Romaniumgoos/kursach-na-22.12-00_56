@@ -334,6 +334,8 @@ C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/adminwindow.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/time.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/vadefs.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/wchar.h
+C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/adminwindow.cpp
+C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/admin.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/pages/StudentAbsencesPage.h
  mmc:Q_OBJECT
  mdp:C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/pages/StudentAbsencesPage.h
@@ -906,8 +908,6 @@ C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/util/AppEvents.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/time.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/vadefs.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/wchar.h
-C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/adminwindow.cpp
-C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/admin.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/loginwindow.h
  mmc:Q_OBJECT
  mdp:C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/database.h
@@ -4276,6 +4276,7 @@ C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/widgets/WeekGridSche
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/wchar.h
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/AdminService.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/database.cpp
+C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/d1_randomizer.h
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/loginwindow.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/pages/StudentSchedulePage.cpp
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/menu.cpp
@@ -4615,3 +4616,4 @@ C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/windows/TeacherSched
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/vadefs.h
  mdp:D:/QTshechka/Tools/mingw1310_64/x86_64-w64-mingw32/include/wchar.h
 C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/windows/TeacherScheduleViewer.cpp
+C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/services/d1_randomizer.cpp
