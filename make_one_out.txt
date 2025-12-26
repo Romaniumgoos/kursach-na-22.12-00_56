@@ -1,4 +1,0 @@
-mingw32-make: Entering directory 'C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-mingw'
-[ 13%] Building CXX object CMakeFiles/app_console.dir/main_console.cpp.obj
-"D:\CLion 2025.1.1\bin\mingw\bin\g++.exe"  @CMakeFiles/app_console.dir/includes_CXX.rsp -std=gnu++20 -fdiagnostics-color=always -MD -MT CMakeFiles/app_console.dir/main_console.cpp.obj -MF CMakeFiles\app_console.dir\main_console.cpp.obj.d -o CMakeFiles\app_console.dir\main_console.cpp.obj -c "C:\Users\leshk\CLionProjects\prodolzhenie ot 24.12 15_32\main_console.cpp"
-mingw32-make: Leaving directory 'C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-mingw'

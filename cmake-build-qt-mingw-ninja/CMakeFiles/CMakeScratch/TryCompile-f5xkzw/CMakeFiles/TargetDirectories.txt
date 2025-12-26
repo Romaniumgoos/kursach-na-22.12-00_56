@@ -1,3 +1,0 @@
-C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-ninja/CMakeFiles/CMakeScratch/TryCompile-f5xkzw/CMakeFiles/cmTC_550e3.dir
-C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-ninja/CMakeFiles/CMakeScratch/TryCompile-f5xkzw/CMakeFiles/edit_cache.dir
-C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-mingw-ninja/CMakeFiles/CMakeScratch/TryCompile-f5xkzw/CMakeFiles/rebuild_cache.dir

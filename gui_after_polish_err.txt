@@ -1,4 +1,0 @@
-mingw32-make[3]: *** [CMakeFiles\app_gui.dir\build.make:139: CMakeFiles/app_gui.dir/teacherwindow.cpp.obj] Error 1
-mingw32-make[2]: *** [CMakeFiles\Makefile2:94: CMakeFiles/app_gui.dir/all] Error 2
-mingw32-make[1]: *** [CMakeFiles\Makefile2:101: CMakeFiles/app_gui.dir/rule] Error 2
-mingw32-make: *** [Makefile:130: app_gui] Error 2

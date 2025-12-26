@@ -9,18 +9,12 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql)
 
 # ===== Backend (общий код) =====
 set(BACKEND_SOURCES
         database.cpp
-        admin.cpp
-        teacher.cpp
-        student.cpp
-        user.cpp
         statistics.cpp
-        scholarship.cpp
-        menu.cpp
 
         AdminService.cpp
         services/student_service.cpp
@@ -31,13 +25,7 @@ set(BACKEND_SOURCES
 
 set(BACKEND_HEADERS
         database.h
-        admin.h
-        teacher.h
-        student.h
-        user.h
         statistics.h
-        scholarship.h
-        menu.h
 
         AdminService.h
         core/result.h
@@ -104,27 +92,12 @@ target_include_directories(app_gui PRIVATE
 
 target_link_libraries(app_gui PRIVATE
         Qt6::Core
+        Qt6::Gui
         Qt6::Widgets
+        Qt6::Sql
 )
 
 if (MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
     set_property(TARGET app_gui PROPERTY AUTOMOC_COMPILER_PREDEFINES OFF)
     target_compile_options(app_gui PRIVATE -fdiagnostics-color=never)
-endif()
-
-# ===== Console executable =====
-add_executable(app_console
-        main_console.cpp
-        ${BACKEND_SOURCES}
-        ${BACKEND_HEADERS}
-)
-
-target_include_directories(app_console PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
-)
-
-if (MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
-    set_property(TARGET app_console PROPERTY AUTOMOC_COMPILER_PREDEFINES OFF)
-    target_compile_options(app_console PRIVATE -fdiagnostics-color=never)
 endif()
