@@ -546,11 +546,11 @@ void StudentGradesPage::reload()
         if (db && groupId > 0 && !r.date.empty() && !r.subject.empty()) {
             const QDate d = QDate::fromString(QString::fromStdString(r.date), "yyyy-MM-dd");
             if (d.isValid()) {
-                const int weekday = d.dayOfWeek() - 1;
+                const int weekday = d.dayOfWeek();
                 const int weekId = db->getWeekIdByDate(r.date);
                 const int weekOfCycle = (weekId > 0) ? db->getWeekOfCycleByWeekId(weekId) : 0;
 
-                if (weekday >= 0 && weekOfCycle > 0) {
+                if (weekday >= 1 && weekday <= 6 && weekOfCycle > 0) {
                     std::vector<std::tuple<int, int, int, std::string, std::string, std::string, std::string>> sched;
                     if (db->getScheduleForGroup(groupId, weekday, weekOfCycle, sched)) {
                         int bestLessonNumber = 0;
@@ -560,9 +560,12 @@ void StudentGradesPage::reload()
 
                         for (const auto& s : sched) {
                             const int lessonNumber = std::get<1>(s);
+                            const int schSubgroup = std::get<2>(s);
                             const std::string& subj = std::get<3>(s);
                             const std::string& ltype = std::get<5>(s);
                             if (subj != r.subject) continue;
+
+                            if (!(schSubgroup == 0 || subgroup == 0 || schSubgroup == subgroup)) continue;
 
                             if (!foundAny) {
                                 bestLessonNumber = lessonNumber;
