@@ -38,18 +38,21 @@ void PeriodSelectorWidget::setupLayout()
     modeCombo = new QComboBox(this);
     modeCombo->addItem("Неделя цикла (1-4)");
     modeCombo->addItem("Календарная неделя");
+    modeCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    modeCombo->setMinimumWidth(220);
+    modeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     layout->addWidget(modeCombo, 0, 1, 1, 2);
 
     cycleWeekSpin = new QSpinBox(this);
     cycleWeekSpin->setMinimum(1);
     cycleWeekSpin->setMaximum(4);
-    cycleWeekSpin->setFixedWidth(60);
+    cycleWeekSpin->setMinimumWidth(70);
+    cycleWeekSpin->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
     layout->addWidget(cycleWeekSpin, 1, 1);
 
     calendarWeekCombo = new QComboBox(this);
     calendarWeekCombo->setMinimumWidth(160);
-    calendarWeekCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-    calendarWeekCombo->setMinimumContentsLength(10);
+    calendarWeekCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
     calendarWeekCombo->view()->setTextElideMode(Qt::ElideRight);
     calendarWeekCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     layout->addWidget(calendarWeekCombo, 1, 2);

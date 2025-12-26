@@ -447,6 +447,12 @@
 			null
 		],
 		[
+			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/windows/TeacherScheduleViewer.h",
+			"MU",
+			"SPMADHTAVI/moc_TeacherScheduleViewer.cpp",
+			null
+		],
+		[
 			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/user.h",
 			"MU",
 			"EWIEGA46WW/moc_user.cpp",
@@ -636,6 +642,11 @@
 		],
 		[
 			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/widgets/WeekGridScheduleWidget.cpp",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/windows/TeacherScheduleViewer.cpp",
 			"MU",
 			null
 		],

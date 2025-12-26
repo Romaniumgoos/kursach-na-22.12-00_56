@@ -179,6 +179,9 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
                     const QString teacher = QString::fromStdString(std::get<6>(r));
 
                     auto* card = new LessonCardWidget(scheduleId, subject, room, lessonType, teacher, rowSubgroup, cell);
+                    connect(card, &LessonCardWidget::teacherClicked, this, [this](int id) {
+                        emit teacherClicked(id);
+                    });
                     connect(card, &LessonCardWidget::clicked, this, [this, card](int id) {
                         QWidget* body = card->findChild<QWidget*>("LessonCardBody");
                         if (selectedLessonCardBody && selectedLessonCardBody != body) {

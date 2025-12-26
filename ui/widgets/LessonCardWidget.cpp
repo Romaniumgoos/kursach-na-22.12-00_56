@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QCursor>
 
 QString LessonCardWidget::stripeColorCss(const QString& lessonType)
 {
@@ -84,7 +85,12 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
     teacherPill->setObjectName("LessonCardTeacher");
     teacherPill->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
     teacherPill->setWordWrap(false);
+    teacherPill->setCursor(Qt::PointingHandCursor);
+    teacherPill->setTextInteractionFlags(Qt::NoTextInteraction);
+    teacherPill->setStyleSheet("color: #3b82f6; font-weight: 650; text-decoration: underline; background: transparent;");
     bottomRow->addWidget(teacherPill, 1);
+
+    teacherWidget = teacherPill;
 
     if (subgroup == 1 || subgroup == 2) {
         auto* sg = new QLabel(QString::number(subgroup), body);
@@ -113,7 +119,16 @@ LessonCardWidget::LessonCardWidget(int scheduleId,
 void LessonCardWidget::mousePressEvent(QMouseEvent* event)
 {
     QWidget::mousePressEvent(event);
-    if (event && event->button() == Qt::LeftButton && scheduleId > 0) {
-        emit clicked(scheduleId);
+    if (!event || event->button() != Qt::LeftButton || scheduleId <= 0) return;
+
+    if (teacherWidget) {
+        const QPoint p = event->position().toPoint();
+        QWidget* child = childAt(p);
+        if (child == teacherWidget || (teacherWidget->isAncestorOf(child))) {
+            emit teacherClicked(scheduleId);
+            return;
+        }
     }
+
+    emit clicked(scheduleId);
 }

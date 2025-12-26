@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QObject>
 #include <QWidget>
 #include <QString>
 
@@ -25,11 +26,13 @@ public:
 
 signals:
     void clicked(int scheduleId);
+    void teacherClicked(int scheduleId);
 
 private:
     static QString stripeColorCss(const QString& lessonType);
 
     int scheduleId = 0;
+    QWidget* teacherWidget = nullptr;
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;

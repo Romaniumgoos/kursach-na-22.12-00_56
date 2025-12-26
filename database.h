@@ -25,6 +25,13 @@ private:
     sqlite3* db;
     std::string fileName;
 
+    bool weekdayZeroBasedResolved = false;
+    bool weekdayZeroBased = false;
+
+    bool resolveWeekdayZeroBased();
+    int normalizeWeekdayForDb(int weekday);
+    int normalizeWeekdayFromDb(int weekday);
+
 
 public:
     // Конструктор - запоминает имя файла БД (например, "students.db")
@@ -73,6 +80,17 @@ public:
     bool getStudentGradesForSemester(int studentId, int semesterId,
     std::vector<std::tuple<std::string, int, std::string, std::string>>& outGrades);
     // (subjectName, value, date, grade_type)
+
+    // ===== Student monthly stats (UI helpers) =====
+    // subjectId: 0 means "all subjects". year/month are calendar values (e.g. 2025, 12).
+    bool getStudentAverageGradeForMonth(int studentId, int semesterId,
+                                        int year, int month, int subjectId,
+                                        double& outAvg, int& outCount);
+
+    // totalHours: SUM(hours), unexcusedHours: SUM(hours) where type != 'excused'
+    bool getStudentAbsenceHoursForMonth(int studentId, int semesterId,
+                                        int year, int month, int subjectId,
+                                        int& outTotalHours, int& outUnexcusedHours);
 
     bool getStudentsOfGroup(int groupId,
                             std::vector<std::pair<int, std::string>>& outStudents);
@@ -191,6 +209,9 @@ public:
      std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>>& rows
  );
 
+    // Resolve teacher for a specific schedule entry (by scheduleId)
+    bool getTeacherForScheduleId(int scheduleId, int& outTeacherId, std::string& outTeacherName);
+
 
 
 
@@ -198,6 +219,7 @@ public:
     // уже добавленные раньше:
     bool getAllSubjects(std::vector<std::pair<int, std::string>>& outSubjects);
     bool getAllTeachers(std::vector<std::pair<int, std::string>>& outTeachers);
+    bool getSubjectIdByName(const std::string& subjectName, int& outSubjectId);
     bool getStudentGroupAndSubgroup(int studentId, int& outGroupId, int& outSubgroup);
 
     bool getTeacherSubjectIds(int teacherId, std::vector<int>& outSubjectIds);

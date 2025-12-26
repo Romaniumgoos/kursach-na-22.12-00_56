@@ -2,6 +2,7 @@
 #include "database.h"
 #include "ui/util/UiStyle.h"
  #include "ui/widgets/WeekGridScheduleWidget.h"
+ #include "ui/windows/TeacherScheduleViewer.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -137,12 +138,40 @@ void StudentSchedulePage::setupLayout()
     weekGrid = new WeekGridScheduleWidget(this);
     mainLayout->addWidget(weekGrid);
 
+    connect(weekGrid, &WeekGridScheduleWidget::teacherClicked,
+            this, &StudentSchedulePage::onTeacherClicked);
+
     // Empty state
     emptyStateLabel = new QLabel("Нет занятий\nПопробуйте выбрать другую неделю или подгруппу", this);
     emptyStateLabel->setAlignment(Qt::AlignCenter);
     emptyStateLabel->setStyleSheet("color: palette(mid); font-size: 14px;");
     emptyStateLabel->setVisible(false);
     mainLayout->addWidget(emptyStateLabel);
+}
+
+void StudentSchedulePage::onTeacherClicked(int scheduleId)
+{
+    if (!db || scheduleId <= 0) return;
+
+    int teacherId = 0;
+    std::string teacherName;
+    if (!db->getTeacherForScheduleId(scheduleId, teacherId, teacherName)) return;
+    if (teacherId <= 0) return;
+
+    if (teacherScheduleViewer) {
+        teacherScheduleViewer->close();
+        teacherScheduleViewer->deleteLater();
+        teacherScheduleViewer = nullptr;
+    }
+
+    teacherScheduleViewer = new TeacherScheduleViewer(db, teacherId, QString::fromStdString(teacherName), nullptr);
+    teacherScheduleViewer->setAttribute(Qt::WA_DeleteOnClose, true);
+    connect(teacherScheduleViewer, &QObject::destroyed, this, [this]() {
+        teacherScheduleViewer = nullptr;
+    });
+    teacherScheduleViewer->show();
+    teacherScheduleViewer->raise();
+    teacherScheduleViewer->activateWindow();
 }
 
 void StudentSchedulePage::setupTable()

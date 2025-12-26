@@ -54,6 +54,88 @@ bool parseDateISO(const std::string& s, std::tm& out) {
 
 } // namespace
 
+bool Database::resolveWeekdayZeroBased()
+{
+    if (weekdayZeroBasedResolved) return true;
+    weekdayZeroBasedResolved = true;
+    weekdayZeroBased = false;
+
+    if (!db) return false;
+
+    const char* sql = "SELECT MIN(weekday), MAX(weekday) FROM schedule;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        // If table is empty, MIN/MAX are NULL.
+        if (sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
+            const int minW = sqlite3_column_int(stmt, 0);
+            // Heuristic:
+            // - if 0 is present -> old convention (0..5)
+            // - otherwise assume 1..6
+            if (minW == 0) weekdayZeroBased = true;
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+int Database::normalizeWeekdayForDb(int weekday)
+{
+    resolveWeekdayZeroBased();
+
+    // UI & most GUI code use 1..6 (Mon..Sat). Some legacy/console code uses 0..5.
+    // Convert the incoming weekday to the DB convention.
+    if (weekdayZeroBased) {
+        if (weekday >= 1 && weekday <= 6) return weekday - 1;
+        return weekday;
+    }
+
+    // DB is 1-based.
+    if (weekday >= 0 && weekday <= 5) return weekday + 1;
+    return weekday;
+}
+
+int Database::normalizeWeekdayFromDb(int weekday)
+{
+    resolveWeekdayZeroBased();
+    if (weekdayZeroBased) return weekday + 1;
+    return weekday;
+}
+
+bool Database::getTeacherForScheduleId(int scheduleId, int& outTeacherId, std::string& outTeacherName)
+{
+    outTeacherId = 0;
+    outTeacherName.clear();
+    if (!db) return false;
+    if (scheduleId <= 0) return true;
+
+    const char* sql =
+        "SELECT s.teacherid, COALESCE(u.name, '') "
+        "FROM schedule s "
+        "LEFT JOIN users u ON u.id = s.teacherid "
+        "WHERE s.id = ? LIMIT 1;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, scheduleId);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outTeacherId = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        outTeacherName = nameText ? reinterpret_cast<const char*>(nameText) : "";
+    }
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_ROW || rc == SQLITE_DONE);
+}
+
 bool Database::getUserIdByUsername(const std::string& username, int& outUserId)
 {
     outUserId = 0;
@@ -1040,6 +1122,132 @@ bool Database::getAllSemesters(std::vector<std::pair<int, std::string>>& outSeme
     return true;
 }
 
+bool Database::getSubjectIdByName(const std::string& subjectName, int& outSubjectId)
+{
+    outSubjectId = 0;
+    if (!db) return false;
+    if (subjectName.empty()) return true;
+
+    const char* sql = "SELECT id FROM subjects WHERE name = ? LIMIT 1;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, subjectName.c_str(), -1, SQLITE_TRANSIENT);
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outSubjectId = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_ROW || rc == SQLITE_DONE);
+}
+
+bool Database::getStudentAverageGradeForMonth(int studentId, int semesterId,
+                                              int year, int month, int subjectId,
+                                              double& outAvg, int& outCount)
+{
+    outAvg = 0.0;
+    outCount = 0;
+    if (!db) return false;
+    if (studentId <= 0 || semesterId <= 0 || year <= 0 || month < 1 || month > 12) return false;
+
+    const char* sqlAll =
+        "SELECT COALESCE(AVG(g.value), 0.0), COALESCE(COUNT(*), 0) "
+        "FROM grades g "
+        "WHERE g.studentid = ? AND g.semesterid = ? "
+        "AND strftime('%Y', g.date) = ? "
+        "AND strftime('%m', g.date) = ?;";
+
+    const char* sqlSubj =
+        "SELECT COALESCE(AVG(g.value), 0.0), COALESCE(COUNT(*), 0) "
+        "FROM grades g "
+        "WHERE g.studentid = ? AND g.semesterid = ? AND g.subjectid = ? "
+        "AND strftime('%Y', g.date) = ? "
+        "AND strftime('%m', g.date) = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = (subjectId > 0) ? sqlSubj : sqlAll;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    int idx = 1;
+    sqlite3_bind_int(stmt, idx++, studentId);
+    sqlite3_bind_int(stmt, idx++, semesterId);
+    if (subjectId > 0) {
+        sqlite3_bind_int(stmt, idx++, subjectId);
+    }
+
+    const std::string ys = std::to_string(year);
+    char msBuf[3];
+    std::snprintf(msBuf, sizeof(msBuf), "%02d", month);
+
+    sqlite3_bind_text(stmt, idx++, ys.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, idx++, msBuf, -1, SQLITE_TRANSIENT);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outAvg = sqlite3_column_double(stmt, 0);
+        outCount = sqlite3_column_int(stmt, 1);
+    }
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_ROW || rc == SQLITE_DONE);
+}
+
+bool Database::getStudentAbsenceHoursForMonth(int studentId, int semesterId,
+                                              int year, int month, int subjectId,
+                                              int& outTotalHours, int& outUnexcusedHours)
+{
+    outTotalHours = 0;
+    outUnexcusedHours = 0;
+    if (!db) return false;
+    if (studentId <= 0 || semesterId <= 0 || year <= 0 || month < 1 || month > 12) return false;
+
+    const char* sqlAll =
+        "SELECT "
+        "  COALESCE(SUM(a.hours), 0), "
+        "  COALESCE(SUM(CASE WHEN COALESCE(a.type,'') <> 'excused' THEN a.hours ELSE 0 END), 0) "
+        "FROM absences a "
+        "WHERE a.studentid = ? AND a.semesterid = ? "
+        "AND strftime('%Y', a.date) = ? "
+        "AND strftime('%m', a.date) = ?;";
+
+    const char* sqlSubj =
+        "SELECT "
+        "  COALESCE(SUM(a.hours), 0), "
+        "  COALESCE(SUM(CASE WHEN COALESCE(a.type,'') <> 'excused' THEN a.hours ELSE 0 END), 0) "
+        "FROM absences a "
+        "WHERE a.studentid = ? AND a.semesterid = ? AND a.subjectid = ? "
+        "AND strftime('%Y', a.date) = ? "
+        "AND strftime('%m', a.date) = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = (subjectId > 0) ? sqlSubj : sqlAll;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    int idx = 1;
+    sqlite3_bind_int(stmt, idx++, studentId);
+    sqlite3_bind_int(stmt, idx++, semesterId);
+    if (subjectId > 0) sqlite3_bind_int(stmt, idx++, subjectId);
+
+    const std::string ys = std::to_string(year);
+    char msBuf[3];
+    std::snprintf(msBuf, sizeof(msBuf), "%02d", month);
+    sqlite3_bind_text(stmt, idx++, ys.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, idx++, msBuf, -1, SQLITE_TRANSIENT);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outTotalHours = sqlite3_column_int(stmt, 0);
+        outUnexcusedHours = sqlite3_column_int(stmt, 1);
+    }
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_ROW || rc == SQLITE_DONE);
+}
+
 bool Database::updateUser(int userId,
                           const std::string& username,
                           const std::string& name,
@@ -1162,7 +1370,7 @@ bool Database::getScheduleForTeacherWeekWithRoom(
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         const int scheduleId = sqlite3_column_int(stmt, 0);
         const int groupId = sqlite3_column_int(stmt, 1);
-        const int weekday = sqlite3_column_int(stmt, 2);
+        const int weekday = normalizeWeekdayFromDb(sqlite3_column_int(stmt, 2));
         const int lessonNumber = sqlite3_column_int(stmt, 3);
         const int subgroup = sqlite3_column_int(stmt, 4);
 
@@ -1228,7 +1436,7 @@ bool Database::getScheduleForTeacherGroupWeekWithRoom(
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         int scheduleId = sqlite3_column_int(stmt, 0);
         int subjectId = sqlite3_column_int(stmt, 1);
-        int weekday = sqlite3_column_int(stmt, 2);
+        int weekday = normalizeWeekdayFromDb(sqlite3_column_int(stmt, 2));
         int lessonNumber = sqlite3_column_int(stmt, 3);
         int subgroup = sqlite3_column_int(stmt, 4);
         const char* subjName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
@@ -1388,6 +1596,7 @@ bool Database::getAllTeachers(std::vector<std::pair<int, std::string>>& outTeach
         sqlite3_finalize(stmt);
         return false;
     }
+
     sqlite3_finalize(stmt);
     return true;
 }
@@ -1965,7 +2174,7 @@ bool Database::addScheduleEntry(int groupId, int subgroup, int weekday,
 
     sqlite3_bind_int(stmt, 1, finalGroupId);
     sqlite3_bind_int(stmt, 2, finalSubgroup);
-    sqlite3_bind_int(stmt, 3, weekday);
+    sqlite3_bind_int(stmt, 3, normalizeWeekdayForDb(weekday));
     sqlite3_bind_int(stmt, 4, lessonNumber);
     sqlite3_bind_int(stmt, 5, weekOfCycle);
     sqlite3_bind_int(stmt, 6, subjectId);
@@ -2034,7 +2243,7 @@ bool Database::updateScheduleEntry(int scheduleId, int groupId, int subgroup, in
 
     sqlite3_bind_int(stmt, 1, groupId);
     sqlite3_bind_int(stmt, 2, subgroup);
-    sqlite3_bind_int(stmt, 3, weekday);
+    sqlite3_bind_int(stmt, 3, normalizeWeekdayForDb(weekday));
     sqlite3_bind_int(stmt, 4, lessonNumber);
     sqlite3_bind_int(stmt, 5, weekOfCycle);
     sqlite3_bind_int(stmt, 6, subjectId);
@@ -2054,10 +2263,19 @@ bool Database::updateScheduleEntry(int scheduleId, int groupId, int subgroup, in
     return false;
 }
 
-bool Database::getScheduleForGroup(int groupId, int weekday, int weekOfCycle,
-                                    std::vector<std::tuple<int, int, int, std::string, std::string, std::string, std::string>>& rows) {
+bool Database::getScheduleForGroup(
+    int groupId,
+    int weekday,
+    int weekOfCycle,
+    std::vector<std::tuple<int,int,int,std::string,std::string,std::string,std::string>>& rows)
+{
     rows.clear();
-    const char* sql = R"(
+    if (!db) {
+        std::cerr << "[✗] getScheduleForGroup: DB not connected\n";
+        return false;
+    }
+
+    const char* sql = R"SQL(
         SELECT
             sch.id,
             sch.lessonnumber,
@@ -2065,31 +2283,33 @@ bool Database::getScheduleForGroup(int groupId, int weekday, int weekOfCycle,
             subj.name,
             sch.room,
             COALESCE(sch.lessontype, ''),
-            u.name AS teachername
+            COALESCE(u.name, '') AS teachername
         FROM schedule sch
         JOIN subjects subj ON sch.subjectid = subj.id
-        JOIN users u ON sch.teacherid = u.id
+        LEFT JOIN users u ON sch.teacherid = u.id
         WHERE (sch.groupid = ? OR sch.groupid = 0)
           AND sch.weekday = ?
           AND sch.weekofcycle = ?
         ORDER BY sch.lessonnumber, sch.subgroup
-    )";
+    )SQL";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    const int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "[✗] getScheduleForGroup: " << sqlite3_errmsg(db) << "\n";
         return false;
     }
 
     sqlite3_bind_int(stmt, 1, groupId);
-    sqlite3_bind_int(stmt, 2, weekday);
+    sqlite3_bind_int(stmt, 2, normalizeWeekdayForDb(weekday));
     sqlite3_bind_int(stmt, 3, weekOfCycle);
 
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        int lesson = sqlite3_column_int(stmt, 1);
-        int subgroup = sqlite3_column_int(stmt, 2);
+    int stepRc = 0;
+    while ((stepRc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const int id = sqlite3_column_int(stmt, 0);
+        const int lesson = sqlite3_column_int(stmt, 1);
+        const int subgroup = sqlite3_column_int(stmt, 2);
+
         const char* subj = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
         const char* room = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
         const char* ltype = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
@@ -2107,7 +2327,7 @@ bool Database::getScheduleForGroup(int groupId, int weekday, int weekOfCycle,
     }
 
     sqlite3_finalize(stmt);
-    return true;
+    return stepRc == SQLITE_DONE;
 }
 
 bool Database::getScheduleForTeacherGroup(
@@ -2233,7 +2453,7 @@ bool Database::isScheduleSlotBusy(int groupId, int subgroup,
     if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, groupId);
-    sqlite3_bind_int(stmt, 2, weekday);
+    sqlite3_bind_int(stmt, 2, normalizeWeekdayForDb(weekday));
     sqlite3_bind_int(stmt, 3, lessonNumber);
     sqlite3_bind_int(stmt, 4, weekOfCycle);
     sqlite3_bind_int(stmt, 5, subgroup);
@@ -2296,7 +2516,7 @@ bool Database::isTeacherBusy(int teacherId, int weekday,
     if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, teacherId);
-    sqlite3_bind_int(stmt, 2, weekday);
+    sqlite3_bind_int(stmt, 2, normalizeWeekdayForDb(weekday));
     sqlite3_bind_int(stmt, 3, lessonNumber);
     sqlite3_bind_int(stmt, 4, weekOfCycle);
 
@@ -2329,7 +2549,7 @@ bool Database::isRoomBusy(const std::string& room, int weekday,
     if (rc != SQLITE_OK) return false;
 
     sqlite3_bind_text(stmt, 1, room.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 2, weekday);
+    sqlite3_bind_int(stmt, 2, normalizeWeekdayForDb(weekday));
     sqlite3_bind_int(stmt, 3, lessonNumber);
     sqlite3_bind_int(stmt, 4, weekOfCycle);
 

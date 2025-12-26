@@ -1,4 +1,5 @@
 C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/NJHUVPU35C/moc_WeekGridScheduleWidget.cpp: C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/WeekGridScheduleWidget.h \
+  D:/QTshechka/6.10.1/mingw_64/include/QtCore/QObject \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/QStringList \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q17memory.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20functional.h \

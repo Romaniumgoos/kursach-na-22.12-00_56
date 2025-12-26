@@ -11,16 +11,17 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QSizePolicy>
- #include <QDate>
- #include <QScrollArea>
- #include <QFrame>
- #include <QGridLayout>
- #include <algorithm>
+#include <QDate>
+#include <QScrollArea>
+#include <QFrame>
+#include <QGridLayout>
+#include <QSignalBlocker>
+#include <algorithm>
 
 static QString cardFrameStyle()
 {
-    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
-           "QLabel{color: palette(Text); background: transparent;}";
+    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Window);}"
+           "QLabel{color: palette(WindowText); background: transparent;}";
 }
 
 static QWidget* buildMonthHeader(QWidget* parent, const QDate& d)
@@ -60,6 +61,7 @@ StudentGradesPage::StudentGradesPage(Database* db, int studentId, QWidget* paren
     , semesterId(1)
     , semesterCombo(nullptr)
     , subjectCombo(nullptr)
+    , monthCombo(nullptr)
     , refreshButton(nullptr)
     , stacked(nullptr)
     , contentWidget(nullptr)
@@ -69,12 +71,25 @@ StudentGradesPage::StudentGradesPage(Database* db, int studentId, QWidget* paren
     , listLayout(nullptr)
     , averageLabel(nullptr)
     , countLabel(nullptr)
+    , avgSubjectMonthLabel(nullptr)
+    , avgAllMonthLabel(nullptr)
     , emptyStateLabel(nullptr)
     , retryButton(nullptr)
 {
     setupLayout();
     populateSemesters();
     reload();
+}
+
+int StudentGradesPage::subjectIdForCurrentFilter() const
+{
+    if (!db || !subjectCombo) return 0;
+    const QString subjectName = subjectCombo->currentData().toString();
+    if (subjectName.trimmed().isEmpty()) return 0;
+
+    int id = 0;
+    if (!db->getSubjectIdByName(subjectName.toStdString(), id)) return 0;
+    return id;
 }
 
 void StudentGradesPage::populateSubjectsFromCache()
@@ -101,6 +116,91 @@ void StudentGradesPage::populateSubjectsFromCache()
     const int idx = subjectCombo->findText(current);
     if (idx >= 0) subjectCombo->setCurrentIndex(idx);
     subjectCombo->blockSignals(false);
+}
+
+void StudentGradesPage::populateMonthsFromCache()
+{
+    if (!monthCombo) return;
+
+    const int currentYm = (selectedYear > 0 && selectedMonth > 0) ? (selectedYear * 100 + selectedMonth) : 0;
+    const QDate today = QDate::currentDate();
+    const int todayYm = today.year() * 100 + today.month();
+
+    QSignalBlocker b(*monthCombo);
+    monthCombo->clear();
+
+    // collect months present in cache
+    QSet<int> ymSet;
+    for (const auto& g : cachedGrades) {
+        const QDate d = QDate::fromString(QString::fromStdString(g.date), "yyyy-MM-dd");
+        if (!d.isValid()) continue;
+        ymSet.insert(d.year() * 100 + d.month());
+    }
+
+    QList<int> yms = ymSet.values();
+    std::sort(yms.begin(), yms.end());
+
+    if (yms.isEmpty()) {
+        monthCombo->addItem("Месяц: —", 0);
+        selectedYear = 0;
+        selectedMonth = 0;
+        return;
+    }
+
+    monthCombo->addItem("Все месяцы", 0);
+    for (int ym : yms) {
+        const int y = ym / 100;
+        const int m = ym % 100;
+        const QDate d(y, m, 1);
+        const QString label = d.isValid() ? d.toString("MMMM yyyy") : QString("%1-%2").arg(y).arg(m);
+        monthCombo->addItem(label, ym);
+    }
+
+    int targetYm = currentYm;
+    if (targetYm == 0 && ymSet.contains(todayYm)) targetYm = todayYm;
+    const int idx = monthCombo->findData(targetYm);
+    monthCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+
+    const int sel = monthCombo->currentData().toInt();
+    if (sel > 0) {
+        selectedYear = sel / 100;
+        selectedMonth = sel % 100;
+    } else {
+        selectedYear = 0;
+        selectedMonth = 0;
+    }
+}
+
+void StudentGradesPage::updateMonthlyStats()
+{
+    if (!avgSubjectMonthLabel || !avgAllMonthLabel) return;
+    avgSubjectMonthLabel->setText("Средний по выбранному предмету: —");
+    avgAllMonthLabel->setText("Средний по всем предметам: —");
+
+    if (!db || semesterId <= 0) return;
+    if (selectedYear <= 0 || selectedMonth <= 0) return;
+
+    // all subjects
+    double allAvg = 0.0;
+    int allCnt = 0;
+    if (db->getStudentAverageGradeForMonth(studentId, semesterId, selectedYear, selectedMonth, /*subjectId*/0, allAvg, allCnt) && allCnt > 0) {
+        avgAllMonthLabel->setText(QString("Средний по всем предметам: %1 (%2)").arg(allAvg, 0, 'f', 2).arg(allCnt));
+    } else {
+        avgAllMonthLabel->setText("Средний по всем предметам: —");
+    }
+
+    const int subjId = subjectIdForCurrentFilter();
+    if (subjId <= 0) {
+        avgSubjectMonthLabel->setText("Средний по выбранному предмету: —");
+        return;
+    }
+    double subAvg = 0.0;
+    int subCnt = 0;
+    if (db->getStudentAverageGradeForMonth(studentId, semesterId, selectedYear, selectedMonth, subjId, subAvg, subCnt) && subCnt > 0) {
+        avgSubjectMonthLabel->setText(QString("Средний по выбранному предмету: %1 (%2)").arg(subAvg, 0, 'f', 2).arg(subCnt));
+    } else {
+        avgSubjectMonthLabel->setText("Средний по выбранному предмету: —");
+    }
 }
 
 QWidget* StudentGradesPage::buildGradeCard(const GradeRow& g)
@@ -196,6 +296,14 @@ void StudentGradesPage::setupLayout()
     subjectCombo->setMinimumWidth(200);
     topBar->addWidget(subjectCombo);
 
+    topBar->addSpacing(12);
+    auto* monthLabel = new QLabel("Месяц:", this);
+    topBar->addWidget(monthLabel);
+    monthCombo = new QComboBox(this);
+    monthCombo->setMinimumWidth(180);
+    monthCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    topBar->addWidget(monthCombo);
+
     topBar->addStretch();
 
     refreshButton = new QPushButton("Обновить", this);
@@ -238,6 +346,21 @@ void StudentGradesPage::setupLayout()
     summaryRow->addStretch();
     contentLayout->addLayout(summaryRow);
 
+    auto* monthStatsRow = new QHBoxLayout();
+    monthStatsRow->setContentsMargins(0, 0, 0, 0);
+    monthStatsRow->setSpacing(10);
+
+    avgSubjectMonthLabel = new QLabel(contentWidget);
+    UiStyle::makeInfoLabel(avgSubjectMonthLabel);
+    monthStatsRow->addWidget(avgSubjectMonthLabel);
+
+    avgAllMonthLabel = new QLabel(contentWidget);
+    UiStyle::makeInfoLabel(avgAllMonthLabel);
+    monthStatsRow->addWidget(avgAllMonthLabel);
+
+    monthStatsRow->addStretch();
+    contentLayout->addLayout(monthStatsRow);
+
     // Empty state
     emptyWidget = new QWidget(this);
     auto* emptyLayout = new QVBoxLayout(emptyWidget);
@@ -271,6 +394,19 @@ void StudentGradesPage::setupLayout()
             this, [this](int) {
         applyFilterToTimeline();
     });
+
+    connect(monthCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int) {
+        const int ym = monthCombo ? monthCombo->currentData().toInt() : 0;
+        if (ym > 0) {
+            selectedYear = ym / 100;
+            selectedMonth = ym % 100;
+        } else {
+            selectedYear = 0;
+            selectedMonth = 0;
+        }
+        applyFilterToTimeline();
+    });
 }
 
 void StudentGradesPage::applyFilterToTimeline()
@@ -278,6 +414,7 @@ void StudentGradesPage::applyFilterToTimeline()
     if (!listLayout || !listContainer) return;
 
     const QString filter = subjectCombo ? subjectCombo->currentData().toString() : QString();
+    const bool monthEnabled = (selectedYear > 0 && selectedMonth > 0);
 
     while (listLayout->count() > 0) {
         QLayoutItem* it = listLayout->takeAt(0);
@@ -292,6 +429,12 @@ void StudentGradesPage::applyFilterToTimeline()
     for (const auto& g : cachedGrades) {
         const QString subject = QString::fromStdString(g.subject);
         if (!filter.isEmpty() && subject != filter) continue;
+
+        if (monthEnabled) {
+            const QDate d = QDate::fromString(QString::fromStdString(g.date), "yyyy-MM-dd");
+            if (!d.isValid()) continue;
+            if (d.year() != selectedYear || d.month() != selectedMonth) continue;
+        }
         rows.push_back(&g);
     }
 
@@ -317,6 +460,8 @@ void StudentGradesPage::applyFilterToTimeline()
     if (countLabel) {
         countLabel->setText(QString("Оценок: %1").arg(shown));
     }
+
+    updateMonthlyStats();
 
     if (shown == 0) {
         showEmptyState("Нет оценок по выбранному фильтру");
@@ -450,6 +595,7 @@ void StudentGradesPage::reload()
     }
 
     populateSubjectsFromCache();
+    populateMonthsFromCache();
     applyFilterToTimeline();
 
     const double average = Statistics::calculateStudentAverage(*db, studentId, semesterId);

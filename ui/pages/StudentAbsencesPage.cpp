@@ -10,16 +10,18 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QSizePolicy>
- #include <QDate>
- #include <QScrollArea>
- #include <QFrame>
- #include <QGridLayout>
- #include <algorithm>
+#include <QDate>
+#include <QScrollArea>
+#include <QFrame>
+#include <QGridLayout>
+#include <QSignalBlocker>
+#include <QSet>
+#include <algorithm>
 
 static QString cardFrameStyle()
 {
-    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
-           "QLabel{color: palette(Text); background: transparent;}";
+    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Window);}"
+           "QLabel{color: palette(WindowText); background: transparent;}";
 }
 
 static QWidget* buildMonthHeader(QWidget* parent, const QDate& d)
@@ -58,6 +60,8 @@ StudentAbsencesPage::StudentAbsencesPage(Database* db, int studentId, QWidget* p
     , filterMode(FilterMode::All)
     , semesterCombo(nullptr)
     , filterCombo(nullptr)
+    , monthCombo(nullptr)
+    , subjectCombo(nullptr)
     , refreshButton(nullptr)
     , stacked(nullptr)
     , contentWidget(nullptr)
@@ -67,12 +71,131 @@ StudentAbsencesPage::StudentAbsencesPage(Database* db, int studentId, QWidget* p
     , listLayout(nullptr)
     , totalAbsencesLabel(nullptr)
     , unexcusedAbsencesLabel(nullptr)
+    , absSubjectMonthLabel(nullptr)
+    , absAllMonthLabel(nullptr)
     , emptyStateLabel(nullptr)
     , retryButton(nullptr)
 {
     setupLayout();
     populateSemesters();
     reload();
+}
+
+int StudentAbsencesPage::subjectIdForCurrentFilter() const
+{
+    if (!db || !subjectCombo) return 0;
+    const QString subjectName = subjectCombo->currentData().toString();
+    if (subjectName.trimmed().isEmpty()) return 0;
+    int id = 0;
+    if (!db->getSubjectIdByName(subjectName.toStdString(), id)) return 0;
+    return id;
+}
+
+void StudentAbsencesPage::populateSubjectsFromCache()
+{
+    if (!subjectCombo) return;
+    const QString current = subjectCombo->currentText();
+    QSignalBlocker b(*subjectCombo);
+    subjectCombo->clear();
+    subjectCombo->addItem("Все", "");
+
+    QStringList subjects;
+    subjects.reserve(static_cast<int>(cachedAbsences.size()));
+    for (const auto& r : cachedAbsences) {
+        const QString s = QString::fromStdString(r.subject);
+        if (!s.isEmpty() && !subjects.contains(s)) subjects.push_back(s);
+    }
+    subjects.sort();
+    for (const auto& s : subjects) {
+        subjectCombo->addItem(s, s);
+    }
+
+    const int idx = subjectCombo->findText(current);
+    if (idx >= 0) subjectCombo->setCurrentIndex(idx);
+}
+
+void StudentAbsencesPage::populateMonthsFromCache()
+{
+    if (!monthCombo) return;
+
+    const int currentYm = (selectedYear > 0 && selectedMonth > 0) ? (selectedYear * 100 + selectedMonth) : 0;
+    const QDate today = QDate::currentDate();
+    const int todayYm = today.year() * 100 + today.month();
+
+    QSignalBlocker b(*monthCombo);
+    monthCombo->clear();
+
+    QSet<int> ymSet;
+    for (const auto& r : cachedAbsences) {
+        const QDate d = QDate::fromString(QString::fromStdString(r.date), "yyyy-MM-dd");
+        if (!d.isValid()) continue;
+        ymSet.insert(d.year() * 100 + d.month());
+    }
+
+    QList<int> yms = ymSet.values();
+    std::sort(yms.begin(), yms.end());
+
+    if (yms.isEmpty()) {
+        monthCombo->addItem("Месяц: —", 0);
+        selectedYear = 0;
+        selectedMonth = 0;
+        return;
+    }
+
+    monthCombo->addItem("Все месяцы", 0);
+    for (int ym : yms) {
+        const int y = ym / 100;
+        const int m = ym % 100;
+        const QDate d(y, m, 1);
+        const QString label = d.isValid() ? d.toString("MMMM yyyy") : QString("%1-%2").arg(y).arg(m);
+        monthCombo->addItem(label, ym);
+    }
+
+    int targetYm = currentYm;
+    if (targetYm == 0 && ymSet.contains(todayYm)) targetYm = todayYm;
+    const int idx = monthCombo->findData(targetYm);
+    monthCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+
+    const int sel = monthCombo->currentData().toInt();
+    if (sel > 0) {
+        selectedYear = sel / 100;
+        selectedMonth = sel % 100;
+    } else {
+        selectedYear = 0;
+        selectedMonth = 0;
+    }
+}
+
+void StudentAbsencesPage::updateMonthlyStats()
+{
+    if (!absSubjectMonthLabel || !absAllMonthLabel) return;
+    absSubjectMonthLabel->setText("Пропуски по выбранному предмету за месяц: —");
+    absAllMonthLabel->setText("Пропуски по всем предметам за месяц: —");
+
+    if (!db || semesterId <= 0) return;
+    if (selectedYear <= 0 || selectedMonth <= 0) return;
+
+    int allTotal = 0;
+    int allUnexc = 0;
+    if (db->getStudentAbsenceHoursForMonth(studentId, semesterId, selectedYear, selectedMonth, /*subjectId*/0, allTotal, allUnexc) && (allTotal > 0 || allUnexc > 0)) {
+        absAllMonthLabel->setText(QString("Пропуски по всем предметам за месяц: %1 ч (неуваж %2)").arg(allTotal).arg(allUnexc));
+    } else {
+        absAllMonthLabel->setText("Пропуски по всем предметам за месяц: —");
+    }
+
+    const int subjId = subjectIdForCurrentFilter();
+    if (subjId <= 0) {
+        absSubjectMonthLabel->setText("Пропуски по выбранному предмету за месяц: —");
+        return;
+    }
+
+    int subTotal = 0;
+    int subUnexc = 0;
+    if (db->getStudentAbsenceHoursForMonth(studentId, semesterId, selectedYear, selectedMonth, subjId, subTotal, subUnexc) && (subTotal > 0 || subUnexc > 0)) {
+        absSubjectMonthLabel->setText(QString("Пропуски по выбранному предмету за месяц: %1 ч (неуваж %2)").arg(subTotal).arg(subUnexc));
+    } else {
+        absSubjectMonthLabel->setText("Пропуски по выбранному предмету за месяц: —");
+    }
 }
 
 void StudentAbsencesPage::setupLayout()
@@ -97,6 +220,20 @@ void StudentAbsencesPage::setupLayout()
     filterCombo->setMinimumWidth(160);
     topBar->addWidget(filterCombo);
 
+    topBar->addSpacing(12);
+    topBar->addWidget(new QLabel("Месяц:", this));
+    monthCombo = new QComboBox(this);
+    monthCombo->setMinimumWidth(180);
+    monthCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    topBar->addWidget(monthCombo);
+
+    topBar->addSpacing(12);
+    topBar->addWidget(new QLabel("Предмет:", this));
+    subjectCombo = new QComboBox(this);
+    subjectCombo->setMinimumWidth(200);
+    subjectCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    topBar->addWidget(subjectCombo);
+
     topBar->addStretch();
 
     refreshButton = new QPushButton("Обновить", this);
@@ -120,6 +257,8 @@ void StudentAbsencesPage::setupLayout()
     listLayout->setContentsMargins(10, 10, 10, 10);
     listLayout->setSpacing(10);
     listLayout->addStretch();
+
+    updateMonthlyStats();
     listScroll->setWidget(listContainer);
 
     contentLayout->addWidget(listScroll);
@@ -137,6 +276,21 @@ void StudentAbsencesPage::setupLayout()
 
     totalsRow->addStretch();
     contentLayout->addLayout(totalsRow);
+
+    auto* monthStatsRow = new QHBoxLayout();
+    monthStatsRow->setContentsMargins(0, 0, 0, 0);
+    monthStatsRow->setSpacing(10);
+
+    absSubjectMonthLabel = new QLabel(contentWidget);
+    UiStyle::makeInfoLabel(absSubjectMonthLabel);
+    monthStatsRow->addWidget(absSubjectMonthLabel);
+
+    absAllMonthLabel = new QLabel(contentWidget);
+    UiStyle::makeInfoLabel(absAllMonthLabel);
+    monthStatsRow->addWidget(absAllMonthLabel);
+
+    monthStatsRow->addStretch();
+    contentLayout->addLayout(monthStatsRow);
 
     emptyWidget = new QWidget(this);
     auto* emptyLayout = new QVBoxLayout(emptyWidget);
@@ -170,6 +324,24 @@ void StudentAbsencesPage::setupLayout()
     connect(filterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int) {
         filterMode = static_cast<FilterMode>(filterCombo->currentData().toInt());
+        applyFilterToTimeline();
+    });
+
+    connect(monthCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int) {
+        const int ym = monthCombo ? monthCombo->currentData().toInt() : 0;
+        if (ym > 0) {
+            selectedYear = ym / 100;
+            selectedMonth = ym % 100;
+        } else {
+            selectedYear = 0;
+            selectedMonth = 0;
+        }
+        applyFilterToTimeline();
+    });
+
+    connect(subjectCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int) {
         applyFilterToTimeline();
     });
 }
@@ -305,6 +477,9 @@ void StudentAbsencesPage::applyFilterToTimeline()
 {
     if (!listLayout || !listContainer) return;
 
+    const QString subjectFilter = subjectCombo ? subjectCombo->currentData().toString() : QString();
+    const bool monthEnabled = (selectedYear > 0 && selectedMonth > 0);
+
     while (listLayout->count() > 0) {
         QLayoutItem* it = listLayout->takeAt(0);
         if (it->widget()) {
@@ -319,6 +494,15 @@ void StudentAbsencesPage::applyFilterToTimeline()
         const bool isExcused = (r.type == "excused");
         if (filterMode == FilterMode::Excused && !isExcused) continue;
         if (filterMode == FilterMode::Unexcused && isExcused) continue;
+
+        const QString subject = QString::fromStdString(r.subject);
+        if (!subjectFilter.isEmpty() && subject != subjectFilter) continue;
+
+        if (monthEnabled) {
+            const QDate d = QDate::fromString(QString::fromStdString(r.date), "yyyy-MM-dd");
+            if (!d.isValid()) continue;
+            if (d.year() != selectedYear || d.month() != selectedMonth) continue;
+        }
         rows.push_back(&r);
     }
 
@@ -416,6 +600,8 @@ void StudentAbsencesPage::reload()
         cachedAbsences.push_back(std::move(r));
     }
 
+    populateSubjectsFromCache();
+    populateMonthsFromCache();
     updateTotalsFromCache();
     applyFilterToTimeline();
 }

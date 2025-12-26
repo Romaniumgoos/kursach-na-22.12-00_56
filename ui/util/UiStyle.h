@@ -14,6 +14,7 @@ inline constexpr const char* kInfoLabelStyle =
     "  padding: 10px 12px;"
     "  border-radius: 8px;"
     "  background: rgba(120,120,120,0.10);"
+    "  color: palette(WindowText);"
     "  font-weight: 600;"
     "}";
 

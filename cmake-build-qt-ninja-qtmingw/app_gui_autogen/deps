@@ -56,6 +56,8 @@ app_gui_autogen/timestamp: \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/ThemeToggleWidget.h \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/WeekGridScheduleWidget.cpp \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/WeekGridScheduleWidget.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/windows/TeacherScheduleViewer.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/windows/TeacherScheduleViewer.h \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/user.cpp \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/user.h \
 	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeCInformation.cmake \

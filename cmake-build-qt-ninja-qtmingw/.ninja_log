@@ -1,18 +1,35 @@
 # ninja log v6
-3	3768	7884059449885591	app_gui_autogen/timestamp	e3bb9bcbaab4d082
-3	3768	7884059449885591	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
-3	3768	7884059449885591	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
-3	3768	7884059449885591	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
-6	3615	7884217077614011	build.ninja	ea41408be8e76e99
-32	284	7884217080221426	app_console_autogen/timestamp	c75964fe3cc61303
-32	284	7884217080221426	app_console_autogen/mocs_compilation.cpp	c75964fe3cc61303
-32	284	7884217080221426	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_console_autogen/timestamp	c75964fe3cc61303
-32	284	7884217080221426	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_console_autogen/mocs_compilation.cpp	c75964fe3cc61303
-26	4795	7884217125538361	app_gui_autogen/timestamp	e3bb9bcbaab4d082
-26	4795	7884217125538361	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
-26	4795	7884217125538361	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
-26	4795	7884217125538361	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
 10	495	7884232193371400	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+32	284	7884217080221426	app_console_autogen/timestamp	c75964fe3cc61303
+32	284	7884217080221426	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_console_autogen/timestamp	c75964fe3cc61303
 10	495	7884232193371400	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
 10	495	7884232193371400	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+32	284	7884217080221426	app_console_autogen/mocs_compilation.cpp	c75964fe3cc61303
 10	495	7884232193371400	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+6	3615	7884279874902493	build.ninja	ea41408be8e76e99
+32	284	7884217080221426	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_console_autogen/mocs_compilation.cpp	c75964fe3cc61303
+4	529	7884279874902493	build.ninja	ea41408be8e76e99
+15	1603	7884279890674680	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+15	1603	7884279890674680	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+15	1603	7884279890674680	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+15	1603	7884279890674680	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+11	496	7884280995018133	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+11	496	7884280995018133	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+11	496	7884280995018133	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+11	496	7884280995018133	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+15	630	7884281379944505	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+15	630	7884281379944505	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+15	630	7884281379944505	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+15	630	7884281379944505	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+21	172	7884287000987894	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+21	172	7884287000987894	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+21	172	7884287000987894	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+21	172	7884287000987894	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+9	893	7884292949273036	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+9	893	7884292949273036	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+9	893	7884292949273036	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+9	893	7884292949273036	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+29	209	7884296694078824	app_gui_autogen/timestamp	e3bb9bcbaab4d082
+29	209	7884296694078824	app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082
+29	209	7884296694078824	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/timestamp	e3bb9bcbaab4d082
+29	209	7884296694078824	C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/mocs_compilation.cpp	e3bb9bcbaab4d082

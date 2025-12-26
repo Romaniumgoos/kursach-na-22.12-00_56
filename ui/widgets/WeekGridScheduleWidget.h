@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QObject>
 #include <QWidget>
 #include <QStringList>
 
@@ -34,6 +35,7 @@ public:
 
 signals:
     void lessonClicked(int scheduleId);
+    void teacherClicked(int scheduleId);
 
 private:
     QScrollArea* scrollArea = nullptr;

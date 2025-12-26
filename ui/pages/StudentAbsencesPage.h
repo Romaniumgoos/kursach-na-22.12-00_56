@@ -36,6 +36,9 @@ private:
 
     int semesterId;
 
+    int selectedYear = 0;
+    int selectedMonth = 0;
+
     enum class FilterMode {
         All,
         Excused,
@@ -45,6 +48,8 @@ private:
 
     QComboBox* semesterCombo;
     QComboBox* filterCombo;
+    QComboBox* monthCombo;
+    QComboBox* subjectCombo;
     QPushButton* refreshButton;
 
     QStackedWidget* stacked;
@@ -56,6 +61,9 @@ private:
     QVBoxLayout* listLayout;
     QLabel* totalAbsencesLabel;
     QLabel* unexcusedAbsencesLabel;
+
+    QLabel* absSubjectMonthLabel;
+    QLabel* absAllMonthLabel;
 
     QLabel* emptyStateLabel;
     QPushButton* retryButton;
@@ -70,5 +78,10 @@ private:
 
     void applyFilterToTimeline();
     void updateTotalsFromCache();
+    void populateSubjectsFromCache();
+    void populateMonthsFromCache();
+    void updateMonthlyStats();
     QWidget* buildAbsenceCard(const AbsenceRow& r);
+
+    int subjectIdForCurrentFilter() const;
 };

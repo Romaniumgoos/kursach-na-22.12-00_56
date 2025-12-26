@@ -45,7 +45,9 @@ template <> constexpr inline auto StudentSchedulePage::qt_create_metaobjectdata<
         "WeekSelection",
         "selection",
         "onSubgroupChanged",
-        "subgroup"
+        "subgroup",
+        "onTeacherClicked",
+        "scheduleId"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -56,6 +58,10 @@ template <> constexpr inline auto StudentSchedulePage::qt_create_metaobjectdata<
         // Slot 'onSubgroupChanged'
         QtMocHelpers::SlotData<void(int)>(5, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::Int, 6 },
+        }}),
+        // Slot 'onTeacherClicked'
+        QtMocHelpers::SlotData<void(int)>(7, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 8 },
         }}),
     };
     QtMocHelpers::UintData qt_properties {
@@ -82,6 +88,7 @@ void StudentSchedulePage::qt_static_metacall(QObject *_o, QMetaObject::Call _c, 
         switch (_id) {
         case 0: _t->onPeriodChanged((*reinterpret_cast<std::add_pointer_t<WeekSelection>>(_a[1]))); break;
         case 1: _t->onSubgroupChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 2: _t->onTeacherClicked((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
         default: ;
         }
     }
@@ -106,14 +113,14 @@ int StudentSchedulePage::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 3;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 3)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 2;
+        _id -= 3;
     }
     return _id;
 }

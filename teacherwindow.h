@@ -58,6 +58,9 @@ private:
     int teacherId;
     QString teacherName;
 
+    int cachedDefaultSemesterId = 1;
+    bool defaultSemesterResolved = false;
+
     // Common
     QTabWidget* tabWidget = nullptr;
 
@@ -70,10 +73,7 @@ private:
 
     // Journal tab
     PeriodSelectorWidget* journalPeriodSelector = nullptr;
-    QComboBox* journalSemesterCombo = nullptr;
     QComboBox* journalGroupCombo = nullptr;
-    QComboBox* journalModeCombo = nullptr;
-    QStackedWidget* journalModeStack = nullptr;
     QFrame* journalLessonCardFrame = nullptr;
     QLabel* journalLessonCardTitle = nullptr;
     QLabel* journalLessonCardSubTitle = nullptr;
@@ -93,26 +93,14 @@ private:
     std::vector<JournalLessonRow> journalLessonRows;
     QSpinBox* gradeSpin = nullptr;
     QPushButton* saveGradeButton = nullptr;
-    QPushButton* deleteGradeButton = nullptr;
     QLabel* currentGradeLabel = nullptr;
     QSpinBox* absenceHoursSpin = nullptr;
     QComboBox* absenceTypeCombo = nullptr;
     QPushButton* saveAbsenceButton = nullptr;
-    QPushButton* deleteAbsenceButton = nullptr;
     QLabel* currentAbsenceLabel = nullptr;
-
-    // Journal free mode (any student, absences only)
-    QComboBox* freeGroupCombo = nullptr;
-    QComboBox* freeStudentCombo = nullptr;
-    QComboBox* freeSubjectCombo = nullptr;
-    QDateEdit* freeDateEdit = nullptr;
-    QSpinBox* freeHoursSpin = nullptr;
-    QComboBox* freeTypeCombo = nullptr;
-    QPushButton* freeSaveAbsenceButton = nullptr;
 
     // Group stats tab
     QComboBox* statsGroupCombo = nullptr;
-    QComboBox* statsSemesterCombo = nullptr;
     QComboBox* statsSubjectCombo = nullptr;
     QTableWidget* statsGradesTable = nullptr;
     QTableWidget* statsAbsencesTable = nullptr;
@@ -143,6 +131,7 @@ private:
 
     bool resolveWeekSelection(const WeekSelection& selection, int& outResolvedWeekId, int& outWeekOfCycle, QString& outErrorText);
     QString formatDdMm(const QString& dateISO) const;
+    int defaultSemesterId();
 
 private slots:
     void onSchedulePeriodChanged(const WeekSelection& selection);
@@ -155,16 +144,9 @@ private slots:
     void onJournalLessonCardClicked(int index);
     void onJournalLessonSelectionChanged();
     void onSaveGrade();
-    void onDeleteGrade();
     void onSaveAbsence();
-    void onDeleteAbsence();
-
-    void onJournalModeChanged(int);
-    void onFreeGroupChanged(int);
-    void onFreeSaveAbsence();
 
     void onStatsGroupChanged(int);
-    void onStatsSemesterChanged(int);
     void onStatsSubjectChanged(int);
     void onStatsStudentSelected();
 

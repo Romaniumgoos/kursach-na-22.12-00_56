@@ -41,6 +41,9 @@ void ThemeManager::applyTheme(QApplication* app)
         pal.setColor(QPalette::Base, QColor(27, 27, 27));
         pal.setColor(QPalette::AlternateBase, QColor(36, 36, 36));
 
+        pal.setColor(QPalette::Mid, QColor(150, 150, 150));
+        pal.setColor(QPalette::Midlight, QColor(185, 185, 185));
+
         pal.setColor(QPalette::WindowText, QColor(232, 234, 237));
         pal.setColor(QPalette::Text, QColor(232, 234, 237));
 
@@ -67,6 +70,9 @@ void ThemeManager::applyTheme(QApplication* app)
 
         pal.setColor(QPalette::Base, Qt::white);
         pal.setColor(QPalette::AlternateBase, QColor(245, 245, 245));
+
+        pal.setColor(QPalette::Mid, QColor(110, 110, 110));
+        pal.setColor(QPalette::Midlight, QColor(140, 140, 140));
 
         pal.setColor(QPalette::ToolTipBase, Qt::white);
         pal.setColor(QPalette::ToolTipText, QColor(20, 20, 20));

@@ -52,14 +52,8 @@ template <> constexpr inline auto TeacherWindow::qt_create_metaobjectdata<qt_met
         "index",
         "onJournalLessonSelectionChanged",
         "onSaveGrade",
-        "onDeleteGrade",
         "onSaveAbsence",
-        "onDeleteAbsence",
-        "onJournalModeChanged",
-        "onFreeGroupChanged",
-        "onFreeSaveAbsence",
         "onStatsGroupChanged",
-        "onStatsSemesterChanged",
         "onStatsSubjectChanged",
         "onStatsStudentSelected"
     };
@@ -95,36 +89,18 @@ template <> constexpr inline auto TeacherWindow::qt_create_metaobjectdata<qt_met
         QtMocHelpers::SlotData<void()>(12, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onSaveGrade'
         QtMocHelpers::SlotData<void()>(13, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onDeleteGrade'
-        QtMocHelpers::SlotData<void()>(14, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onSaveAbsence'
-        QtMocHelpers::SlotData<void()>(15, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onDeleteAbsence'
-        QtMocHelpers::SlotData<void()>(16, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onJournalModeChanged'
-        QtMocHelpers::SlotData<void(int)>(17, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 2 },
-        }}),
-        // Slot 'onFreeGroupChanged'
-        QtMocHelpers::SlotData<void(int)>(18, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 2 },
-        }}),
-        // Slot 'onFreeSaveAbsence'
-        QtMocHelpers::SlotData<void()>(19, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(14, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onStatsGroupChanged'
-        QtMocHelpers::SlotData<void(int)>(20, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 2 },
-        }}),
-        // Slot 'onStatsSemesterChanged'
-        QtMocHelpers::SlotData<void(int)>(21, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<void(int)>(15, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Int, 2 },
         }}),
         // Slot 'onStatsSubjectChanged'
-        QtMocHelpers::SlotData<void(int)>(22, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<void(int)>(16, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Int, 2 },
         }}),
         // Slot 'onStatsStudentSelected'
-        QtMocHelpers::SlotData<void()>(23, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(17, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -157,16 +133,10 @@ void TeacherWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 6: _t->onJournalLessonCardClicked((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
         case 7: _t->onJournalLessonSelectionChanged(); break;
         case 8: _t->onSaveGrade(); break;
-        case 9: _t->onDeleteGrade(); break;
-        case 10: _t->onSaveAbsence(); break;
-        case 11: _t->onDeleteAbsence(); break;
-        case 12: _t->onJournalModeChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 13: _t->onFreeGroupChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 14: _t->onFreeSaveAbsence(); break;
-        case 15: _t->onStatsGroupChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 16: _t->onStatsSemesterChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 17: _t->onStatsSubjectChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 18: _t->onStatsStudentSelected(); break;
+        case 9: _t->onSaveAbsence(); break;
+        case 10: _t->onStatsGroupChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 11: _t->onStatsSubjectChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 12: _t->onStatsStudentSelected(); break;
         default: ;
         }
     }
@@ -191,14 +161,14 @@ int TeacherWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 19)
+        if (_id < 13)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 19;
+        _id -= 13;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 19)
+        if (_id < 13)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 19;
+        _id -= 13;
     }
     return _id;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QObject>
 #include <QWidget>
 #include <QTableWidget>
 #include <QLabel>
@@ -17,6 +18,7 @@ public:
 public slots:
     void onPeriodChanged(const WeekSelection& selection);
     void onSubgroupChanged(int subgroup);
+    void onTeacherClicked(int scheduleId);
 
 private:
     Database* db = nullptr;
@@ -30,6 +32,8 @@ private:
     QLabel* emptyStateLabel = nullptr;
     QComboBox* subgroupCombo = nullptr;
     QLabel* periodLabel = nullptr;
+
+    QWidget* teacherScheduleViewer = nullptr;
 
     void setupLayout();
     void setupTable();

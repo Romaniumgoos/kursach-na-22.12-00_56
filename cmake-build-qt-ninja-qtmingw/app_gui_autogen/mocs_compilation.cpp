@@ -12,3 +12,4 @@
 #include "NJHUVPU35C/moc_PeriodSelectorWidget.cpp"
 #include "NJHUVPU35C/moc_ThemeToggleWidget.cpp"
 #include "NJHUVPU35C/moc_WeekGridScheduleWidget.cpp"
+#include "SPMADHTAVI/moc_TeacherScheduleViewer.cpp"

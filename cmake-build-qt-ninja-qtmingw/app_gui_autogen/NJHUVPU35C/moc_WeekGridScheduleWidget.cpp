@@ -41,12 +41,17 @@ template <> constexpr inline auto WeekGridScheduleWidget::qt_create_metaobjectda
         "WeekGridScheduleWidget",
         "lessonClicked",
         "",
-        "scheduleId"
+        "scheduleId",
+        "teacherClicked"
     };
 
     QtMocHelpers::UintData qt_methods {
         // Signal 'lessonClicked'
         QtMocHelpers::SignalData<void(int)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
+        // Signal 'teacherClicked'
+        QtMocHelpers::SignalData<void(int)>(4, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::Int, 3 },
         }}),
     };
@@ -73,11 +78,14 @@ void WeekGridScheduleWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->lessonClicked((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 1: _t->teacherClicked((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
         default: ;
         }
     }
     if (_c == QMetaObject::IndexOfMethod) {
         if (QtMocHelpers::indexOfMethod<void (WeekGridScheduleWidget::*)(int )>(_a, &WeekGridScheduleWidget::lessonClicked, 0))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (WeekGridScheduleWidget::*)(int )>(_a, &WeekGridScheduleWidget::teacherClicked, 1))
             return;
     }
 }
@@ -101,14 +109,14 @@ int WeekGridScheduleWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 2)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 2;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 2)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 1;
+        _id -= 2;
     }
     return _id;
 }
@@ -117,5 +125,11 @@ int WeekGridScheduleWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a
 void WeekGridScheduleWidget::lessonClicked(int _t1)
 {
     QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
+}
+
+// SIGNAL 1
+void WeekGridScheduleWidget::teacherClicked(int _t1)
+{
+    QMetaObject::activate<void>(this, &staticMetaObject, 1, nullptr, _t1);
 }
 QT_WARNING_POP

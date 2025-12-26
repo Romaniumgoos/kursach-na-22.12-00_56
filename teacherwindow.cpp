@@ -40,6 +40,25 @@
      return UiStyle::badgeLessonTypeStyle(lessonType);
  }
 
+ int TeacherWindow::defaultSemesterId()
+ {
+     if (defaultSemesterResolved) return cachedDefaultSemesterId;
+     defaultSemesterResolved = true;
+
+     cachedDefaultSemesterId = 1;
+     if (!db) return cachedDefaultSemesterId;
+
+     std::vector<std::pair<int, std::string>> semesters;
+     if (!db->getAllSemesters(semesters) || semesters.empty()) return cachedDefaultSemesterId;
+
+     int best = 0;
+     for (const auto& s : semesters) {
+         if (s.first > best) best = s.first;
+     }
+     if (best > 0) cachedDefaultSemesterId = best;
+     return cachedDefaultSemesterId;
+ }
+
 void TeacherWindow::onStatsStudentSelected()
 {
     if (!statsGradesTable) return;
@@ -66,10 +85,10 @@ void TeacherWindow::reloadStatsStudentDetails(int studentId)
 {
     if (!db || studentId <= 0) return;
     if (!statsDetailGradesTable || !statsDetailAbsencesTable || !statsDetailGradesSummaryLabel || !statsDetailAbsencesSummaryLabel) return;
-    if (!statsGroupCombo || !statsSemesterCombo || !statsSubjectCombo) return;
+    if (!statsGroupCombo || !statsSubjectCombo) return;
 
     const int groupId = statsGroupCombo->currentData().toInt();
-    const int semesterId = statsSemesterCombo->currentData().toInt();
+    const int semesterId = defaultSemesterId();
     const int subjectId = statsSubjectCombo->currentData().toInt();
     const QString subjectName = statsSubjectCombo->currentText();
 
@@ -354,8 +373,8 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
     auto* filtersCard = new QFrame(root);
     filtersCard->setFrameShape(QFrame::StyledPanel);
-    filtersCard->setStyleSheet("QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
-                               "QLabel{color: palette(Text); background: transparent;}");
+    filtersCard->setStyleSheet("QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Window);}"
+                               "QLabel{color: palette(WindowText); background: transparent;}");
     auto* topRow = new QHBoxLayout(filtersCard);
     topRow->setContentsMargins(14, 10, 14, 10);
     topRow->setSpacing(10);
@@ -367,17 +386,8 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     topRow->addWidget(groupLabel);
     statsGroupCombo = new QComboBox(filtersCard);
     statsGroupCombo->setMinimumWidth(180);
+    statsGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
     topRow->addWidget(statsGroupCombo);
-
-    topRow->addSpacing(12);
-    auto* semesterLabel = new QLabel("Семестр", filtersCard);
-    semesterLabel->setStyleSheet(UiStyle::badgeNeutralStyle());
-    semesterLabel->setMinimumHeight(22);
-    semesterLabel->setAlignment(Qt::AlignCenter);
-    topRow->addWidget(semesterLabel);
-    statsSemesterCombo = new QComboBox(filtersCard);
-    statsSemesterCombo->setMinimumWidth(160);
-    topRow->addWidget(statsSemesterCombo);
 
     topRow->addSpacing(12);
     auto* subjectLabel = new QLabel("Предмет", filtersCard);
@@ -387,6 +397,7 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     topRow->addWidget(subjectLabel);
     statsSubjectCombo = new QComboBox(filtersCard);
     statsSubjectCombo->setMinimumWidth(240);
+    statsSubjectCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
     topRow->addWidget(statsSubjectCombo);
 
     topRow->addStretch();
@@ -439,14 +450,17 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
     auto* detailHeader = new QFrame(statsDetailWidget);
     detailHeader->setFrameShape(QFrame::StyledPanel);
-    detailHeader->setStyleSheet("QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
-                                "QLabel{color: palette(Text); background: transparent;}");
+    detailHeader->setStyleSheet("QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Window);}"
+                                "QLabel{color: palette(WindowText); background: transparent;}");
+    detailHeader->setMinimumHeight(52);
     auto* dh = new QHBoxLayout(detailHeader);
     dh->setContentsMargins(14, 10, 14, 10);
     dh->setSpacing(10);
 
     statsDetailTitleLabel = new QLabel("Выберите студента слева", detailHeader);
     statsDetailTitleLabel->setStyleSheet("font-weight: 900; font-size: 14px; color: palette(WindowText);");
+    statsDetailTitleLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    statsDetailTitleLabel->setMinimumHeight(22);
     dh->addWidget(statsDetailTitleLabel, 1);
 
     auto* hint = new QLabel("детали", detailHeader);
@@ -458,8 +472,14 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     detailLayout->addWidget(detailHeader);
 
     auto* detailGradesBox = new QGroupBox("Все оценки студента", statsDetailWidget);
+    detailGradesBox->setMinimumHeight(220);
+    detailGradesBox->setStyleSheet(
+        "QGroupBox{margin-top: 18px;}"
+        "QGroupBox::title{subcontrol-origin: margin; subcontrol-position: top left;"
+        "padding: 0 8px; left: 10px; color: palette(WindowText); font-weight: 800;}"
+    );
     auto* dgLayout = new QVBoxLayout(detailGradesBox);
-    dgLayout->setContentsMargins(10, 8, 10, 8);
+    dgLayout->setContentsMargins(10, 18, 10, 8);
     dgLayout->setSpacing(8);
 
     statsDetailGradesTable = new QTableWidget(detailGradesBox);
@@ -469,6 +489,7 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     statsDetailGradesTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     statsDetailGradesTable->horizontalHeader()->setStretchLastSection(true);
     statsDetailGradesTable->setSortingEnabled(true);
+    statsDetailGradesTable->horizontalHeader()->setMinimumHeight(28);
     dgLayout->addWidget(statsDetailGradesTable);
 
     statsDetailGradesSummaryLabel = new QLabel(detailGradesBox);
@@ -476,8 +497,14 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     dgLayout->addWidget(statsDetailGradesSummaryLabel);
 
     auto* detailAbsBox = new QGroupBox("Все пропуски студента", statsDetailWidget);
+    detailAbsBox->setMinimumHeight(220);
+    detailAbsBox->setStyleSheet(
+        "QGroupBox{margin-top: 18px;}"
+        "QGroupBox::title{subcontrol-origin: margin; subcontrol-position: top left;"
+        "padding: 0 8px; left: 10px; color: palette(WindowText); font-weight: 800;}"
+    );
     auto* daLayout = new QVBoxLayout(detailAbsBox);
-    daLayout->setContentsMargins(10, 8, 10, 8);
+    daLayout->setContentsMargins(10, 18, 10, 8);
     daLayout->setSpacing(8);
 
     statsDetailAbsencesTable = new QTableWidget(detailAbsBox);
@@ -487,6 +514,9 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     statsDetailAbsencesTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     statsDetailAbsencesTable->horizontalHeader()->setStretchLastSection(true);
     statsDetailAbsencesTable->setSortingEnabled(true);
+    statsDetailAbsencesTable->horizontalHeader()->setMinimumHeight(28);
+    statsDetailAbsencesTable->horizontalHeader()->setMinimumSectionSize(90);
+    statsDetailAbsencesTable->setColumnWidth(4, 140);
     daLayout->addWidget(statsDetailAbsencesTable);
 
     statsDetailAbsencesSummaryLabel = new QLabel(detailAbsBox);
@@ -500,26 +530,10 @@ QWidget* TeacherWindow::buildGroupStatsTab()
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 2);
 
-    // semesters
-    if (db) {
-        std::vector<std::pair<int, std::string>> semesters;
-        if (db->getAllSemesters(semesters) && !semesters.empty()) {
-            for (const auto& s : semesters) {
-                statsSemesterCombo->addItem(QString::fromStdString(s.second).isEmpty() ? QString("Семестр %1").arg(s.first)
-                                                                                       : QString::fromStdString(s.second),
-                                            s.first);
-            }
-        } else {
-            statsSemesterCombo->addItem("Семестр 1", 1);
-        }
-    }
-
     statsSubjectCombo->addItem("Все предметы", 0);
 
     connect(statsGroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &TeacherWindow::onStatsGroupChanged);
-    connect(statsSemesterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TeacherWindow::onStatsSemesterChanged);
     connect(statsSubjectCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &TeacherWindow::onStatsSubjectChanged);
     connect(refresh, &QPushButton::clicked, this, &TeacherWindow::reloadGroupStats);
@@ -535,8 +549,8 @@ QWidget* TeacherWindow::buildGroupStatsTab()
 
 static QString journalTimelineCardStyle()
 {
-    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
-           "QLabel{color: palette(Text); background: transparent;}";
+    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Window);}"
+           "QLabel{color: palette(WindowText); background: transparent;}";
 }
 
 static QWidget* buildJournalDayHeader(QWidget* parent, const QString& title)
@@ -664,8 +678,7 @@ QWidget* TeacherWindow::buildScheduleTab()
     scheduleGroupCombo->setMinimumWidth(120);
     scheduleGroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     scheduleGroupCombo->view()->setTextElideMode(Qt::ElideRight);
-    scheduleGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-    scheduleGroupCombo->setMinimumContentsLength(10);
+    scheduleGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
     filtersRow->addWidget(scheduleGroupCombo);
 
     filtersRow->addSpacing(12);
@@ -712,109 +725,109 @@ QWidget* TeacherWindow::buildJournalTab()
     auto* topRow = new QHBoxLayout();
     topRow->setContentsMargins(0, 0, 0, 0);
 
-    topRow->addWidget(new QLabel("Режим:", root));
-    journalModeCombo = new QComboBox(root);
-    journalModeCombo->addItem("По паре (из расписания)", 0);
-    journalModeCombo->addItem("Свободный режим (пропуски)", 1);
-    journalModeCombo->setMinimumWidth(260);
-    journalModeCombo->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
-    journalModeCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    topRow->addWidget(journalModeCombo);
-
-    topRow->addSpacing(12);
-
-    topRow->addWidget(new QLabel("Семестр:", root));
-    journalSemesterCombo = new QComboBox(root);
-    journalSemesterCombo->setMinimumWidth(120);
-    journalSemesterCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    journalSemesterCombo->view()->setTextElideMode(Qt::ElideRight);
-    journalSemesterCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-    journalSemesterCombo->setMinimumContentsLength(8);
-    topRow->addWidget(journalSemesterCombo);
-
-    topRow->addSpacing(12);
     topRow->addWidget(new QLabel("Группа:", root));
     journalGroupCombo = new QComboBox(root);
     journalGroupCombo->setMinimumWidth(120);
     journalGroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     journalGroupCombo->view()->setTextElideMode(Qt::ElideRight);
-    journalGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-    journalGroupCombo->setMinimumContentsLength(10);
+    journalGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
     topRow->addWidget(journalGroupCombo);
 
     topRow->addStretch();
     layout->addLayout(topRow);
 
-    journalModeStack = new QStackedWidget(root);
-    layout->addWidget(journalModeStack);
-
-    // ===== Mode 0: by lesson =====
-    auto* byLesson = new QWidget(root);
-    auto* byLessonLayout = new QVBoxLayout(byLesson);
-    byLessonLayout->setContentsMargins(0, 0, 0, 0);
-
-    auto* journalRoot = new QSplitter(Qt::Horizontal, byLesson);
+    auto* journalRoot = new QSplitter(Qt::Horizontal, root);
     journalRoot->setChildrenCollapsible(false);
-    byLessonLayout->addWidget(journalRoot, 1);
+    layout->addWidget(journalRoot, 1);
 
     // Left panel (CRUD)
     auto* journalLeftPanel = new QWidget(journalRoot);
-    journalLeftPanel->setMinimumWidth(280);
-    journalLeftPanel->setMaximumWidth(340);
+    journalLeftPanel->setMinimumWidth(260);
+    journalLeftPanel->setMaximumWidth(320);
     auto* leftLayout = new QVBoxLayout(journalLeftPanel);
     leftLayout->setContentsMargins(0, 0, 0, 0);
-    leftLayout->setSpacing(12);
+    leftLayout->setSpacing(10);
 
     auto* gradeBox = new QGroupBox("Оценка", journalLeftPanel);
-    auto* gradeLayout = new QVBoxLayout(gradeBox);
-    gradeLayout->setContentsMargins(10, 8, 10, 10);
-    gradeLayout->setSpacing(8);
+    auto* gradeLayout = new QGridLayout(gradeBox);
+    gradeLayout->setContentsMargins(10, 8, 10, 8);
+    gradeLayout->setHorizontalSpacing(8);
+    gradeLayout->setVerticalSpacing(6);
 
     gradeSpin = new QSpinBox(gradeBox);
-    gradeSpin->setRange(0, 10);
-    gradeSpin->setValue(5);
-    gradeLayout->addWidget(gradeSpin);
+    gradeSpin->setRange(-1, 10);
+    gradeSpin->setSpecialValueText("—");
+    gradeSpin->setValue(-1);
+    gradeSpin->setMinimumHeight(28);
+    gradeSpin->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    gradeSpin->setToolTip("Для удаления поставьте значение — и нажмите Применить");
 
     currentGradeLabel = new QLabel("Оценка: —", gradeBox);
     UiStyle::makeInfoLabel(currentGradeLabel);
-    gradeLayout->addWidget(currentGradeLabel);
+    currentGradeLabel->setMinimumHeight(36);
+    currentGradeLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    auto* gradeButtons = new QHBoxLayout();
-    gradeButtons->setContentsMargins(0, 0, 0, 0);
-    gradeButtons->setSpacing(8);
-    saveGradeButton = new QPushButton("Сохранить", gradeBox);
-    deleteGradeButton = new QPushButton("Удалить", gradeBox);
-    gradeButtons->addWidget(saveGradeButton);
-    gradeButtons->addWidget(deleteGradeButton);
-    gradeLayout->addLayout(gradeButtons);
+    saveGradeButton = new QPushButton("Применить", gradeBox);
+    saveGradeButton->setMinimumHeight(28);
+    saveGradeButton->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    saveGradeButton->setToolTip("Применить: сохранить/изменить оценку. Значение — удаляет запись");
+
+    auto* gradeHint = new QLabel("Удаление: поставьте — и нажмите Применить", gradeBox);
+    UiStyle::makeInfoLabel(gradeHint);
+    gradeHint->setMinimumHeight(18);
+    gradeHint->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    gradeLayout->addWidget(gradeSpin, 0, 0);
+    gradeLayout->addWidget(saveGradeButton, 0, 1);
+    gradeLayout->addWidget(currentGradeLabel, 1, 0, 1, 2);
+    gradeLayout->addWidget(gradeHint, 2, 0, 1, 2);
+    gradeLayout->setColumnStretch(0, 1);
+    gradeLayout->setColumnStretch(1, 0);
 
     auto* absenceBox = new QGroupBox("Пропуск", journalLeftPanel);
-    auto* absenceLayout = new QVBoxLayout(absenceBox);
-    absenceLayout->setContentsMargins(10, 8, 10, 10);
-    absenceLayout->setSpacing(8);
+    auto* absenceLayout = new QGridLayout(absenceBox);
+    absenceLayout->setContentsMargins(10, 8, 10, 8);
+    absenceLayout->setHorizontalSpacing(8);
+    absenceLayout->setVerticalSpacing(6);
 
     absenceHoursSpin = new QSpinBox(absenceBox);
-    absenceHoursSpin->setRange(1, 8);
-    absenceHoursSpin->setValue(1);
-    absenceLayout->addWidget(absenceHoursSpin);
+    absenceHoursSpin->setRange(0, 8);
+    absenceHoursSpin->setSpecialValueText("—");
+    absenceHoursSpin->setValue(0);
+    absenceHoursSpin->setMinimumHeight(28);
+    absenceHoursSpin->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    absenceHoursSpin->setToolTip("Для удаления поставьте — (0 часов) и нажмите Применить");
 
     absenceTypeCombo = new QComboBox(absenceBox);
     absenceTypeCombo->addItem("Уважительный", "excused");
     absenceTypeCombo->addItem("Неуважительный", "unexcused");
-    absenceLayout->addWidget(absenceTypeCombo);
+    absenceTypeCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    absenceTypeCombo->setMinimumHeight(28);
+    absenceTypeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    absenceTypeCombo->setToolTip("Тип пропуска. Для удаления поставьте — в часах и нажмите Применить");
 
     currentAbsenceLabel = new QLabel("Пропуск: —", absenceBox);
     UiStyle::makeInfoLabel(currentAbsenceLabel);
-    absenceLayout->addWidget(currentAbsenceLabel);
+    currentAbsenceLabel->setMinimumHeight(36);
+    currentAbsenceLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    auto* absenceButtons = new QHBoxLayout();
-    absenceButtons->setContentsMargins(0, 0, 0, 0);
-    absenceButtons->setSpacing(8);
-    saveAbsenceButton = new QPushButton("Сохранить", absenceBox);
-    deleteAbsenceButton = new QPushButton("Удалить", absenceBox);
-    absenceButtons->addWidget(saveAbsenceButton);
-    absenceButtons->addWidget(deleteAbsenceButton);
-    absenceLayout->addLayout(absenceButtons);
+    saveAbsenceButton = new QPushButton("Применить", absenceBox);
+    saveAbsenceButton->setMinimumHeight(28);
+    saveAbsenceButton->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    saveAbsenceButton->setToolTip("Применить: сохранить/изменить пропуск. Часы — удаляют запись");
+
+    auto* absenceHint = new QLabel("Удаление: поставьте — в часах и нажмите Применить", absenceBox);
+    UiStyle::makeInfoLabel(absenceHint);
+    absenceHint->setMinimumHeight(18);
+    absenceHint->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    absenceLayout->addWidget(absenceHoursSpin, 0, 0);
+    absenceLayout->addWidget(saveAbsenceButton, 0, 1);
+    absenceLayout->addWidget(absenceTypeCombo, 1, 0, 1, 2);
+    absenceLayout->addWidget(currentAbsenceLabel, 2, 0, 1, 2);
+    absenceLayout->addWidget(absenceHint, 3, 0, 1, 2);
+    absenceLayout->setColumnStretch(0, 1);
+    absenceLayout->setColumnStretch(1, 0);
 
     leftLayout->addWidget(gradeBox);
     leftLayout->addWidget(absenceBox);
@@ -834,8 +847,8 @@ QWidget* TeacherWindow::buildJournalTab()
     journalLessonCardFrame->setProperty("card", "journalLesson");
     journalLessonCardFrame->setProperty("selected", false);
     journalLessonCardFrame->setFrameShape(QFrame::StyledPanel);
-    journalLessonCardFrame->setStyleSheet("#selectedLessonCard{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
-                                          "#selectedLessonCard QLabel{background: transparent;}");
+    journalLessonCardFrame->setStyleSheet("#selectedLessonCard{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Window);}"
+                                          "#selectedLessonCard QLabel{background: transparent; color: palette(WindowText);}");
     journalLessonCardFrame->setMinimumHeight(150);
     journalLessonCardFrame->setMaximumHeight(190);
 
@@ -849,7 +862,14 @@ QWidget* TeacherWindow::buildJournalTab()
     cardGrid->addWidget(journalLessonCardTitle, 0, 0, 1, 2);
 
     journalLessonCardSubTitle = new QLabel("—", journalLessonCardFrame);
-    journalLessonCardSubTitle->setStyleSheet("color: palette(mid); font-weight: 650;");
+    journalLessonCardSubTitle->setStyleSheet(
+        "padding: 4px 10px;"
+        "border-radius: 10px;"
+        "border: 1px solid rgba(59,130,246,0.45);"
+        "background: rgba(59,130,246,0.16);"
+        "color: palette(WindowText);"
+        "font-weight: 650;"
+    );
     cardGrid->addWidget(journalLessonCardSubTitle, 1, 0, 1, 2);
 
     // Right badges
@@ -907,6 +927,25 @@ QWidget* TeacherWindow::buildJournalTab()
     journalLessonsTable->setHorizontalHeaderLabels({"Дата", "День", "Время", "№", "Предмет", "Тип"});
     journalLessonsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     journalLessonsTable->horizontalHeader()->setStretchLastSection(true);
+    journalLessonsTable->setAlternatingRowColors(true);
+    journalLessonsTable->setStyleSheet(
+        "QTableWidget{"
+        "alternate-background-color: rgba(59,130,246,0.08);"
+        "selection-background-color: rgba(59,130,246,0.28);"
+        "selection-color: palette(WindowText);"
+        "}"
+        "QHeaderView::section{"
+        "background: rgba(59,130,246,0.18);"
+        "color: palette(WindowText);"
+        "font-weight: 800;"
+        "padding: 6px 10px;"
+        "border: none;"
+        "border-bottom: 1px solid rgba(120,120,120,0.25);"
+        "}"
+        "QTableWidget::item{padding: 4px 8px;}"
+        "QTableWidget::item:hover{background: rgba(59,130,246,0.14);}"
+        "QTableWidget::item:selected{background: rgba(59,130,246,0.25); color: palette(WindowText);}"
+    );
     journalLessonsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     journalLessonsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     journalTables->addWidget(journalLessonsTable);
@@ -927,78 +966,10 @@ QWidget* TeacherWindow::buildJournalTab()
     journalRoot->setStretchFactor(0, 0);
     journalRoot->setStretchFactor(1, 1);
 
-    journalModeStack->addWidget(byLesson);
-
-    // ===== Mode 1: free absences =====
-    auto* freeMode = new QWidget(root);
-    auto* freeLayout = new QVBoxLayout(freeMode);
-    freeLayout->setContentsMargins(0, 0, 0, 0);
-
-    auto* freeInfo = new QLabel("Свободный режим позволяет отмечать пропуски для любого студента любой группы.", freeMode);
-    freeInfo->setWordWrap(true);
-    UiStyle::makeInfoLabel(freeInfo);
-    freeLayout->addWidget(freeInfo);
-
-    auto* freeRow1 = new QHBoxLayout();
-    freeRow1->setContentsMargins(0, 0, 0, 0);
-    freeRow1->addWidget(new QLabel("Группа:", freeMode));
-    freeGroupCombo = new QComboBox(freeMode);
-    freeGroupCombo->setMinimumWidth(220);
-    freeRow1->addWidget(freeGroupCombo);
-    freeRow1->addSpacing(12);
-    freeRow1->addWidget(new QLabel("Студент:", freeMode));
-    freeStudentCombo = new QComboBox(freeMode);
-    freeStudentCombo->setMinimumWidth(260);
-    freeRow1->addWidget(freeStudentCombo);
-    freeRow1->addStretch();
-    freeLayout->addLayout(freeRow1);
-
-    auto* freeRow2 = new QHBoxLayout();
-    freeRow2->setContentsMargins(0, 0, 0, 0);
-    freeRow2->addWidget(new QLabel("Предмет:", freeMode));
-    freeSubjectCombo = new QComboBox(freeMode);
-    freeSubjectCombo->setMinimumWidth(280);
-    freeRow2->addWidget(freeSubjectCombo);
-    freeRow2->addSpacing(12);
-    freeRow2->addWidget(new QLabel("Дата:", freeMode));
-    freeDateEdit = new QDateEdit(QDate::currentDate(), freeMode);
-    freeDateEdit->setDisplayFormat("dd.MM.yyyy");
-    freeDateEdit->setCalendarPopup(true);
-    freeRow2->addWidget(freeDateEdit);
-    freeRow2->addStretch();
-    freeLayout->addLayout(freeRow2);
-
-    auto* freeRow3 = new QHBoxLayout();
-    freeRow3->setContentsMargins(0, 0, 0, 0);
-    freeRow3->addWidget(new QLabel("Часы:", freeMode));
-    freeHoursSpin = new QSpinBox(freeMode);
-    freeHoursSpin->setRange(1, 8);
-    freeHoursSpin->setValue(1);
-    freeRow3->addWidget(freeHoursSpin);
-    freeRow3->addSpacing(12);
-    freeRow3->addWidget(new QLabel("Тип:", freeMode));
-    freeTypeCombo = new QComboBox(freeMode);
-    freeTypeCombo->addItem("Уважительный", "excused");
-    freeTypeCombo->addItem("Неуважительный", "unexcused");
-    freeRow3->addWidget(freeTypeCombo);
-    freeSaveAbsenceButton = new QPushButton("Сохранить пропуск", freeMode);
-    freeRow3->addWidget(freeSaveAbsenceButton);
-    freeRow3->addStretch();
-    freeLayout->addLayout(freeRow3);
-
-    journalModeStack->addWidget(freeMode);
-
-    connect(journalModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TeacherWindow::onJournalModeChanged);
-
     connect(journalPeriodSelector, &PeriodSelectorWidget::selectionChanged,
             this, &TeacherWindow::onJournalPeriodChanged);
     connect(journalGroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &TeacherWindow::onJournalGroupChanged);
-    connect(journalSemesterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, [this](int) {
-        reloadJournalLessonsForSelectedStudent();
-    });
 
     connect(journalLessonsTable->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &TeacherWindow::onJournalLessonSelectionChanged);
@@ -1006,89 +977,12 @@ QWidget* TeacherWindow::buildJournalTab()
     connect(journalStudentsTable->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &TeacherWindow::onJournalStudentSelectionChanged);
 
-    connect(saveGradeButton, &QPushButton::clicked, this, &TeacherWindow::openGradeDialog);
-    connect(saveAbsenceButton, &QPushButton::clicked, this, &TeacherWindow::openAbsenceDialog);
-    connect(deleteGradeButton, &QPushButton::clicked, this, &TeacherWindow::onDeleteGrade);
-    connect(deleteAbsenceButton, &QPushButton::clicked, this, &TeacherWindow::onDeleteAbsence);
-
-    connect(freeGroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TeacherWindow::onFreeGroupChanged);
-    connect(freeSaveAbsenceButton, &QPushButton::clicked, this, &TeacherWindow::onFreeSaveAbsence);
-
-    // semesters
-    {
-        std::vector<std::pair<int, std::string>> semesters;
-        if (db && db->getAllSemesters(semesters) && !semesters.empty()) {
-            for (const auto& s : semesters) {
-                journalSemesterCombo->addItem(QString::fromStdString(s.second).isEmpty() ? QString("Семестр %1").arg(s.first)
-                                                                                          : QString::fromStdString(s.second),
-                                              s.first);
-            }
-        } else {
-            journalSemesterCombo->addItem("Семестр 1", 1);
-        }
-    }
+    connect(saveGradeButton, &QPushButton::clicked, this, &TeacherWindow::onSaveGrade);
+    connect(saveAbsenceButton, &QPushButton::clicked, this, &TeacherWindow::onSaveAbsence);
 
     onJournalPeriodChanged(journalPeriodSelector->currentSelection());
 
-    // free-mode data
-    if (db) {
-        std::vector<std::pair<int, std::string>> groups;
-        if (db->getAllGroups(groups)) {
-            freeGroupCombo->addItem("Выберите группу", 0);
-            for (const auto& g : groups) {
-                freeGroupCombo->addItem(QString::fromStdString(g.second), g.first);
-            }
-        }
-
-        freeSubjectCombo->addItem("Сначала выберите группу", 0);
-    }
-
-    onJournalModeChanged(journalModeCombo->currentIndex());
     return root;
-}
-
-void TeacherWindow::onJournalModeChanged(int)
-{
-    if (!journalModeStack || !journalModeCombo) return;
-    const int mode = journalModeCombo->currentData().toInt();
-    journalModeStack->setCurrentIndex(mode);
-}
-
-void TeacherWindow::onFreeGroupChanged(int)
-{
-    if (!db || !freeGroupCombo || !freeStudentCombo) return;
-
-    freeStudentCombo->clear();
-    const int groupId = freeGroupCombo->currentData().toInt();
-    if (groupId <= 0) {
-        freeStudentCombo->addItem("Выберите группу", 0);
-        return;
-    }
-
-    std::vector<std::pair<int, std::string>> students;
-    if (!db->getStudentsOfGroup(groupId, students)) {
-        freeStudentCombo->addItem("Не удалось загрузить", 0);
-        return;
-    }
-
-    freeStudentCombo->addItem("Выберите студента", 0);
-    for (const auto& st : students) {
-        freeStudentCombo->addItem(QString::fromStdString(st.second), st.first);
-    }
-
-    if (freeSubjectCombo) {
-        freeSubjectCombo->clear();
-        std::vector<std::pair<int, std::string>> subjects;
-        if (db->getSubjectsForTeacherInGroupSchedule(teacherId, groupId, subjects) && !subjects.empty()) {
-            freeSubjectCombo->addItem("Выберите предмет", 0);
-            for (const auto& s : subjects) {
-                freeSubjectCombo->addItem(QString::fromStdString(s.second), s.first);
-            }
-        } else {
-            freeSubjectCombo->addItem("Нет предметов (по расписанию)", 0);
-        }
-    }
 }
 
 void TeacherWindow::openGradeDialog()
@@ -1113,7 +1007,7 @@ void TeacherWindow::openGradeDialog()
     const int sRow = sel.front().row();
     const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
     const QString studentName = journalStudentsTable->item(sRow, 1) ? journalStudentsTable->item(sRow, 1)->text() : QString();
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
+    const int semesterId = defaultSemesterId();
     if (studentId <= 0 || semesterId <= 0) return;
 
     // conflict with absence
@@ -1201,7 +1095,7 @@ void TeacherWindow::openAbsenceDialog()
     const int sRow = sel.front().row();
     const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
     const QString studentName = journalStudentsTable->item(sRow, 1) ? journalStudentsTable->item(sRow, 1)->text() : QString();
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
+    const int semesterId = defaultSemesterId();
     if (studentId <= 0 || semesterId <= 0) return;
 
     // conflict with grade
@@ -1284,71 +1178,6 @@ void TeacherWindow::openAbsenceDialog()
 
     QMessageBox::information(this, "Журнал", "Пропуск сохранён.");
     refreshJournalCurrentValues();
-}
-
-void TeacherWindow::onFreeSaveAbsence()
-{
-    if (!db) return;
-
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
-    if (semesterId <= 0) {
-        QMessageBox::warning(this, "Журнал", "Некорректный семестр.");
-        return;
-    }
-
-    const int groupId = freeGroupCombo ? freeGroupCombo->currentData().toInt() : 0;
-    if (groupId <= 0) {
-        QMessageBox::warning(this, "Журнал", "Выберите группу.");
-        return;
-    }
-
-    const int studentId = freeStudentCombo ? freeStudentCombo->currentData().toInt() : 0;
-    if (studentId <= 0) {
-        QMessageBox::warning(this, "Журнал", "Выберите студента.");
-        return;
-    }
-
-    const int subjectId = freeSubjectCombo ? freeSubjectCombo->currentData().toInt() : 0;
-    if (subjectId <= 0) {
-        QMessageBox::warning(this, "Журнал", "Выберите предмет.");
-        return;
-    }
-
-    const QString dateISO = freeDateEdit ? freeDateEdit->date().toString("yyyy-MM-dd") : QString();
-    if (dateISO.isEmpty()) {
-        QMessageBox::warning(this, "Журнал", "Выберите дату.");
-        return;
-    }
-
-    const int hours = freeHoursSpin ? freeHoursSpin->value() : 0;
-    if (hours <= 0 || hours > 8) {
-        QMessageBox::warning(this, "Журнал", "Часы пропуска должны быть в диапазоне 1..8.");
-        return;
-    }
-
-    const QString type = freeTypeCombo ? freeTypeCombo->currentData().toString() : "excused";
-    if (type != "excused" && type != "unexcused") {
-        QMessageBox::warning(this, "Журнал", "Некорректный тип пропуска.");
-        return;
-    }
-
-    // conflict with grade
-    int gradeId = 0;
-    if (!db->findGradeId(studentId, subjectId, semesterId, dateISO.toStdString(), gradeId)) {
-        QMessageBox::warning(this, "Журнал", "Ошибка при проверке оценок.");
-        return;
-    }
-    if (gradeId > 0) {
-        QMessageBox::warning(this, "Журнал", "Нельзя отметить пропуск: уже есть оценка на эту дату/предмет.");
-        return;
-    }
-
-    if (!db->upsertAbsenceByKey(studentId, subjectId, semesterId, hours, dateISO.toStdString(), type.toStdString())) {
-        QMessageBox::critical(this, "Журнал", "Не удалось сохранить пропуск.");
-        return;
-    }
-
-    QMessageBox::information(this, "Журнал", "Пропуск сохранён.");
 }
 
 void TeacherWindow::loadTeacherGroups()
@@ -1440,7 +1269,7 @@ void TeacherWindow::reloadGroupStatsSubjects()
 
 void TeacherWindow::reloadGroupStats()
 {
-    if (!db || !statsGroupCombo || !statsSemesterCombo || !statsSubjectCombo) return;
+    if (!db || !statsGroupCombo || !statsSubjectCombo) return;
     if (!statsGradesTable || !statsGradesSummaryLabel) return;
 
     if (statsDetailTitleLabel) statsDetailTitleLabel->setText("Выберите студента слева");
@@ -1450,7 +1279,7 @@ void TeacherWindow::reloadGroupStats()
     if (statsDetailAbsencesSummaryLabel) statsDetailAbsencesSummaryLabel->setText("Пропуски: —");
 
     const int groupId = statsGroupCombo->currentData().toInt();
-    const int semesterId = statsSemesterCombo->currentData().toInt();
+    const int semesterId = defaultSemesterId();
 
     statsGradesTable->setRowCount(0);
 
@@ -1483,11 +1312,6 @@ void TeacherWindow::reloadGroupStats()
 void TeacherWindow::onStatsGroupChanged(int)
 {
     reloadGroupStatsSubjects();
-    reloadGroupStats();
-}
-
-void TeacherWindow::onStatsSemesterChanged(int)
-{
     reloadGroupStats();
 }
 
@@ -1816,8 +1640,6 @@ void TeacherWindow::refreshJournalCurrentValues()
 
     currentGradeLabel->setText("Оценка: —");
     currentAbsenceLabel->setText("Пропуск: —");
-    if (deleteGradeButton) deleteGradeButton->setEnabled(false);
-    if (deleteAbsenceButton) deleteAbsenceButton->setEnabled(false);
 
     if (!selectedLesson.valid || selectedLesson.subjectId <= 0 || selectedLesson.dateISO.isEmpty()) return;
     if (!journalStudentsTable || !journalStudentsTable->selectionModel()) return;
@@ -1827,7 +1649,7 @@ void TeacherWindow::refreshJournalCurrentValues()
 
     const int sRow = sel.front().row();
     const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
+    const int semesterId = defaultSemesterId();
     if (studentId <= 0 || semesterId <= 0) return;
 
     int gradeId = 0;
@@ -1838,7 +1660,6 @@ void TeacherWindow::refreshJournalCurrentValues()
         if (db->getGradeById(gradeId, value, date, type)) {
             currentGradeLabel->setText(QString("Оценка: %1").arg(value));
             if (gradeSpin) gradeSpin->setValue(value);
-            if (deleteGradeButton) deleteGradeButton->setEnabled(true);
         }
     }
 
@@ -1857,7 +1678,6 @@ void TeacherWindow::refreshJournalCurrentValues()
                 const int idx = absenceTypeCombo->findData(qt);
                 if (idx >= 0) absenceTypeCombo->setCurrentIndex(idx);
             }
-            if (deleteAbsenceButton) deleteAbsenceButton->setEnabled(true);
         }
     }
 }
@@ -1884,11 +1704,8 @@ void TeacherWindow::onSaveGrade()
     const int sRow = sel.front().row();
     const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
 
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
-    if (semesterId <= 0) {
-        QMessageBox::warning(this, "Журнал", "Некорректный семестр.");
-        return;
-    }
+    const int semesterId = defaultSemesterId();
+    if (semesterId <= 0) return;
 
     // conflict: absence exists on same date+subject
     int absenceId = 0;
@@ -1901,9 +1718,30 @@ void TeacherWindow::onSaveGrade()
         return;
     }
 
-    const int gradeValue = gradeSpin ? gradeSpin->value() : 0;
+    const int gradeValue = gradeSpin ? gradeSpin->value() : -1;
+    if (gradeValue == -1) {
+        int gradeId = 0;
+        if (!db->findGradeId(studentId, selectedLesson.subjectId, semesterId, selectedLesson.dateISO.toStdString(), gradeId)) {
+            QMessageBox::warning(this, "Журнал", "Ошибка при поиске оценки.");
+            return;
+        }
+        if (gradeId <= 0) {
+            QMessageBox::information(this, "Журнал", "Оценка не найдена.");
+            refreshJournalCurrentValues();
+            return;
+        }
+        if (QMessageBox::question(this, "Журнал", "Удалить оценку?") != QMessageBox::Yes) return;
+        if (!db->deleteGrade(gradeId)) {
+            QMessageBox::critical(this, "Журнал", "Не удалось удалить оценку.");
+            return;
+        }
+        QMessageBox::information(this, "Журнал", "Оценка удалена.");
+        refreshJournalCurrentValues();
+        return;
+    }
+
     if (gradeValue < 0 || gradeValue > 10) {
-        QMessageBox::warning(this, "Журнал", "Оценка должна быть в диапазоне 0..10.");
+        QMessageBox::warning(this, "Журнал", "Оценка должна быть в диапазоне 0..10 (или — для удаления).");
         return;
     }
 
@@ -1913,49 +1751,7 @@ void TeacherWindow::onSaveGrade()
         return;
     }
 
-    QMessageBox::information(this, "Журнал", "Оценка сохранена.");
-    refreshJournalCurrentValues();
-}
-
-void TeacherWindow::onDeleteGrade()
-{
-    if (!db) return;
-    if (!selectedLesson.valid || selectedLesson.subjectId <= 0 || selectedLesson.dateISO.isEmpty()) {
-        QMessageBox::warning(this, "Журнал", "Сначала выберите пару.");
-        return;
-    }
-    if (!journalStudentsTable || !journalStudentsTable->selectionModel()) return;
-    const auto sel = journalStudentsTable->selectionModel()->selectedRows();
-    if (sel.isEmpty()) {
-        QMessageBox::warning(this, "Журнал", "Сначала выберите студента.");
-        return;
-    }
-    const int sRow = sel.front().row();
-    const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
-    if (semesterId <= 0 || studentId <= 0) return;
-
-    int gradeId = 0;
-    if (!db->findGradeId(studentId, selectedLesson.subjectId, semesterId, selectedLesson.dateISO.toStdString(), gradeId)) {
-        QMessageBox::warning(this, "Журнал", "Ошибка при поиске оценки.");
-        return;
-    }
-    if (gradeId <= 0) {
-        QMessageBox::information(this, "Журнал", "Оценка не найдена.");
-        refreshJournalCurrentValues();
-        return;
-    }
-
-    if (QMessageBox::question(this, "Журнал", "Удалить оценку?") != QMessageBox::Yes) {
-        return;
-    }
-
-    if (!db->deleteGrade(gradeId)) {
-        QMessageBox::critical(this, "Журнал", "Не удалось удалить оценку.");
-        return;
-    }
-
-    QMessageBox::information(this, "Журнал", "Оценка удалена.");
+    QMessageBox::information(this, "Журнал", "Оценка применена.");
     refreshJournalCurrentValues();
 }
 
@@ -1976,11 +1772,8 @@ void TeacherWindow::onSaveAbsence()
     const int sRow = sel.front().row();
     const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
 
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
-    if (semesterId <= 0) {
-        QMessageBox::warning(this, "Журнал", "Некорректный семестр.");
-        return;
-    }
+    const int semesterId = defaultSemesterId();
+    if (semesterId <= 0) return;
 
     // conflict: grade exists on same date+subject
     int gradeId = 0;
@@ -1994,8 +1787,8 @@ void TeacherWindow::onSaveAbsence()
     }
 
     const int hours = absenceHoursSpin ? absenceHoursSpin->value() : 0;
-    if (hours <= 0 || hours > 8) {
-        QMessageBox::warning(this, "Журнал", "Часы пропуска должны быть в диапазоне 1..8.");
+    if (hours < 0 || hours > 8) {
+        QMessageBox::warning(this, "Журнал", "Часы пропуска должны быть в диапазоне 0..8 (или — для удаления).");
         return;
     }
 
@@ -2005,54 +1798,33 @@ void TeacherWindow::onSaveAbsence()
         return;
     }
 
+    if (hours == 0) {
+        int absenceId = 0;
+        if (!db->findAbsenceId(studentId, selectedLesson.subjectId, semesterId, selectedLesson.dateISO.toStdString(), absenceId)) {
+            QMessageBox::warning(this, "Журнал", "Ошибка при поиске пропуска.");
+            return;
+        }
+        if (absenceId <= 0) {
+            QMessageBox::information(this, "Журнал", "Пропуск не найден.");
+            refreshJournalCurrentValues();
+            return;
+        }
+        if (QMessageBox::question(this, "Журнал", "Удалить пропуск?") != QMessageBox::Yes) return;
+        if (!db->deleteAbsence(absenceId)) {
+            QMessageBox::critical(this, "Журнал", "Не удалось удалить пропуск.");
+            return;
+        }
+        QMessageBox::information(this, "Журнал", "Пропуск удалён.");
+        refreshJournalCurrentValues();
+        return;
+    }
+
     if (!db->upsertAbsenceByKey(studentId, selectedLesson.subjectId, semesterId, hours,
                                 selectedLesson.dateISO.toStdString(), type.toStdString())) {
         QMessageBox::critical(this, "Журнал", "Не удалось сохранить пропуск.");
         return;
     }
 
-    QMessageBox::information(this, "Журнал", "Пропуск сохранён.");
-    refreshJournalCurrentValues();
-}
-
-void TeacherWindow::onDeleteAbsence()
-{
-    if (!db) return;
-    if (!selectedLesson.valid || selectedLesson.subjectId <= 0 || selectedLesson.dateISO.isEmpty()) {
-        QMessageBox::warning(this, "Журнал", "Сначала выберите пару.");
-        return;
-    }
-    if (!journalStudentsTable || !journalStudentsTable->selectionModel()) return;
-    const auto sel = journalStudentsTable->selectionModel()->selectedRows();
-    if (sel.isEmpty()) {
-        QMessageBox::warning(this, "Журнал", "Сначала выберите студента.");
-        return;
-    }
-    const int sRow = sel.front().row();
-    const int studentId = journalStudentsTable->item(sRow, 0)->text().toInt();
-    const int semesterId = journalSemesterCombo ? journalSemesterCombo->currentData().toInt() : 1;
-    if (semesterId <= 0 || studentId <= 0) return;
-
-    int absenceId = 0;
-    if (!db->findAbsenceId(studentId, selectedLesson.subjectId, semesterId, selectedLesson.dateISO.toStdString(), absenceId)) {
-        QMessageBox::warning(this, "Журнал", "Ошибка при поиске пропуска.");
-        return;
-    }
-    if (absenceId <= 0) {
-        QMessageBox::information(this, "Журнал", "Пропуск не найден.");
-        refreshJournalCurrentValues();
-        return;
-    }
-
-    if (QMessageBox::question(this, "Журнал", "Удалить пропуск?") != QMessageBox::Yes) {
-        return;
-    }
-
-    if (!db->deleteAbsence(absenceId)) {
-        QMessageBox::critical(this, "Журнал", "Не удалось удалить пропуск.");
-        return;
-    }
-
-    QMessageBox::information(this, "Журнал", "Пропуск удалён.");
+    QMessageBox::information(this, "Журнал", "Пропуск применён.");
     refreshJournalCurrentValues();
 }

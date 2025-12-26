@@ -37,8 +37,12 @@ private:
 
     int semesterId;
 
+    int selectedYear = 0;
+    int selectedMonth = 0;
+
     QComboBox* semesterCombo;
     QComboBox* subjectCombo;
+    QComboBox* monthCombo;
     QPushButton* refreshButton;
 
     QStackedWidget* stacked;
@@ -51,6 +55,9 @@ private:
     QLabel* averageLabel;
     QLabel* countLabel;
 
+    QLabel* avgSubjectMonthLabel;
+    QLabel* avgAllMonthLabel;
+
     QLabel* emptyStateLabel;
     QPushButton* retryButton;
 
@@ -61,6 +68,10 @@ private:
 
     std::vector<GradeRow> cachedGrades;
     void populateSubjectsFromCache();
+    void populateMonthsFromCache();
     void applyFilterToTimeline();
+    void updateMonthlyStats();
     QWidget* buildGradeCard(const GradeRow& g);
+
+    int subjectIdForCurrentFilter() const;
 };

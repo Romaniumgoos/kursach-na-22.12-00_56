@@ -1,4 +1,5 @@
-C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/NJHUVPU35C/moc_LessonCardWidget.cpp: C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/LessonCardWidget.h \
+C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/SPMADHTAVI/moc_TeacherScheduleViewer.cpp: C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/windows/TeacherScheduleViewer.h \
+  C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/models/WeekSelection.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/QObject \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/QString \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q17memory.h \

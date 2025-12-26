@@ -60,6 +60,7 @@ set(GUI_SOURCES
         ui/widgets/PeriodSelectorWidget.cpp
         ui/widgets/LessonCardWidget.cpp
         ui/widgets/WeekGridScheduleWidget.cpp
+        ui/windows/TeacherScheduleViewer.cpp
         ui/pages/StudentSchedulePage.cpp
         ui/pages/StudentGradesPage.cpp
         ui/pages/StudentAbsencesPage.cpp
@@ -76,6 +77,7 @@ set(GUI_HEADERS
         ui/widgets/PeriodSelectorWidget.h
         ui/widgets/LessonCardWidget.h
         ui/widgets/WeekGridScheduleWidget.h
+        ui/windows/TeacherScheduleViewer.h
         ui/pages/StudentSchedulePage.h
         ui/pages/StudentGradesPage.h
         ui/pages/StudentAbsencesPage.h

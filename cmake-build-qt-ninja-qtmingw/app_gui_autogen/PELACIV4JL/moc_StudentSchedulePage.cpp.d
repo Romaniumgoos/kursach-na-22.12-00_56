@@ -1,5 +1,6 @@
 C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/PELACIV4JL/moc_StudentSchedulePage.cpp: C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/pages/StudentSchedulePage.h \
   C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/models/WeekSelection.h \
+  D:/QTshechka/6.10.1/mingw_64/include/QtCore/QObject \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/QString \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q17memory.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20functional.h \
