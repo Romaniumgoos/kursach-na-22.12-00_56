@@ -40,9 +40,13 @@ private:
     QWidget* contentWidget = nullptr;
     QGridLayout* grid = nullptr;
 
+    QWidget* selectedLessonCardBody = nullptr;
+
     static QString dayHeaderText(const QString& dayName, const QString& dateISO);
     static QString dateISOForDay(Database* db, int weekOfCycle, int resolvedWeekId, int weekday);
     static bool isRowVisibleForSubgroup(int rowSubgroup, int selectedSubgroup);
+
+    static void repolish(QWidget* w);
 
     void clearGrid();
 };

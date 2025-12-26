@@ -7,6 +7,7 @@
 #include "PELACIV4JL/moc_StudentGradesPage.cpp"
 #include "PELACIV4JL/moc_StudentSchedulePage.cpp"
 #include "EV52JQ33XM/moc_ThemeManager.cpp"
+#include "7WGCVUFY3M/moc_AppEvents.cpp"
 #include "NJHUVPU35C/moc_LessonCardWidget.cpp"
 #include "NJHUVPU35C/moc_PeriodSelectorWidget.cpp"
 #include "NJHUVPU35C/moc_ThemeToggleWidget.cpp"

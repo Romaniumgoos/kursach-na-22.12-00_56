@@ -38,10 +38,17 @@ template <> constexpr inline auto LessonCardWidget::qt_create_metaobjectdata<qt_
 {
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
-        "LessonCardWidget"
+        "LessonCardWidget",
+        "clicked",
+        "",
+        "scheduleId"
     };
 
     QtMocHelpers::UintData qt_methods {
+        // Signal 'clicked'
+        QtMocHelpers::SignalData<void(int)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -63,10 +70,16 @@ Q_CONSTINIT const QMetaObject LessonCardWidget::staticMetaObject = { {
 void LessonCardWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     auto *_t = static_cast<LessonCardWidget *>(_o);
-    (void)_t;
-    (void)_c;
-    (void)_id;
-    (void)_a;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        switch (_id) {
+        case 0: _t->clicked((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        default: ;
+        }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        if (QtMocHelpers::indexOfMethod<void (LessonCardWidget::*)(int )>(_a, &LessonCardWidget::clicked, 0))
+            return;
+    }
 }
 
 const QMetaObject *LessonCardWidget::metaObject() const
@@ -85,6 +98,24 @@ void *LessonCardWidget::qt_metacast(const char *_clname)
 int LessonCardWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QWidget::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 1)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 1;
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 1)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 1;
+    }
     return _id;
+}
+
+// SIGNAL 0
+void LessonCardWidget::clicked(int _t1)
+{
+    QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
 }
 QT_WARNING_POP

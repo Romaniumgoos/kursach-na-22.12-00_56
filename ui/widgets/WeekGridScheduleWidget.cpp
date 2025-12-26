@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QDate>
+#include <QStyle>
 
 WeekGridScheduleWidget::WeekGridScheduleWidget(QWidget* parent)
     : QWidget(parent)
@@ -34,9 +35,19 @@ WeekGridScheduleWidget::WeekGridScheduleWidget(QWidget* parent)
     root->addWidget(scrollArea);
 }
 
+void WeekGridScheduleWidget::repolish(QWidget* w)
+{
+    if (!w) return;
+    w->style()->unpolish(w);
+    w->style()->polish(w);
+    w->update();
+}
+
 void WeekGridScheduleWidget::clearGrid()
 {
     if (!grid) return;
+
+    selectedLessonCardBody = nullptr;
 
     while (QLayoutItem* item = grid->takeAt(0)) {
         if (QWidget* w = item->widget()) {
@@ -100,6 +111,8 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
                                         int currentSubgroup)
 {
     clearGrid();
+
+    selectedLessonCardBody = nullptr;
 
     const QStringList dayNames = {"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"};
     const QStringList pairTimes = {
@@ -166,7 +179,19 @@ void WeekGridScheduleWidget::setSchedule(Database* db,
                     const QString teacher = QString::fromStdString(std::get<6>(r));
 
                     auto* card = new LessonCardWidget(scheduleId, subject, room, lessonType, teacher, rowSubgroup, cell);
-                    connect(card, &LessonCardWidget::clicked, this, &WeekGridScheduleWidget::lessonClicked);
+                    connect(card, &LessonCardWidget::clicked, this, [this, card](int id) {
+                        QWidget* body = card->findChild<QWidget*>("LessonCardBody");
+                        if (selectedLessonCardBody && selectedLessonCardBody != body) {
+                            selectedLessonCardBody->setProperty("selected", false);
+                            repolish(selectedLessonCardBody);
+                        }
+                        selectedLessonCardBody = body;
+                        if (selectedLessonCardBody) {
+                            selectedLessonCardBody->setProperty("selected", true);
+                            repolish(selectedLessonCardBody);
+                        }
+                        emit lessonClicked(id);
+                    });
                     v->addWidget(card);
                     ++cardCount;
                 }
@@ -216,14 +241,14 @@ void WeekGridScheduleWidget::setTeacherScheduleAllGroups(Database* db,
     corner->setObjectName("WeekGridCorner");
     grid->addWidget(corner, 0, 0);
 
-    for (int weekday = 0; weekday <= 5; ++weekday) {
+    for (int weekday = 1; weekday <= 6; ++weekday) {
         const QString iso = dateISOForDay(db, weekOfCycle, resolvedWeekId, weekday);
-        auto* header = new QLabel(dayHeaderText(dayNames[weekday], iso), contentWidget);
+        auto* header = new QLabel(dayHeaderText(dayNames[weekday - 1], iso), contentWidget);
         header->setAlignment(Qt::AlignCenter);
         header->setFixedHeight(52);
         header->setObjectName("WeekGridDayHeader");
         header->setWordWrap(true);
-        grid->addWidget(header, 0, 1 + weekday);
+        grid->addWidget(header, 0, weekday);
     }
 
     for (int lessonIndex = 0; lessonIndex < 6; ++lessonIndex) {
@@ -236,7 +261,7 @@ void WeekGridScheduleWidget::setTeacherScheduleAllGroups(Database* db,
 
         const int lessonNum = lessonIndex + 1;
 
-        for (int weekday = 0; weekday <= 5; ++weekday) {
+        for (int weekday = 1; weekday <= 6; ++weekday) {
             auto* cell = new QWidget(contentWidget);
             cell->setObjectName("WeekGridCell");
 
@@ -280,7 +305,7 @@ void WeekGridScheduleWidget::setTeacherScheduleAllGroups(Database* db,
 
             v->addStretch(1);
             cell->setMinimumHeight(90);
-            grid->addWidget(cell, 1 + lessonIndex, 1 + weekday);
+            grid->addWidget(cell, 1 + lessonIndex, weekday);
         }
     }
 
@@ -317,14 +342,14 @@ void WeekGridScheduleWidget::setTeacherSchedule(Database* db,
     grid->addWidget(corner, 0, 0);
 
     // day headers
-    for (int weekday = 0; weekday <= 5; ++weekday) {
+    for (int weekday = 1; weekday <= 6; ++weekday) {
         const QString iso = dateISOForDay(db, weekOfCycle, resolvedWeekId, weekday);
-        auto* header = new QLabel(dayHeaderText(dayNames[weekday], iso), contentWidget);
+        auto* header = new QLabel(dayHeaderText(dayNames[weekday - 1], iso), contentWidget);
         header->setAlignment(Qt::AlignCenter);
         header->setFixedHeight(52);
         header->setObjectName("WeekGridDayHeader");
         header->setWordWrap(true);
-        grid->addWidget(header, 0, 1 + weekday);
+        grid->addWidget(header, 0, weekday);
     }
 
     for (int lessonIndex = 0; lessonIndex < 6; ++lessonIndex) {
@@ -337,7 +362,7 @@ void WeekGridScheduleWidget::setTeacherSchedule(Database* db,
 
         const int lessonNum = lessonIndex + 1;
 
-        for (int weekday = 0; weekday <= 5; ++weekday) {
+        for (int weekday = 1; weekday <= 6; ++weekday) {
             auto* cell = new QWidget(contentWidget);
             cell->setObjectName("WeekGridCell");
 
@@ -375,7 +400,7 @@ void WeekGridScheduleWidget::setTeacherSchedule(Database* db,
 
             v->addStretch(1);
             cell->setMinimumHeight(90);
-            grid->addWidget(cell, 1 + lessonIndex, 1 + weekday);
+            grid->addWidget(cell, 1 + lessonIndex, weekday);
         }
     }
 

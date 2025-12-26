@@ -1,13 +1,15 @@
 #include "adminwindow.h"
 #include <QVBoxLayout>
+#include "ui/util/AppEvents.h"
+#include "ui/util/UiStyle.h"
+#include "ui/widgets/ThemeToggleWidget.h"
+#include "ui/widgets/PeriodSelectorWidget.h"
+#include <QToolBar>
+#include <QAction>
+#include "loginwindow.h"
+
 #include <QHBoxLayout>
 #include <QFont>
-#include "ui/widgets/ThemeToggleWidget.h"
- #include <QToolBar>
- #include <QAction>
- #include "loginwindow.h"
-
-#include "ui/util/UiStyle.h"
 
 #include <QTabWidget>
 #include <QTableWidget>
@@ -22,6 +24,8 @@
 #include <QMessageBox>
 #include <QSpinBox>
 #include <QLabel>
+#include <QGridLayout>
+#include <QAbstractItemView>
 
 #include <QListWidget>
 #include <QGroupBox>
@@ -73,6 +77,44 @@ struct UserEditResult {
     std::vector<int> teacherSubjectIds;
     std::vector<int> teacherGroupIds;
 };
+
+static bool resolveWeekSelectionForAdmin(Database* db,
+                                        const WeekSelection& selection,
+                                        int& outResolvedWeekId,
+                                        int& outWeekOfCycle,
+                                        QString& outErrorText)
+{
+    outResolvedWeekId = 0;
+    outWeekOfCycle = 1;
+    outErrorText.clear();
+
+    if (!db) {
+        outErrorText = "Нет соединения с БД.";
+        return false;
+    }
+
+    if (selection.mode == WeekSelection::CycleWeek) {
+        outWeekOfCycle = selection.weekOfCycle;
+        return true;
+    }
+
+    if (selection.mode == WeekSelection::CalendarWeek) {
+        outResolvedWeekId = selection.weekId;
+        if (outResolvedWeekId <= 0) {
+            outErrorText = "Не выбрана календарная неделя.";
+            return false;
+        }
+        outWeekOfCycle = db->getWeekOfCycleByWeekId(outResolvedWeekId);
+        if (outWeekOfCycle <= 0) {
+            outErrorText = "Не удалось определить неделю цикла по выбранной календарной неделе.";
+            return false;
+        }
+        return true;
+    }
+
+    outErrorText = "Неизвестный режим выбора периода.";
+    return false;
+}
 
 static bool execUserExistsByUsername(sqlite3* rawDb, const QString& username, int excludeId, bool& outExists)
 {
@@ -372,6 +414,8 @@ static UserEditResult runUserEditDialog(QWidget* parent,
     QDialog dlg(parent);
     dlg.setWindowTitle(title);
     dlg.setModal(true);
+    dlg.setMinimumWidth(420);
+    dlg.setMaximumWidth(560);
 
     auto* root = new QVBoxLayout(&dlg);
 
@@ -403,6 +447,9 @@ static UserEditResult runUserEditDialog(QWidget* parent,
     }
 
     auto* roleCombo = new QComboBox(&dlg);
+    roleCombo->view()->setTextElideMode(Qt::ElideRight);
+    roleCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    roleCombo->setMinimumContentsLength(10);
     roleCombo->addItem("admin", "admin");
     roleCombo->addItem("teacher", "teacher");
     roleCombo->addItem("student", "student");
@@ -631,11 +678,16 @@ QWidget* AdminWindow::buildUsersTab()
 
     userSearchEdit = new QLineEdit(controlsCard);
     userSearchEdit->setPlaceholderText("Поиск (ФИО / логин)");
-    userSearchEdit->setMinimumWidth(240);
+    userSearchEdit->setMinimumWidth(160);
+    userSearchEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     controls->addWidget(userSearchEdit);
 
     userRoleFilterCombo = new QComboBox(controlsCard);
-    userRoleFilterCombo->setMinimumWidth(160);
+    userRoleFilterCombo->setMinimumWidth(120);
+    userRoleFilterCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    userRoleFilterCombo->view()->setTextElideMode(Qt::ElideRight);
+    userRoleFilterCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    userRoleFilterCombo->setMinimumContentsLength(10);
     userRoleFilterCombo->addItem("Все роли", "");
     userRoleFilterCombo->addItem("admin", "admin");
     userRoleFilterCombo->addItem("teacher", "teacher");
@@ -669,7 +721,17 @@ QWidget* AdminWindow::buildUsersTab()
     UiStyle::applyStandardTableStyle(usersTable);
     usersTable->setColumnCount(6);
     usersTable->setHorizontalHeaderLabels({"ID", "ФИО", "login", "role", "groupId", "subgroup"});
+    usersTable->setWordWrap(false);
     usersTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    usersTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    usersTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    usersTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed);
+    usersTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed);
+    usersTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed);
+    usersTable->setColumnWidth(0, 64);
+    usersTable->setColumnWidth(3, 116);
+    usersTable->setColumnWidth(4, 76);
+    usersTable->setColumnWidth(5, 86);
     usersTable->horizontalHeader()->setStretchLastSection(true);
     usersTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     usersTable->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -721,35 +783,50 @@ QWidget* AdminWindow::buildScheduleTab()
     auto* controlsCard = new QFrame(mainCard);
     controlsCard->setFrameShape(QFrame::StyledPanel);
     controlsCard->setStyleSheet(cardFrameStyle());
-    auto* controls = new QHBoxLayout(controlsCard);
+    auto* controls = new QGridLayout(controlsCard);
     controls->setContentsMargins(14, 10, 14, 10);
-    controls->setSpacing(10);
+    controls->setHorizontalSpacing(10);
+    controls->setVerticalSpacing(8);
 
-    controls->addWidget(makeBadge(controlsCard, "Группа", UiStyle::badgeNeutralStyle()));
-    schedGroupCombo = new QComboBox(controlsCard);
-    schedGroupCombo->setMinimumWidth(180);
-    controls->addWidget(schedGroupCombo);
+    controls->addWidget(makeBadge(controlsCard, "Режим", UiStyle::badgeNeutralStyle()), 0, 0);
+    schedModeCombo = new QComboBox(controlsCard);
+    schedModeCombo->setMinimumWidth(170);
+    schedModeCombo->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    schedModeCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    schedModeCombo->addItem("Группа", 0);
+    schedModeCombo->addItem("Преподаватель", 1);
+    controls->addWidget(schedModeCombo, 0, 1);
 
-    controls->addSpacing(12);
-    controls->addWidget(makeBadge(controlsCard, "Подгруппа", UiStyle::badgeNeutralStyle()));
+    controls->addWidget(makeBadge(controlsCard, "Подгруппа", UiStyle::badgeNeutralStyle()), 0, 2);
     schedSubgroupCombo = new QComboBox(controlsCard);
-    schedSubgroupCombo->setMinimumWidth(120);
+    schedSubgroupCombo->setMinimumWidth(80);
+    schedSubgroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     schedSubgroupCombo->addItem("Все", 0);
     schedSubgroupCombo->addItem("1", 1);
     schedSubgroupCombo->addItem("2", 2);
-    controls->addWidget(schedSubgroupCombo);
+    controls->addWidget(schedSubgroupCombo, 0, 3);
 
-    controls->addSpacing(12);
-    controls->addWidget(makeBadge(controlsCard, "Неделя", UiStyle::badgeNeutralStyle()));
-    schedWeekCombo = new QComboBox(controlsCard);
-    schedWeekCombo->setMinimumWidth(120);
-    schedWeekCombo->addItem("1", 1);
-    schedWeekCombo->addItem("2", 2);
-    schedWeekCombo->addItem("3", 3);
-    schedWeekCombo->addItem("4", 4);
-    controls->addWidget(schedWeekCombo);
+    schedPeriodSelector = new PeriodSelectorWidget(db, controlsCard);
+    schedPeriodSelector->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    controls->addWidget(schedPeriodSelector, 0, 4, 1, 3);
 
-    controls->addStretch();
+    controls->addWidget(makeBadge(controlsCard, "Группа", UiStyle::badgeNeutralStyle()), 1, 0);
+    schedGroupCombo = new QComboBox(controlsCard);
+    schedGroupCombo->setMinimumWidth(120);
+    schedGroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    schedGroupCombo->view()->setTextElideMode(Qt::ElideRight);
+    schedGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    schedGroupCombo->setMinimumContentsLength(10);
+    controls->addWidget(schedGroupCombo, 1, 1, 1, 2);
+
+    controls->addWidget(makeBadge(controlsCard, "Преподаватель", UiStyle::badgeNeutralStyle()), 1, 3);
+    schedTeacherCombo = new QComboBox(controlsCard);
+    schedTeacherCombo->setMinimumWidth(140);
+    schedTeacherCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    schedTeacherCombo->view()->setTextElideMode(Qt::ElideRight);
+    schedTeacherCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    schedTeacherCombo->setMinimumContentsLength(12);
+    controls->addWidget(schedTeacherCombo, 1, 4, 1, 2);
 
     addScheduleButton = new QPushButton("Добавить", controlsCard);
     editScheduleButton = new QPushButton("Редактировать", controlsCard);
@@ -758,10 +835,21 @@ QWidget* AdminWindow::buildScheduleTab()
     editScheduleButton->setEnabled(false);
     deleteScheduleButton->setEnabled(false);
 
-    controls->addWidget(addScheduleButton);
-    controls->addWidget(editScheduleButton);
-    controls->addWidget(deleteScheduleButton);
-    controls->addWidget(refreshScheduleButton);
+    controls->addWidget(addScheduleButton, 1, 6);
+    controls->addWidget(editScheduleButton, 1, 7);
+    controls->addWidget(deleteScheduleButton, 1, 8);
+    controls->addWidget(refreshScheduleButton, 1, 9);
+
+    controls->setColumnStretch(0, 0);
+    controls->setColumnStretch(1, 0);
+    controls->setColumnStretch(2, 0);
+    controls->setColumnStretch(3, 0);
+    controls->setColumnStretch(4, 1);
+    controls->setColumnStretch(5, 1);
+    controls->setColumnStretch(6, 0);
+    controls->setColumnStretch(7, 0);
+    controls->setColumnStretch(8, 0);
+    controls->setColumnStretch(9, 0);
 
     mainCardLayout->addWidget(controlsCard);
 
@@ -777,16 +865,32 @@ QWidget* AdminWindow::buildScheduleTab()
 
     mainCardLayout->addWidget(tableCard, 1);
 
-    reloadGroupsInto(schedGroupCombo, false);
+    reloadGroupsInto(schedGroupCombo, false, true);
+    reloadTeachersInto(schedTeacherCombo, false);
+
+    auto updateModeUi = [this]() {
+        const int mode = schedModeCombo ? schedModeCombo->currentData().toInt() : 0;
+        const bool teacherMode = (mode == 1);
+        if (schedGroupCombo) schedGroupCombo->setEnabled(!teacherMode);
+        if (schedTeacherCombo) schedTeacherCombo->setEnabled(teacherMode);
+    };
+    updateModeUi();
 
     connect(refreshScheduleButton, &QPushButton::clicked, this, &AdminWindow::reloadSchedule);
     connect(addScheduleButton, &QPushButton::clicked, this, &AdminWindow::onAddSchedule);
     connect(editScheduleButton, &QPushButton::clicked, this, &AdminWindow::onEditSchedule);
     connect(deleteScheduleButton, &QPushButton::clicked, this, &AdminWindow::onDeleteSchedule);
 
+    connect(schedModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, updateModeUi](int) {
+        updateModeUi();
+        reloadSchedule();
+    });
     connect(schedGroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
+    connect(schedTeacherCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
     connect(schedSubgroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
-    connect(schedWeekCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
+    if (schedPeriodSelector) {
+        connect(schedPeriodSelector, &PeriodSelectorWidget::selectionChanged, this, &AdminWindow::reloadSchedule);
+    }
 
     if (scheduleGrid) {
         connect(scheduleGrid, &WeekGridScheduleWidget::lessonClicked, this, [this](int scheduleId) {
@@ -834,14 +938,17 @@ void AdminWindow::reloadUsers()
         usersTable->setItem(row, 0, new QTableWidgetItem(QString::number(id)));
         usersTable->setItem(row, 1, new QTableWidgetItem(name));
         usersTable->setItem(row, 2, new QTableWidgetItem(username));
-        usersTable->setItem(row, 3, new QTableWidgetItem(role));
+        auto* roleItem = new QTableWidgetItem();
+        roleItem->setData(Qt::UserRole, role);
+        roleItem->setText("");
+        usersTable->setItem(row, 3, roleItem);
         usersTable->setCellWidget(row, 3, makeBadge(usersTable, role, roleBadgeStyle(role)));
         usersTable->setItem(row, 4, new QTableWidgetItem(QString::number(groupId)));
         usersTable->setItem(row, 5, new QTableWidgetItem(QString::number(subgroup)));
     }
 }
 
-void AdminWindow::reloadGroupsInto(QComboBox* combo, bool withAllOption)
+void AdminWindow::reloadGroupsInto(QComboBox* combo, bool withAllOption, bool hideGroupIdZero)
 {
     if (!combo) return;
     combo->blockSignals(true);
@@ -853,7 +960,30 @@ void AdminWindow::reloadGroupsInto(QComboBox* combo, bool withAllOption)
         std::vector<std::pair<int, std::string>> groups;
         if (db->getAllGroups(groups)) {
             for (const auto& g : groups) {
+                if (hideGroupIdZero && g.first == 0) continue;
                 combo->addItem(QString::fromStdString(g.second), g.first);
+            }
+        }
+    }
+
+    const int idx = combo->findData(prev);
+    if (idx >= 0) combo->setCurrentIndex(idx);
+    combo->blockSignals(false);
+}
+
+void AdminWindow::reloadTeachersInto(QComboBox* combo, bool withAllOption)
+{
+    if (!combo) return;
+    combo->blockSignals(true);
+    const QVariant prev = combo->currentData();
+    combo->clear();
+    combo->addItem(withAllOption ? "Все" : "Выберите преподавателя", withAllOption ? 0 : -1);
+
+    if (db) {
+        std::vector<std::pair<int, std::string>> teachers;
+        if (db->getAllTeachers(teachers)) {
+            for (const auto& t : teachers) {
+                combo->addItem(QString::fromStdString(t.second), t.first);
             }
         }
     }
@@ -865,19 +995,36 @@ void AdminWindow::reloadGroupsInto(QComboBox* combo, bool withAllOption)
 
 void AdminWindow::reloadSchedule()
 {
-    if (!db || !scheduleGrid || !schedGroupCombo || !schedWeekCombo || !schedSubgroupCombo) return;
+    if (!db || !scheduleGrid || !schedModeCombo || !schedSubgroupCombo || !schedPeriodSelector) return;
 
     selectedScheduleId = 0;
     if (editScheduleButton) editScheduleButton->setEnabled(false);
     if (deleteScheduleButton) deleteScheduleButton->setEnabled(false);
 
-    const int groupId = schedGroupCombo->currentData().toInt();
-    const int weekOfCycle = schedWeekCombo->currentData().toInt();
+    const int mode = schedModeCombo->currentData().toInt();
     const int subgroupFilter = schedSubgroupCombo->currentData().toInt();
-    if (groupId < 0 || weekOfCycle <= 0) return;
 
-    // resolvedWeekId not used in admin view (cycle week mode)
-    scheduleGrid->setSchedule(db, groupId, weekOfCycle, 0, subgroupFilter);
+    int resolvedWeekId = 0;
+    int weekOfCycle = 1;
+    QString err;
+    if (!resolveWeekSelectionForAdmin(db, schedPeriodSelector->currentSelection(), resolvedWeekId, weekOfCycle, err)) {
+        scheduleGrid->setVisible(false);
+        return;
+    }
+    if (weekOfCycle <= 0) return;
+
+    if (mode == 1) {
+        if (!schedTeacherCombo) return;
+        const int teacherId = schedTeacherCombo->currentData().toInt();
+        if (teacherId <= 0) return;
+        scheduleGrid->setTeacherScheduleAllGroups(db, teacherId, weekOfCycle, resolvedWeekId, subgroupFilter);
+        return;
+    }
+
+    if (!schedGroupCombo) return;
+    const int groupId = schedGroupCombo->currentData().toInt();
+    if (groupId <= 0) return;
+    scheduleGrid->setSchedule(db, groupId, weekOfCycle, resolvedWeekId, subgroupFilter);
 }
 
 void AdminWindow::onAddUser()
@@ -902,6 +1049,39 @@ void AdminWindow::onAddUser()
     if (res.role == "student" && res.groupId <= 0) {
         QMessageBox::warning(this, "Пользователи", "Для студента выберите группу.");
         return;
+    }
+
+    if (res.role == "teacher") {
+        if (res.teacherSubjectIds.empty()) {
+            QMessageBox::warning(this, "Пользователи", "Для преподавателя выберите хотя бы один предмет.");
+            return;
+        }
+        if (res.teacherGroupIds.empty()) {
+            QMessageBox::warning(this, "Пользователи", "Для преподавателя выберите хотя бы одну группу.");
+            return;
+        }
+    }
+
+    if (res.role == "student" && res.groupId > 0 && res.subgroup == 0) {
+        std::vector<std::pair<int, std::string>> students;
+        if (!db->getStudentsOfGroup(res.groupId, students)) {
+            QMessageBox::critical(this, "Пользователи", "Не удалось загрузить список студентов группы для авто-подгруппы.");
+            return;
+        }
+
+        const QString newName = res.name.trimmed();
+        int pos = 0;
+        for (const auto& s : students) {
+            const QString existingName = QString::fromStdString(s.second);
+            if (QString::compare(existingName, newName, Qt::CaseInsensitive) > 0) {
+                break;
+            }
+            ++pos;
+        }
+
+        const int total = static_cast<int>(students.size()) + 1;
+        const int firstHalf = (total + 1) / 2;
+        res.subgroup = (pos < firstHalf) ? 1 : 2;
     }
 
     bool exists = false;
@@ -948,7 +1128,7 @@ void AdminWindow::onEditUser()
     init.id = id;
     init.name = usersTable->item(row, 1) ? usersTable->item(row, 1)->text() : QString();
     init.username = usersTable->item(row, 2) ? usersTable->item(row, 2)->text() : QString();
-    init.role = usersTable->item(row, 3) ? usersTable->item(row, 3)->text() : QString();
+    init.role = usersTable->item(row, 3) ? usersTable->item(row, 3)->data(Qt::UserRole).toString() : QString();
     init.groupId = usersTable->item(row, 4) ? usersTable->item(row, 4)->text().toInt() : 0;
     init.subgroup = usersTable->item(row, 5) ? usersTable->item(row, 5)->text().toInt() : 0;
 
@@ -1016,12 +1196,31 @@ void AdminWindow::onDeleteUser()
     const int id = usersTable->item(row, 0)->text().toInt();
     if (id <= 0) return;
 
-    if (QMessageBox::question(this, "Пользователи", "Удалить пользователя?", QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
-        return;
-    }
-    if (!db->deleteUserById(id)) {
-        QMessageBox::critical(this, "Пользователи", "Не удалось удалить пользователя.");
-        return;
+    const QString role = usersTable->item(row, 3) ? usersTable->item(row, 3)->data(Qt::UserRole).toString().trimmed().toLower() : QString();
+
+    if (role == "teacher") {
+        int cnt = 0;
+        if (!db->countScheduleEntriesForTeacher(id, cnt)) {
+            QMessageBox::critical(this, "Пользователи", "Не удалось посчитать пары преподавателя перед удалением.");
+            return;
+        }
+
+        const QString text = QString("Удалить преподавателя?\n\nБудут удалены %1 пар(ы) из расписания.").arg(cnt);
+        if (QMessageBox::question(this, "Пользователи", text, QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+            return;
+        }
+        if (!db->deleteTeacherWithDependencies(id)) {
+            QMessageBox::critical(this, "Пользователи", "Не удалось удалить преподавателя и его зависимости.");
+            return;
+        }
+    } else {
+        if (QMessageBox::question(this, "Пользователи", "Удалить пользователя?", QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+            return;
+        }
+        if (!db->deleteUserById(id)) {
+            QMessageBox::critical(this, "Пользователи", "Не удалось удалить пользователя.");
+            return;
+        }
     }
     reloadUsers();
 }
@@ -1031,9 +1230,15 @@ void AdminWindow::onAddSchedule()
     if (!db) return;
 
     ScheduleEditResult init;
-    if (schedGroupCombo) init.groupId = schedGroupCombo->currentData().toInt();
+    if (schedModeCombo && schedModeCombo->currentData().toInt() == 0) {
+        if (schedGroupCombo) init.groupId = schedGroupCombo->currentData().toInt();
+    }
     if (schedSubgroupCombo) init.subgroup = schedSubgroupCombo->currentData().toInt();
-    if (schedWeekCombo) init.weekOfCycle = schedWeekCombo->currentData().toInt();
+    if (schedPeriodSelector) {
+        int resolvedWeekId = 0;
+        QString err;
+        resolveWeekSelectionForAdmin(db, schedPeriodSelector->currentSelection(), resolvedWeekId, init.weekOfCycle, err);
+    }
 
     ScheduleEditResult res = runScheduleEditDialog(this, db, "Добавить запись", true, init);
     if (!res.accepted) return;

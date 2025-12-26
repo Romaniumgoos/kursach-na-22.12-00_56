@@ -214,6 +214,136 @@ bool Database::setTeacherGroups(int teacherId, const std::vector<int>& groupIds)
     return true;
 }
 
+bool Database::countScheduleEntriesForTeacher(int teacherId, int& outCount)
+{
+    outCount = 0;
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    const char* sql = "SELECT COUNT(*) FROM schedule WHERE teacherid = ?;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_int(stmt, 1, teacherId);
+
+    const int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        outCount = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_ROW || rc == SQLITE_DONE;
+}
+
+bool Database::deleteTeacherWithDependencies(int teacherId)
+{
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    char* err = nullptr;
+    if (sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &err) != SQLITE_OK) {
+        if (err) sqlite3_free(err);
+        return false;
+    }
+
+    auto rollback = [&]() {
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+    };
+
+    sqlite3_stmt* stmt = nullptr;
+
+    // 1) schedule
+    if (sqlite3_prepare_v2(db, "DELETE FROM schedule WHERE teacherid = ?;", -1, &stmt, nullptr) != SQLITE_OK) {
+        rollback();
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, teacherId);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        rollback();
+        return false;
+    }
+    sqlite3_finalize(stmt);
+
+    // 2) teachersubjects
+    if (sqlite3_prepare_v2(db, "DELETE FROM teachersubjects WHERE teacherid = ?;", -1, &stmt, nullptr) != SQLITE_OK) {
+        rollback();
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, teacherId);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        rollback();
+        return false;
+    }
+    sqlite3_finalize(stmt);
+
+    // 3) teachergroups
+    if (sqlite3_prepare_v2(db, "DELETE FROM teachergroups WHERE teacherid = ?;", -1, &stmt, nullptr) != SQLITE_OK) {
+        rollback();
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, teacherId);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        rollback();
+        return false;
+    }
+    sqlite3_finalize(stmt);
+
+    // 4) user
+    if (sqlite3_prepare_v2(db, "DELETE FROM users WHERE id = ?;", -1, &stmt, nullptr) != SQLITE_OK) {
+        rollback();
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, teacherId);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        rollback();
+        return false;
+    }
+    sqlite3_finalize(stmt);
+
+    if (sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &err) != SQLITE_OK) {
+        if (err) sqlite3_free(err);
+        rollback();
+        return false;
+    }
+    if (err) sqlite3_free(err);
+    return true;
+}
+
+bool Database::getGroupsFromScheduleForTeacher(int teacherId,
+                                              std::vector<std::pair<int, std::string>>& outGroups)
+{
+    outGroups.clear();
+    if (!db) return false;
+    if (teacherId <= 0) return false;
+
+    const char* sql = R"SQL(
+        SELECT DISTINCT g.id, g.name
+        FROM schedule s
+        JOIN groups g ON s.groupid = g.id
+        WHERE s.teacherid = ?
+          AND s.groupid <> 0
+        ORDER BY g.id
+    )SQL";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, teacherId);
+
+    int rc = 0;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const int id = sqlite3_column_int(stmt, 0);
+        const unsigned char* nameText = sqlite3_column_text(stmt, 1);
+        std::string name = nameText ? reinterpret_cast<const char*>(nameText) : "";
+        outGroups.emplace_back(id, name);
+    }
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
 // ===== Constructor & Destructor =====
 
 Database::Database(const std::string& file)

@@ -204,6 +204,11 @@ public:
     bool setTeacherSubjects(int teacherId, const std::vector<int>& subjectIds);
     bool getTeacherGroupIds(int teacherId, std::vector<int>& outGroupIds);
     bool setTeacherGroups(int teacherId, const std::vector<int>& groupIds);
+
+    bool countScheduleEntriesForTeacher(int teacherId, int& outCount);
+    bool deleteTeacherWithDependencies(int teacherId);
+    bool getGroupsFromScheduleForTeacher(int teacherId,
+                                        std::vector<std::pair<int, std::string>>& outGroups);
     bool getScheduleForTeacherGroup(
     int teacherId,
     int groupId,

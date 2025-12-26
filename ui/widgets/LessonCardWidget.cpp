@@ -26,6 +26,8 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
     scheduleId = 0;
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     setObjectName("LessonCard");
+    setAttribute(Qt::WA_Hover, true);
+    setMouseTracking(true);
 
     auto* root = new QHBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -39,10 +41,14 @@ LessonCardWidget::LessonCardWidget(const QString& subject,
 
     auto* body = new QWidget(this);
     body->setObjectName("LessonCardBody");
+    body->setProperty("card", "lesson");
+    body->setProperty("selected", false);
+    body->setAttribute(Qt::WA_Hover, true);
+    body->setMouseTracking(true);
     root->addWidget(body);
 
     auto* v = new QVBoxLayout(body);
-    v->setContentsMargins(10, 8, 16, 8);
+    v->setContentsMargins(10, 8, 10, 8);
     v->setSpacing(6);
 
     auto* topRow = new QHBoxLayout();

@@ -3,7 +3,6 @@
 #include <QWidget>
 #include <QComboBox>
 #include <QSpinBox>
-#include <QDateEdit>
 #include <QPushButton>
 #include "ui/models/WeekSelection.h"
 
@@ -23,16 +22,14 @@ private slots:
     void onModeChanged(int index);
     void onCycleWeekChanged(int value);
     void onCalendarWeekChanged(int index);
-    void onDateChanged(const QDate& date);
     void emitSelectionChanged();
 
 private:
     Database* db = nullptr;
 
-    QComboBox* modeCombo = nullptr;      // "Неделя цикла", "Календарная", "По дате"
+    QComboBox* modeCombo = nullptr;      // "Неделя цикла", "Календарная"
     QSpinBox* cycleWeekSpin = nullptr;   // 1-4
     QComboBox* calendarWeekCombo = nullptr;
-    QDateEdit* dateEdit = nullptr;
 
     WeekSelection m_currentSelection;
 

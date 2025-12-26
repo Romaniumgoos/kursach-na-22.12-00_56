@@ -1,17 +1,11 @@
-C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/NJHUVPU35C/moc_PeriodSelectorWidget.cpp: C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/PeriodSelectorWidget.h \
-  C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/models/WeekSelection.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/QString \
+C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/app_gui_autogen/7WGCVUFY3M/moc_AppEvents.cpp: C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/util/AppEvents.h \
+  D:/QTshechka/6.10.1/mingw_64/include/QtCore/QObject \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q17memory.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20functional.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20iterator.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20memory.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20type_traits.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/q20utility.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/q23type_traits.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/q23utility.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qabstractitemmodel.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qalgorithms.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qalloc.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qanystringview.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qarraydata.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qarraydataops.h \
@@ -26,7 +20,6 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qbytearraylist.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qbytearrayview.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qchar.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcheckedint_impl.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcompare.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcompare_impl.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcomparehelpers.h \
@@ -36,11 +29,8 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcontainerfwd.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcontainerinfo.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcontainertools_impl.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcontiguouscache.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdarwinhelpers.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdatastream.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdebug.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qendian.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qexceptionhandling.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qflags.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qfloat16.h \
@@ -50,19 +40,14 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qgenericatomic.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qglobal.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qglobalstatic.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qhash.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qhashfunctions.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qiodevicebase.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qiterable.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qiterator.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qlatin1stringview.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qline.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qlist.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qlocale.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qlogging.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qmalloc.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qmap.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qmargins.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qmath.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qmetacontainer.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qmetatype.h \
@@ -75,20 +60,10 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qobjectdefs_impl.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qoverload.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qpair.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qpoint.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qprocessordetection.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qrect.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qrefcount.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qregularexpression.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qscopedpointer.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qscopeguard.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qset.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qshareddata.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qshareddata_impl.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qsharedpointer.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qsharedpointer_impl.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qsize.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qspan.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qstdlibdetection.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qstring.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qstringalgorithms.h \
@@ -113,7 +88,6 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtdeprecationdefinitions.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtdeprecationmarkers.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtenvironmentvariables.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtextstream.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtformat_impl.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtmetamacros.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtnoop.h \
@@ -126,61 +100,9 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtypeinfo.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtypes.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qutf8stringview.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qvariant.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtCore/qvarlengtharray.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qversiontagging.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qxptype_traits.h \
   D:/QTshechka/6.10.1/mingw_64/include/QtCore/qyieldcpu.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qaction.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qbitmap.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qbrush.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qcolor.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qcursor.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qfont.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qfontinfo.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qfontmetrics.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qfontvariableaxis.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qicon.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qimage.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qkeysequence.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qpaintdevice.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qpalette.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qpixelformat.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qpixmap.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qpolygon.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qregion.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qrgb.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qrgba64.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qtgui-config.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qtguiexports.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qtguiglobal.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qtransform.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qvalidator.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qwindowdefs.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtGui/qwindowdefs_win.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QComboBox \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QPushButton \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QSpinBox \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QWidget \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qabstractbutton.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qabstractitemdelegate.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qabstractslider.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qabstractspinbox.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qcombobox.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qframe.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qpushbutton.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qrubberband.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qsizepolicy.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qslider.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qspinbox.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qstyle.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qstyleoption.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qtabbar.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qtabwidget.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qtwidgets-config.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qtwidgetsexports.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qtwidgetsglobal.h \
-  D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qwidget.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/algorithm \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/array \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/atomic \
@@ -191,22 +113,16 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/atomic_lockfree_defines.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/basic_string.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/basic_string.tcc \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/c++0x_warning.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/char_traits.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/chrono.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/concept_check.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/cow_string.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/cpp_type_traits.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/cxxabi_forced.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/enable_special_members.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/erase_if.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/exception.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/exception_defines.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/functexcept.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/functional_hash.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/hash_bytes.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/hashtable.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/hashtable_policy.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/invoke.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/list.tcc \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/localefwd.h \
@@ -233,25 +149,19 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_list.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_map.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_multimap.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_multiset.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_numeric.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_pair.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_raw_storage_iter.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_relops.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_set.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_tree.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_uninitialized.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stl_vector.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/stringfwd.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/unordered_map.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/unordered_set.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/uses_allocator.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/utility.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/bits/vector.tcc \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/cassert \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/cctype \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/chrono \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/climits \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/clocale \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/cmath \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/compare \
@@ -262,7 +172,6 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/cwchar \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/debug/assertions.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/debug/debug.h \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/ext/aligned_buffer.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/ext/alloc_traits.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/ext/atomicity.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/ext/numeric_traits.h \
@@ -278,14 +187,11 @@ C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/new \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/numeric \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/optional \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/set \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/stdlib.h \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/string \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/string_view \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/tuple \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/type_traits \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/unordered_map \
-  D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/unordered_set \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/utility \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/variant \
   D:/QTshechka/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/vector \

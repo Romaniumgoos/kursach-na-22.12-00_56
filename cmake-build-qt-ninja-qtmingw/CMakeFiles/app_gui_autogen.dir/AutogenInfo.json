@@ -405,6 +405,12 @@
 			null
 		],
 		[
+			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/util/AppEvents.h",
+			"MU",
+			"7WGCVUFY3M/moc_AppEvents.cpp",
+			null
+		],
+		[
 			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/util/TableWidgetStyle.h",
 			"MU",
 			"7WGCVUFY3M/moc_TableWidgetStyle.cpp",
@@ -605,6 +611,11 @@
 		],
 		[
 			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/style/ThemeManager.cpp",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/leshk/CLionProjects/prodolzhenie ot 24.12 15_32/ui/util/AppEvents.cpp",
 			"MU",
 			null
 		],

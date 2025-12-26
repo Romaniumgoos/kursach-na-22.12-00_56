@@ -12,6 +12,7 @@ class QComboBox;
 class QLineEdit;
 class QWidget;
 class WeekGridScheduleWidget;
+class PeriodSelectorWidget;
 
 class AdminWindow : public QMainWindow {
     Q_OBJECT
@@ -38,9 +39,11 @@ private:
     QPushButton* refreshUsersButton = nullptr;
 
     // Schedule tab
+    QComboBox* schedModeCombo = nullptr;
     QComboBox* schedGroupCombo = nullptr;
+    QComboBox* schedTeacherCombo = nullptr;
     QComboBox* schedSubgroupCombo = nullptr;
-    QComboBox* schedWeekCombo = nullptr;
+    PeriodSelectorWidget* schedPeriodSelector = nullptr;
     WeekGridScheduleWidget* scheduleGrid = nullptr;
     int selectedScheduleId = 0;
     QPushButton* addScheduleButton = nullptr;
@@ -54,7 +57,8 @@ private:
     QWidget* buildScheduleTab();
 
     void reloadUsers();
-    void reloadGroupsInto(QComboBox* combo, bool withAllOption);
+    void reloadGroupsInto(QComboBox* combo, bool withAllOption, bool hideGroupIdZero);
+    void reloadTeachersInto(QComboBox* combo, bool withAllOption);
     void reloadSchedule();
 
 private slots:

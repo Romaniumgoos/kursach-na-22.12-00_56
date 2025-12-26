@@ -1,0 +1,2 @@
+﻿g++.exe: fatal error: no input files
+compilation terminated.

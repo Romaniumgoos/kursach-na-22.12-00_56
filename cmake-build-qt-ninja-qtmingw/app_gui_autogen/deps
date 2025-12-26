@@ -44,6 +44,8 @@ app_gui_autogen/timestamp: \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/pages/StudentSchedulePage.h \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/style/ThemeManager.cpp \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/style/ThemeManager.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/util/AppEvents.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/util/AppEvents.h \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/util/TableWidgetStyle.h \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/util/UiStyle.h \
 	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/ui/widgets/LessonCardWidget.cpp \
@@ -131,7 +133,6 @@ app_gui_autogen/timestamp: \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qbytearrayalgorithms.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qbytearraylist.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qbytearrayview.h \
-	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcalendar.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qchar.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcheckedint_impl.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcompare.h \
@@ -149,7 +150,6 @@ app_gui_autogen/timestamp: \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qcoreevent.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdarwinhelpers.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdatastream.h \
-	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdatetime.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdeadlinetimer.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qdebug.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qendian.h \
@@ -231,7 +231,6 @@ app_gui_autogen/timestamp: \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtenvironmentvariables.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtextstream.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtformat_impl.h \
-	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtimezone.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtmetamacros.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtnoop.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtCore/qtpreprocessorsupport.h \
@@ -287,7 +286,6 @@ app_gui_autogen/timestamp: \
 	D:/QTshechka/6.10.1/mingw_64/include/QtGui/qwindowdefs_win.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QApplication \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QComboBox \
-	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QDateEdit \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QLabel \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QLineEdit \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/QMainWindow \
@@ -306,7 +304,6 @@ app_gui_autogen/timestamp: \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qabstractspinbox.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qapplication.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qcombobox.h \
-	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qdatetimeedit.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qframe.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qlabel.h \
 	D:/QTshechka/6.10.1/mingw_64/include/QtWidgets/qlineedit.h \

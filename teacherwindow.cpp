@@ -22,6 +22,7 @@
  #include <QStackedWidget>
  #include <QDateEdit>
  #include <QDate>
+ #include <QAbstractItemView>
  #include <QFrame>
  #include <QGridLayout>
  #include <QGroupBox>
@@ -30,6 +31,9 @@
  #include <QFormLayout>
  #include <QSplitter>
  #include <QScrollArea>
+ #include <QStyle>
+ #include <algorithm>
+ #include <unordered_map>
 
  static QString lessonTypeBadgeStyle(const QString& lessonType)
  {
@@ -637,6 +641,7 @@ static QWidget* buildJournalLessonCard(QWidget* parent,
     grid->addWidget(right, 0, 2, 2, 1, Qt::AlignRight | Qt::AlignTop);
 
     card->setCursor(Qt::PointingHandCursor);
+
     card->setProperty("journalLessonIndex", index);
     card->installEventFilter(wnd);
     return card;
@@ -656,7 +661,11 @@ QWidget* TeacherWindow::buildScheduleTab()
 
     filtersRow->addWidget(new QLabel("Группа:", root));
     scheduleGroupCombo = new QComboBox(root);
-    scheduleGroupCombo->setMinimumWidth(160);
+    scheduleGroupCombo->setMinimumWidth(120);
+    scheduleGroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    scheduleGroupCombo->view()->setTextElideMode(Qt::ElideRight);
+    scheduleGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    scheduleGroupCombo->setMinimumContentsLength(10);
     filtersRow->addWidget(scheduleGroupCombo);
 
     filtersRow->addSpacing(12);
@@ -665,7 +674,8 @@ QWidget* TeacherWindow::buildScheduleTab()
     scheduleSubgroupCombo->addItem("Все", 0);
     scheduleSubgroupCombo->addItem("1", 1);
     scheduleSubgroupCombo->addItem("2", 2);
-    scheduleSubgroupCombo->setMinimumWidth(120);
+    scheduleSubgroupCombo->setMinimumWidth(80);
+    scheduleSubgroupCombo->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
     filtersRow->addWidget(scheduleSubgroupCombo);
 
     filtersRow->addStretch();
@@ -706,20 +716,30 @@ QWidget* TeacherWindow::buildJournalTab()
     journalModeCombo = new QComboBox(root);
     journalModeCombo->addItem("По паре (из расписания)", 0);
     journalModeCombo->addItem("Свободный режим (пропуски)", 1);
-    journalModeCombo->setMinimumWidth(220);
+    journalModeCombo->setMinimumWidth(260);
+    journalModeCombo->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    journalModeCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     topRow->addWidget(journalModeCombo);
 
     topRow->addSpacing(12);
 
     topRow->addWidget(new QLabel("Семестр:", root));
     journalSemesterCombo = new QComboBox(root);
-    journalSemesterCombo->setMinimumWidth(160);
+    journalSemesterCombo->setMinimumWidth(120);
+    journalSemesterCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    journalSemesterCombo->view()->setTextElideMode(Qt::ElideRight);
+    journalSemesterCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    journalSemesterCombo->setMinimumContentsLength(8);
     topRow->addWidget(journalSemesterCombo);
 
     topRow->addSpacing(12);
     topRow->addWidget(new QLabel("Группа:", root));
     journalGroupCombo = new QComboBox(root);
-    journalGroupCombo->setMinimumWidth(180);
+    journalGroupCombo->setMinimumWidth(120);
+    journalGroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    journalGroupCombo->view()->setTextElideMode(Qt::ElideRight);
+    journalGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    journalGroupCombo->setMinimumContentsLength(10);
     topRow->addWidget(journalGroupCombo);
 
     topRow->addStretch();
@@ -811,6 +831,8 @@ QWidget* TeacherWindow::buildJournalTab()
     // Selected lesson card
     journalLessonCardFrame = new QFrame(journalRightPanel);
     journalLessonCardFrame->setObjectName("selectedLessonCard");
+    journalLessonCardFrame->setProperty("card", "journalLesson");
+    journalLessonCardFrame->setProperty("selected", false);
     journalLessonCardFrame->setFrameShape(QFrame::StyledPanel);
     journalLessonCardFrame->setStyleSheet("#selectedLessonCard{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
                                           "#selectedLessonCard QLabel{background: transparent;}");
@@ -1333,7 +1355,34 @@ void TeacherWindow::loadTeacherGroups()
 {
     if (!db) return;
     std::vector<std::pair<int, std::string>> groups;
-    if (!db->getGroupsForTeacher(teacherId, groups)) return;
+    std::vector<std::pair<int, std::string>> groupsFromSchedule;
+
+    // 1) declared permissions (teachergroups)
+    db->getGroupsForTeacher(teacherId, groups);
+
+    // 2) factual assignments (schedule.teacherid) - required for teacher replacement scenario
+    db->getGroupsFromScheduleForTeacher(teacherId, groupsFromSchedule);
+
+    std::unordered_map<int, QString> byId;
+    byId.reserve(groups.size() + groupsFromSchedule.size());
+    for (const auto& g : groups) {
+        byId[g.first] = QString::fromStdString(g.second);
+    }
+    for (const auto& g : groupsFromSchedule) {
+        auto it = byId.find(g.first);
+        if (it == byId.end() || it->second.trimmed().isEmpty()) {
+            byId[g.first] = QString::fromStdString(g.second);
+        }
+    }
+
+    groups.clear();
+    groups.reserve(byId.size());
+    for (const auto& kv : byId) {
+        groups.emplace_back(kv.first, kv.second.toStdString());
+    }
+    std::sort(groups.begin(), groups.end(), [](const auto& a, const auto& b) {
+        return a.first < b.first;
+    });
 
     scheduleGroupCombo->blockSignals(true);
     journalGroupCombo->blockSignals(true);
@@ -1486,17 +1535,6 @@ bool TeacherWindow::resolveWeekSelection(const WeekSelection& selection,
             outErrorText = "Неделя не найдена в cycleweeks.";
             return false;
         }
-        return true;
-    }
-
-    if (selection.mode == WeekSelection::ByDate) {
-        outResolvedWeekId = db->getWeekIdByDate(selection.selectedDate.toStdString());
-        if (outResolvedWeekId <= 0) {
-            outErrorText = "Для выбранной даты нет данных о цикле недель (cycleweeks).";
-            return false;
-        }
-        outWeekOfCycle = db->getWeekOfCycleByWeekId(outResolvedWeekId);
-        if (outWeekOfCycle <= 0) outWeekOfCycle = 1;
         return true;
     }
 
@@ -1683,6 +1721,12 @@ void TeacherWindow::onJournalLessonSelectionChanged()
     const auto sel = journalLessonsTable->selectionModel()->selectedRows();
     if (sel.isEmpty()) {
         selectedLesson = {};
+        if (journalLessonCardFrame) {
+            journalLessonCardFrame->setProperty("selected", false);
+            journalLessonCardFrame->style()->unpolish(journalLessonCardFrame);
+            journalLessonCardFrame->style()->polish(journalLessonCardFrame);
+            journalLessonCardFrame->update();
+        }
         refreshJournalCurrentValues();
         return;
     }
@@ -1702,6 +1746,13 @@ void TeacherWindow::onJournalLessonCardClicked(int index)
 {
     if (index < 0 || index >= static_cast<int>(journalLessonRows.size())) return;
     selectedLesson = journalLessonRows[index].lesson;
+
+    if (journalLessonCardFrame) {
+        journalLessonCardFrame->setProperty("selected", true);
+        journalLessonCardFrame->style()->unpolish(journalLessonCardFrame);
+        journalLessonCardFrame->style()->polish(journalLessonCardFrame);
+        journalLessonCardFrame->update();
+    }
 
     const QStringList dayNames = {"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"};
     const QStringList pairTimes = {

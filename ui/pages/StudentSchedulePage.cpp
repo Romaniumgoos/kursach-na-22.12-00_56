@@ -21,8 +21,11 @@ static void addDayHeaderRow(QTableWidget* table, const QString& dayTitle)
     // Колонка 0: текст дня, остальные пустые
     auto* item0 = new QTableWidgetItem(dayTitle);
     item0->setFlags(Qt::ItemIsEnabled); // не редактируется
-    item0->setBackground(QColor(230, 235, 245));
-    item0->setForeground(QColor(30, 30, 30));
+    const QPalette pal = table->palette();
+    const QColor bg = pal.color(QPalette::AlternateBase);
+    const QColor fg = pal.color(QPalette::Text);
+    item0->setBackground(bg);
+    item0->setForeground(fg);
     item0->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     QFont f = item0->font();
     f.setBold(true);
@@ -34,7 +37,8 @@ static void addDayHeaderRow(QTableWidget* table, const QString& dayTitle)
     for (int col = 1; col < table->columnCount(); ++col) {
         auto* it = new QTableWidgetItem("");
         it->setFlags(Qt::ItemIsEnabled);
-        it->setBackground(QColor(230, 235, 245));
+        it->setBackground(bg);
+        it->setForeground(fg);
         table->setItem(row, col, it);
     }
 
@@ -228,47 +232,6 @@ void StudentSchedulePage::loadSchedule()
             return;
         }
     }
-    else if (currentSelection.mode == WeekSelection::ByDate) {
-        // 1) Пытаемся найти конкретную календарную неделю (cycleweeks.id) по дате
-        resolvedWeekId = db->getWeekIdByDate(currentSelection.selectedDate.toStdString());
-
-        // ВАЖНО: если дата не покрывается таблицей cycleweeks — не показываем расписание по "левому" циклу.
-        if (resolvedWeekId <= 0) {
-            std::string minISO;
-            std::string maxISO;
-            {
-                sqlite3_stmt* stmt = nullptr;
-                const char* sql = "SELECT MIN(startdate), MAX(enddate) FROM cycleweeks;";
-                if (sqlite3_prepare_v2(db->getHandle(), sql, -1, &stmt, nullptr) == SQLITE_OK) {
-                    if (sqlite3_step(stmt) == SQLITE_ROW) {
-                        const char* s1 = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-                        const char* s2 = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                        if (s1) minISO = s1;
-                        if (s2) maxISO = s2;
-                    }
-                }
-                sqlite3_finalize(stmt);
-            }
-
-            table->setRowCount(0);
-            table->setVisible(false);
-            if (weekGrid) weekGrid->setVisible(false);
-
-            QString msg = "Для выбранной даты нет данных о цикле недель (cycleweeks).";
-            if (!minISO.empty() && !maxISO.empty()) {
-                msg += QString("\nВыберите дату в диапазоне %1 — %2")
-                           .arg(QString::fromStdString(minISO))
-                           .arg(QString::fromStdString(maxISO));
-            }
-            emptyStateLabel->setText(msg);
-            emptyStateLabel->setVisible(true);
-            return;
-        }
-
-        // Если нашли weekId — получаем weekOfCycle из этой недели
-        weekOfCycle = db->getWeekOfCycleByWeekId(resolvedWeekId);
-        if (weekOfCycle <= 0) weekOfCycle = 1;
-    }
 
 
     // 2) Группа/подгруппа студента (чтобы не хранить groupId_ в UI)
@@ -302,8 +265,6 @@ void StudentSchedulePage::loadSchedule()
             p += QString("Неделя цикла %1").arg(weekOfCycle);
         } else if (currentSelection.mode == WeekSelection::CalendarWeek) {
             p += QString("weekId %1 (цикл %2)").arg(resolvedWeekId).arg(weekOfCycle);
-        } else if (currentSelection.mode == WeekSelection::ByDate) {
-            p += QString("%1 (цикл %2)").arg(currentSelection.selectedDate).arg(weekOfCycle);
         }
         periodLabel->setText(p);
     }
@@ -312,7 +273,6 @@ void StudentSchedulePage::loadSchedule()
     const char* modeStr = "Unknown";
     if (currentSelection.mode == WeekSelection::CycleWeek) modeStr = "CycleWeek";
     else if (currentSelection.mode == WeekSelection::CalendarWeek) modeStr = "CalendarWeek";
-    else if (currentSelection.mode == WeekSelection::ByDate) modeStr = "ByDate";
     qDebug() << "[StudentSchedulePage] mode=" << modeStr
              << "resolvedWeekId=" << resolvedWeekId
              << "weekOfCycle=" << weekOfCycle

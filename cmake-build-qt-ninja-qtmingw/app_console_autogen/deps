@@ -1,0 +1,224 @@
+app_console_autogen/timestamp: \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/AdminService.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/AdminService.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/CMakeLists.txt \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/admin.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/admin.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/CMakeFiles/3.31.6/CMakeCCompiler.cmake \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/CMakeFiles/3.31.6/CMakeCXXCompiler.cmake \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/CMakeFiles/3.31.6/CMakeRCCompiler.cmake \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/cmake-build-qt-ninja-qtmingw/CMakeFiles/3.31.6/CMakeSystem.cmake \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/config.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/core/result.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/database.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/database.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/main_console.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/menu.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/menu.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/scholarship.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/scholarship.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/services/student_service.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/services/student_service.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/statistics.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/statistics.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/student.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/student.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/teacher.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/teacher.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/third_party/sqlite/sqlite3.c \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/third_party/sqlite/sqlite3.h \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/user.cpp \
+	C:/Users/leshk/CLionProjects/prodolzhenie\ ot\ 24.12\ 15_32/user.h \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeCInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeCXXInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeCommonLanguageInclude.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeFindDependencyMacro.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeGenericSystem.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeInitializeConfigs.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeLanguageInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeRCInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeSystemSpecificInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CMakeSystemSpecificInitialize.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CheckIncludeFile.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/CheckLibraryExists.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Compiler/CMakeCommonCompilerMacros.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Compiler/GNU-C.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Compiler/GNU-CXX.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Compiler/GNU.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/FindPackageMessage.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/FindThreads.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/FindVulkan.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/GNUInstallDirs.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Internal/CMakeCLinkerInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Internal/CMakeCXXLinkerInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Internal/CMakeCommonLinkerInformation.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Internal/CheckFlagCommonConfig.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Linker/GNU.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Linker/Windows-C.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Linker/Windows-CXX.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Linker/Windows-GNU-C.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Linker/Windows-GNU-CXX.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Linker/Windows-GNU.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-GNU-C-ABI.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-GNU-C.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-GNU-CXX-ABI.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-GNU-CXX.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-GNU.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-Initialize.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows-windres.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/Windows.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/share/cmake-3.31/Modules/Platform/WindowsPaths.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/FindWrapAtomic.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/FindWrapVulkanHeaders.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6Config.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6ConfigExtras.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6ConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6ConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6Dependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6Targets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/Qt6VersionlessAliasTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtFeature.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtFeatureCommon.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtInstallPaths.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicAndroidHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicAppleHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicCMakeEarlyPolicyHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicCMakeHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicCMakeVersionHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicDependencyHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicExternalProjectHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicFinalizerHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicFindPackageHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicGitHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicPluginHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicPluginHelpers_v2.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomAttributionHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomCpeHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomDepHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomFileHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomGenerationHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomLicenseHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomOpsHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomPurlHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomPythonHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomQtEntityHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicSbomSystemDepHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicTargetHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicTestHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicToolHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicWalkLibsHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6/QtPublicWindowsHelpers.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreConfigExtras.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreDependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreMacros.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Core/Qt6CoreVersionlessAliasTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsDependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsVersionlessTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointMinGW32Target.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateVersionlessAliasTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiDependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiPlugins.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6GuiVersionlessAliasTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QGifPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QGifPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QGifPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QGifPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QJpegPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QJpegPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QJpegPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QJpegPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsDependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsVersionlessTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsDependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsMacros.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsPlugins.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6Widgets/Qt6WidgetsVersionlessAliasTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsAdditionalTargetInfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsConfig.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsConfigVersion.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsConfigVersionImpl.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsDependencies.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsTargets-relwithdebinfo.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsTargets.cmake \
+	D:/QTshechka/6.10.1/mingw_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsVersionlessTargets.cmake \
+	D:/CLion\ 2025.1.1/bin/cmake/win/x64/bin/cmake.exe
