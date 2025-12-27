@@ -1,11 +1,18 @@
 #include "adminwindow.h"
 
+#include "ui/util/UiStyle.h"
 #include "ui/util/AppEvents.h"
 #include "ui/models/WeekSelection.h"
 #include "ui/widgets/PeriodSelectorWidget.h"
 #include "ui/widgets/WeekGridScheduleWidget.h"
 
+#include <QAbstractItemView>
 #include <QComboBox>
+#include <QFrame>
+#include <QGridLayout>
+#include <QHeaderView>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -13,6 +20,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QVBoxLayout>
 #include <QVariant>
 
 #include <sqlite3.h>
@@ -23,6 +31,15 @@ static QString cardFrameStyle()
 {
     return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}"
            "QLabel{color: palette(Text); background: transparent;}";
+}
+
+static QLabel* makeBadge(QWidget* parent, const QString& text, const QString& style)
+{
+    auto* b = new QLabel(text, parent);
+    b->setAlignment(Qt::AlignCenter);
+    b->setMinimumHeight(22);
+    b->setStyleSheet(style);
+    return b;
 }
 
 static QString weekdayName(int weekday)
@@ -333,6 +350,145 @@ static ScheduleEditResult runScheduleEditDialog(QWidget* parent, Database* db, c
 }
 
 } // namespace
+
+QWidget* AdminWindow::buildScheduleTab()
+{
+    auto* root = new QWidget(this);
+    auto* layout = new QVBoxLayout(root);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(10);
+
+    auto* mainCard = new QFrame(root);
+    mainCard->setFrameShape(QFrame::StyledPanel);
+    mainCard->setStyleSheet(cardFrameStyle());
+    auto* mainCardLayout = new QVBoxLayout(mainCard);
+    mainCardLayout->setContentsMargins(12, 12, 12, 12);
+    mainCardLayout->setSpacing(12);
+    layout->addWidget(mainCard, 1);
+
+    auto* controlsCard = new QFrame(mainCard);
+    controlsCard->setFrameShape(QFrame::StyledPanel);
+    controlsCard->setStyleSheet(cardFrameStyle());
+    auto* controls = new QGridLayout(controlsCard);
+    controls->setContentsMargins(14, 10, 14, 10);
+    controls->setHorizontalSpacing(10);
+    controls->setVerticalSpacing(8);
+
+    controls->addWidget(makeBadge(controlsCard, "Режим", UiStyle::badgeNeutralStyle()), 0, 0);
+    schedModeCombo = new QComboBox(controlsCard);
+    schedModeCombo->setMinimumWidth(170);
+    schedModeCombo->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    schedModeCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    schedModeCombo->addItem("Группа", 0);
+    schedModeCombo->addItem("Преподаватель", 1);
+    controls->addWidget(schedModeCombo, 0, 1);
+
+    controls->addWidget(makeBadge(controlsCard, "Подгруппа", UiStyle::badgeNeutralStyle()), 0, 2);
+    schedSubgroupCombo = new QComboBox(controlsCard);
+    schedSubgroupCombo->setMinimumWidth(80);
+    schedSubgroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    schedSubgroupCombo->addItem("Все", 0);
+    schedSubgroupCombo->addItem("1", 1);
+    schedSubgroupCombo->addItem("2", 2);
+    controls->addWidget(schedSubgroupCombo, 0, 3);
+
+    schedPeriodSelector = new PeriodSelectorWidget(db, controlsCard);
+    schedPeriodSelector->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    controls->addWidget(schedPeriodSelector, 0, 4, 1, 3);
+
+    controls->addWidget(makeBadge(controlsCard, "Группа", UiStyle::badgeNeutralStyle()), 1, 0);
+    schedGroupCombo = new QComboBox(controlsCard);
+    schedGroupCombo->setMinimumWidth(120);
+    schedGroupCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    schedGroupCombo->view()->setTextElideMode(Qt::ElideRight);
+    schedGroupCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    schedGroupCombo->setMinimumContentsLength(10);
+    controls->addWidget(schedGroupCombo, 1, 1, 1, 2);
+
+    controls->addWidget(makeBadge(controlsCard, "Преподаватель", UiStyle::badgeNeutralStyle()), 1, 3);
+    schedTeacherCombo = new QComboBox(controlsCard);
+    schedTeacherCombo->setMinimumWidth(140);
+    schedTeacherCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    schedTeacherCombo->view()->setTextElideMode(Qt::ElideRight);
+    schedTeacherCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    schedTeacherCombo->setMinimumContentsLength(12);
+    controls->addWidget(schedTeacherCombo, 1, 4, 1, 2);
+
+    addScheduleButton = new QPushButton("Добавить", controlsCard);
+    editScheduleButton = new QPushButton("Редактировать", controlsCard);
+    deleteScheduleButton = new QPushButton("Удалить", controlsCard);
+    refreshScheduleButton = new QPushButton("Обновить", controlsCard);
+    editScheduleButton->setEnabled(false);
+    deleteScheduleButton->setEnabled(false);
+
+    controls->addWidget(addScheduleButton, 1, 6);
+    controls->addWidget(editScheduleButton, 1, 7);
+    controls->addWidget(deleteScheduleButton, 1, 8);
+    controls->addWidget(refreshScheduleButton, 1, 9);
+
+    controls->setColumnStretch(0, 0);
+    controls->setColumnStretch(1, 0);
+    controls->setColumnStretch(2, 0);
+    controls->setColumnStretch(3, 0);
+    controls->setColumnStretch(4, 1);
+    controls->setColumnStretch(5, 1);
+    controls->setColumnStretch(6, 0);
+    controls->setColumnStretch(7, 0);
+    controls->setColumnStretch(8, 0);
+    controls->setColumnStretch(9, 0);
+
+    mainCardLayout->addWidget(controlsCard);
+
+    auto* tableCard = new QFrame(mainCard);
+    tableCard->setFrameShape(QFrame::StyledPanel);
+    tableCard->setStyleSheet(cardFrameStyle());
+    auto* tableLayout = new QVBoxLayout(tableCard);
+    tableLayout->setContentsMargins(12, 10, 12, 12);
+    tableLayout->setSpacing(10);
+
+    scheduleGrid = new WeekGridScheduleWidget(tableCard);
+    tableLayout->addWidget(scheduleGrid, 1);
+
+    mainCardLayout->addWidget(tableCard, 1);
+
+    reloadGroupsInto(schedGroupCombo, false, true);
+    reloadTeachersInto(schedTeacherCombo, false);
+
+    auto updateModeUi = [this]() {
+        const int mode = schedModeCombo ? schedModeCombo->currentData().toInt() : 0;
+        const bool teacherMode = (mode == 1);
+        if (schedGroupCombo) schedGroupCombo->setEnabled(!teacherMode);
+        if (schedTeacherCombo) schedTeacherCombo->setEnabled(teacherMode);
+    };
+    updateModeUi();
+
+    connect(refreshScheduleButton, &QPushButton::clicked, this, &AdminWindow::reloadSchedule);
+    connect(addScheduleButton, &QPushButton::clicked, this, &AdminWindow::onAddSchedule);
+    connect(editScheduleButton, &QPushButton::clicked, this, &AdminWindow::onEditSchedule);
+    connect(deleteScheduleButton, &QPushButton::clicked, this, &AdminWindow::onDeleteSchedule);
+
+    connect(schedModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, updateModeUi](int) {
+        updateModeUi();
+        reloadSchedule();
+    });
+    connect(schedGroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
+    connect(schedTeacherCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
+    connect(schedSubgroupCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadSchedule);
+    if (schedPeriodSelector) {
+        connect(schedPeriodSelector, &PeriodSelectorWidget::selectionChanged, this, &AdminWindow::reloadSchedule);
+    }
+
+    if (scheduleGrid) {
+        connect(scheduleGrid, &WeekGridScheduleWidget::lessonClicked, this, [this](int scheduleId) {
+            selectedScheduleId = scheduleId;
+            if (editScheduleButton) editScheduleButton->setEnabled(selectedScheduleId > 0);
+            if (deleteScheduleButton) deleteScheduleButton->setEnabled(selectedScheduleId > 0);
+        });
+    }
+
+    reloadSchedule();
+    return root;
+}
 
 void AdminWindow::reloadSchedule()
 {

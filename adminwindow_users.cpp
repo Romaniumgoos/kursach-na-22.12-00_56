@@ -4,13 +4,17 @@
 
 #include <QAbstractItemView>
 #include <QComboBox>
+#include <QFrame>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
@@ -19,6 +23,12 @@
 #include <algorithm>
 
 namespace {
+
+static QString cardFrameStyle()
+{
+    return "QFrame{border-radius: 14px; border: 1px solid rgba(120,120,120,0.22); background: palette(Base);}" \
+           "QLabel{color: palette(Text); background: transparent;}";
+}
 
 static QLabel* makeBadge(QWidget* parent, const QString& text, const QString& style)
 {
@@ -269,6 +279,117 @@ static UserEditResult runUserEditDialog(QWidget* parent,
 }
 
 } // namespace
+
+QWidget* AdminWindow::buildUsersTab()
+{
+    auto* root = new QWidget(this);
+    auto* layout = new QVBoxLayout(root);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(10);
+
+    auto* mainCard = new QFrame(root);
+    mainCard->setFrameShape(QFrame::StyledPanel);
+    mainCard->setStyleSheet(cardFrameStyle());
+    auto* mainCardLayout = new QVBoxLayout(mainCard);
+    mainCardLayout->setContentsMargins(12, 12, 12, 12);
+    mainCardLayout->setSpacing(12);
+    layout->addWidget(mainCard, 1);
+
+    auto* controlsCard = new QFrame(mainCard);
+    controlsCard->setFrameShape(QFrame::StyledPanel);
+    controlsCard->setStyleSheet(cardFrameStyle());
+    auto* controls = new QHBoxLayout(controlsCard);
+    controls->setContentsMargins(14, 10, 14, 10);
+    controls->setSpacing(10);
+
+    userSearchEdit = new QLineEdit(controlsCard);
+    userSearchEdit->setPlaceholderText("Поиск (ФИО / логин)");
+    userSearchEdit->setMinimumWidth(160);
+    userSearchEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    controls->addWidget(userSearchEdit);
+
+    userRoleFilterCombo = new QComboBox(controlsCard);
+    userRoleFilterCombo->setMinimumWidth(120);
+    userRoleFilterCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    userRoleFilterCombo->view()->setTextElideMode(Qt::ElideRight);
+    userRoleFilterCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    userRoleFilterCombo->setMinimumContentsLength(10);
+    userRoleFilterCombo->addItem("Все роли", "");
+    userRoleFilterCombo->addItem("admin", "admin");
+    userRoleFilterCombo->addItem("teacher", "teacher");
+    userRoleFilterCombo->addItem("student", "student");
+    controls->addWidget(userRoleFilterCombo);
+
+    controls->addStretch();
+
+    addUserButton = new QPushButton("Добавить", controlsCard);
+    editUserButton = new QPushButton("Редактировать", controlsCard);
+    deleteUserButton = new QPushButton("Удалить", controlsCard);
+    refreshUsersButton = new QPushButton("Обновить", controlsCard);
+    editUserButton->setEnabled(false);
+    deleteUserButton->setEnabled(false);
+
+    controls->addWidget(addUserButton);
+    controls->addWidget(editUserButton);
+    controls->addWidget(deleteUserButton);
+    controls->addWidget(refreshUsersButton);
+
+    mainCardLayout->addWidget(controlsCard);
+
+    auto* tableCard = new QFrame(mainCard);
+    tableCard->setFrameShape(QFrame::StyledPanel);
+    tableCard->setStyleSheet(cardFrameStyle());
+    auto* tableLayout = new QVBoxLayout(tableCard);
+    tableLayout->setContentsMargins(12, 10, 12, 12);
+    tableLayout->setSpacing(10);
+
+    usersTable = new QTableWidget(tableCard);
+    UiStyle::applyStandardTableStyle(usersTable);
+    usersTable->setColumnCount(6);
+    usersTable->setHorizontalHeaderLabels({"ID", "ФИО", "login", "role", "groupId", "subgroup"});
+    usersTable->setWordWrap(false);
+    usersTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    usersTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    usersTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    usersTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed);
+    usersTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed);
+    usersTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed);
+    usersTable->setColumnWidth(0, 64);
+    usersTable->setColumnWidth(3, 116);
+    usersTable->setColumnWidth(4, 76);
+    usersTable->setColumnWidth(5, 86);
+    usersTable->horizontalHeader()->setStretchLastSection(true);
+    usersTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    usersTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    tableLayout->addWidget(usersTable, 1);
+
+    mainCardLayout->addWidget(tableCard, 1);
+
+    connect(refreshUsersButton, &QPushButton::clicked, this, &AdminWindow::reloadUsers);
+    connect(addUserButton, &QPushButton::clicked, this, &AdminWindow::onAddUser);
+    connect(editUserButton, &QPushButton::clicked, this, &AdminWindow::onEditUser);
+    connect(deleteUserButton, &QPushButton::clicked, this, &AdminWindow::onDeleteUser);
+
+    if (userSearchEdit) {
+        connect(userSearchEdit, &QLineEdit::textChanged, this, &AdminWindow::reloadUsers);
+    }
+    if (userRoleFilterCombo) {
+        connect(userRoleFilterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AdminWindow::reloadUsers);
+    }
+
+    connect(usersTable, &QTableWidget::itemSelectionChanged, this, [this]() {
+        const bool hasSel = usersTable && usersTable->selectionModel() && !usersTable->selectionModel()->selectedRows().isEmpty();
+        if (editUserButton) editUserButton->setEnabled(hasSel);
+        if (deleteUserButton) deleteUserButton->setEnabled(hasSel);
+    });
+
+    connect(usersTable, &QTableWidget::cellDoubleClicked, this, [this](int, int) {
+        onEditUser();
+    });
+
+    reloadUsers();
+    return root;
+}
 
 void AdminWindow::reloadUsers()
 {

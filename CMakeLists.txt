@@ -35,11 +35,13 @@ set(BACKEND_HEADERS
 set(GUI_SOURCES
         main.cpp
         loginwindow.cpp
+        studentwindow_core.cpp
         studentwindow.cpp
-        teacherwindow.cpp
+        teacherwindow_core.cpp
         teacherwindow_schedule.cpp
         teacherwindow_journal.cpp
         teacherwindow_stats.cpp
+        adminwindow_core.cpp
         adminwindow.cpp
         adminwindow_users.cpp
         adminwindow_schedule.cpp
