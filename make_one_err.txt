@@ -1,1 +1,0 @@
-mingw32-make: *** [CMakeFiles\app_console.dir\build.make:94: CMakeFiles/app_console.dir/main_console.cpp.obj] Error 1

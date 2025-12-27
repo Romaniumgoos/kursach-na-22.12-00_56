@@ -14,15 +14,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 # ===== Backend (общий код) =====
 set(BACKEND_SOURCES
         database.cpp
-        admin.cpp
-        teacher.cpp
-        student.cpp
-        user.cpp
         statistics.cpp
-        scholarship.cpp
-        menu.cpp
-
-        AdminService.cpp
         services/student_service.cpp
         services/d1_randomizer.cpp
 
@@ -31,15 +23,7 @@ set(BACKEND_SOURCES
 
 set(BACKEND_HEADERS
         database.h
-        admin.h
-        teacher.h
-        student.h
-        user.h
         statistics.h
-        scholarship.h
-        menu.h
-
-        AdminService.h
         core/result.h
         services/student_service.h
         services/d1_randomizer.h
@@ -53,7 +37,12 @@ set(GUI_SOURCES
         loginwindow.cpp
         studentwindow.cpp
         teacherwindow.cpp
+        teacherwindow_schedule.cpp
+        teacherwindow_journal.cpp
         adminwindow.cpp
+        adminwindow_users.cpp
+        adminwindow_schedule.cpp
+        adminwindow_d1.cpp
 
         ui/util/AppEvents.cpp
 
@@ -112,19 +101,3 @@ if (MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
     target_compile_options(app_gui PRIVATE -fdiagnostics-color=never)
 endif()
 
-# ===== Console executable =====
-add_executable(app_console
-        main_console.cpp
-        ${BACKEND_SOURCES}
-        ${BACKEND_HEADERS}
-)
-
-target_include_directories(app_console PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
-)
-
-if (MINGW OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
-    set_property(TARGET app_console PROPERTY AUTOMOC_COMPILER_PREDEFINES OFF)
-    target_compile_options(app_console PRIVATE -fdiagnostics-color=never)
-endif()

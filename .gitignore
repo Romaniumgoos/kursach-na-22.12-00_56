@@ -1,0 +1,33 @@
+# Build directories
+cmake-build-*/
+build*/
+
+# Qt / CMake autogen
+*_autogen/
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+mocs_compilation.cpp
+moc_predefs.h
+
+# Logs / dumps
+*_err.txt
+*_out.txt
+*build*.txt
+*build*.log
+*compile*.txt
+*verbose*.txt
+
+# Toolchain artifacts
+*.rsp
+*.rsp.txt
+*_flags.make
+*_includes*
+
+# Local build helper outputs
+app_gui_*
+app_console_*
+*_link_*
+
+# IDE
+.idea/
