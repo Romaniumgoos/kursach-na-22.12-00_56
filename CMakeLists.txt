@@ -39,6 +39,7 @@ set(GUI_SOURCES
         teacherwindow.cpp
         teacherwindow_schedule.cpp
         teacherwindow_journal.cpp
+        teacherwindow_stats.cpp
         adminwindow.cpp
         adminwindow_users.cpp
         adminwindow_schedule.cpp
